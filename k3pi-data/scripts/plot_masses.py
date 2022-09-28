@@ -81,10 +81,14 @@ def main():
     ax[1].set_title("D* Mass")
     ax[2].set_title(r"$\Delta$ Mass")
 
+    for a in ax:
+        a.set_xlabel("MeV")
+
     fig.tight_layout()
 
     ax[2].legend()
 
+    plt.savefig("masses.png")
     plt.show()
 
 
