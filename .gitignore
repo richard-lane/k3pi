@@ -1,3 +1,20 @@
+# Output, data, etc.
+*.pkl
+*.png
+*.root
+
+# Files that you should copy from elsewhere that I don't want getting accidentally added to git
+lib_efficiency/amplitude_models/cf.cpp
+lib_efficiency/amplitude_models/dcs.cpp
+
+# tarballs
+*.tar.gz
+
+# Condor things
+*.out
+*.log
+*.err
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

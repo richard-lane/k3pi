@@ -1,0 +1,8 @@
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000001_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000002_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000003_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000004_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000005_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000006_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000007_1.charm_d02hhhh_dvntuple.root
+/eos/lhcb/grid/prod/lhcb/MC/2018/CHARM_D02HHHH_DVNTUPLE.ROOT/00123272/0000/00123272_00000008_1.charm_d02hhhh_dvntuple.root
