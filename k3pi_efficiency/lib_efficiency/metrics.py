@@ -41,20 +41,3 @@ def _counts(t: np.ndarray, wt: np.ndarray, bins: np.ndarray) -> Tuple:
         errs[i] = np.sqrt(np.sum(wt[mask] ** 2))
 
     return counts, errs
-
-
-def phsp_chi2_test(
-    target: np.ndarray, original: np.ndarray, orig_weights: np.ndarray = None
-) -> float:
-    """
-    chi2 test for phase space distributions; bins into 10 bins
-    along each axis and finds the sum of KS values.
-
-    :param target: (N, 6) shape array of target (i.e. AmpGen) points
-    :param original: (N, 6) shape array of original (i.e. MC or reweighted) points
-    :param orig_weights: weights to apply to the original sample
-    :returns: the combined chi2 statistic
-
-    """
-    # TODO chi2 or some other test
-    assert False

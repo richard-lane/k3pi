@@ -17,7 +17,13 @@ def weight(label: np.ndarray, signal_fraction: float) -> float:
     n_sig, n_bkg = np.sum(label == 1), np.sum(label == 0)
 
     retval = n_bkg * signal_fraction / (n_sig * (1 - signal_fraction))
-    assert 0.0 < retval and retval < 1.0
+
+    # If either of these asserts fail, you might be using
+    # the wrong size inputs.
+    # See tests/test_signal_cuts.py:test_sig_frac_overflow
+    # for a potential explanation
+    assert 0.0 < retval
+    assert retval < 1.0
 
     return retval
 
