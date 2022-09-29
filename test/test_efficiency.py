@@ -1,10 +1,15 @@
 """
-Things where I think it's actually useful to have a unit test
+Efficiency unit test
 
 """
+import sys
 import pytest
+import pathlib
 import numpy as np
-from ..metrics import _counts
+
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_efficiency"))
+
+from lib_efficiency.metrics import _counts
 
 
 def test_counts_underflow():

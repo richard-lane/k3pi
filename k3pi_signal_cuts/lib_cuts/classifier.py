@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Classifier():
+class Classifier:
     """
     Basically just storange for an sklearn classifier
     returns predict_proba normalised to a mean of 0.5

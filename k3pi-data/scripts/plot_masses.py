@@ -18,17 +18,17 @@ from lib_data import get, definitions
 
 
 def _d0_mass(df: pd.DataFrame) -> np.ndarray:
-    """ D0 Mass """
+    """D0 Mass"""
     return df["D0 mass"]
 
 
 def _dst_mass(df: pd.DataFrame) -> np.ndarray:
-    """ D* Mass """
+    """D* Mass"""
     return df["D* mass"]
 
 
 def _delta_mass(df: pd.DataFrame) -> np.ndarray:
-    """ D* - D0 Mass """
+    """D* - D0 Mass"""
     return _dst_mass(df) - _d0_mass(df)
 
 

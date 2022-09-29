@@ -19,7 +19,7 @@ def weighted_mean(points: np.ndarray, errors: np.ndarray) -> Tuple[float, float]
     :returns: error on the mean
 
     """
-    weights = 1 / errors ** 2
+    weights = 1 / errors**2
 
     return np.average(points, weights=weights), 1 / np.sum(weights)
 

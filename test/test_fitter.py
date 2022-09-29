@@ -2,8 +2,13 @@
 Things where I think it's actually useful to have a unit test
 
 """
+import sys
+import pathlib
 import numpy as np
-from .. import models
+
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_fitter"))
+
+from lib_time_fit import models
 
 
 def test_rs_integral():

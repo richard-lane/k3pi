@@ -16,7 +16,7 @@ from lib_data import get, training_vars
 
 
 def _delta_m(data: pd.DataFrame) -> np.ndarray:
-    """ D* - D0 Mass """
+    """D* - D0 Mass"""
     return data["D* mass"] - data["D0 mass"]
 
 

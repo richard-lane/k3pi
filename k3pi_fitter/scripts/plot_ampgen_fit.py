@@ -32,7 +32,7 @@ def _plot(
 
 
 def _counts(sign: str) -> np.ndarray:
-    """ Number of times in each bin """
+    """Number of times in each bin"""
     return util.bin_times(get.ampgen(sign)["time"])
 
 
@@ -70,7 +70,7 @@ def main():
     axis.set_ylabel(r"$WS/RS$")
 
     ratio_str, err_str = f"{best_rd:.4f}", f"{err_on_rd:.4f}"
-    best_ratio = best_rd ** 2
+    best_ratio = best_rd**2
     axis.plot(
         axis.get_xlim(),
         [best_ratio, best_ratio],

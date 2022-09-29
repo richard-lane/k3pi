@@ -23,7 +23,7 @@ from lib_data import get, training_vars
 
 
 def _train_test_dfs(year, sign, magnetisation):
-    """ Join signal + bkg dataframes but split by train/test """
+    """Join signal + bkg dataframes but split by train/test"""
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 

@@ -25,7 +25,7 @@ def _plot(params: mixing.MixingParams, path: str, scale: bool = False) -> None:
     """
     d_lifetime_ps = 0.4103
     times_ps = np.linspace(0, 20 * d_lifetime_ps, 100)
-    times_inv_mev = times_ps * (10 ** 10) / 6.58
+    times_inv_mev = times_ps * (10**10) / 6.58
 
     # Assume no CPV in mixing
     p_q = 1 / np.sqrt(2)

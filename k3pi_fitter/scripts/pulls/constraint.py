@@ -113,7 +113,9 @@ def main():
     widths = np.array([0.01, 0.01])
     correlation = 0.1
     n_experiments = 20
-    xy_vals = common.xy_vals(rng, n_experiments, (params.x, params.y), widths, correlation)
+    xy_vals = common.xy_vals(
+        rng, n_experiments, (params.x, params.y), widths, correlation
+    )
 
     # Do a fit
     pulls = np.ones((4, n_experiments)) * np.nan

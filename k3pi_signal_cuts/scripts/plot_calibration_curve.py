@@ -18,14 +18,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.calibration import CalibrationDisplay
 
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
-from lib_cuts import read_data, util
+from lib_cuts.get import classifier as get_clf
+from lib_data import get, training_vars
 
 
 def main():
-    sig_df = util.read_dataframe(background=False)
-    bkg_df = util.read_dataframe(background=True)
+    year, sign, magnetisation = "2018", "dcs", "magdown"
+    sig_df = get.mc(year, sign, magnetisation)
+    bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
     # Plot calibration using testing data, because that seems right
     sig_df = sig_df[~sig_df["train"]]
@@ -35,8 +38,8 @@ def main():
     labels = np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df))))
 
     # Predict which of these are signal and background using our classifier
-    clf = util.get_classifier()
-    var_names = list(read_data.training_var_names())
+    clf = get_clf(year, sign, magnetisation)
+    var_names = list(training_vars.training_var_names())
 
     fig, ax = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True)
 

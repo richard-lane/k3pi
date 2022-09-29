@@ -74,7 +74,9 @@ def main():
 
     ax[0, 0].legend()
 
-    fig.suptitle(f"Data before/after BDT cut; {year} {sign} {magnetisation}\n {threshhold=}")
+    fig.suptitle(
+        f"Data before/after BDT cut; {year} {sign} {magnetisation}\n {threshhold=}"
+    )
 
     fig.tight_layout()
 

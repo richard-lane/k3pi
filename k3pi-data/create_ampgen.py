@@ -45,7 +45,7 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
 
 
 def main(path: str, sign: str) -> None:
-    """ Create a DataFrame holding AmpGen momenta """
+    """Create a DataFrame holding AmpGen momenta"""
     # If the dir doesnt exist, create it
     if not definitions.AMPGEN_DIR.is_dir():
         os.mkdir(definitions.AMPGEN_DIR)

@@ -36,9 +36,11 @@ def main(sign: str):
 
     # Don't plot below the minimum time
     min_t = 0.4
+    n_bins = 20000
+    n_neighs = 100
     reweighters = [
-        reweighter.TimeWeighter(min_t, fit=False),
-        reweighter.TimeWeighter(min_t, fit=True),
+        reweighter.TimeWeighter(min_t, fit=False, n_bins=n_bins, n_neighs=n_neighs),
+        reweighter.TimeWeighter(min_t, fit=True, n_bins=n_bins, n_neighs=n_neighs),
     ]
 
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))

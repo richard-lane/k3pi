@@ -37,7 +37,7 @@ def _target_points(gen: np.random.Generator, n_gen: int) -> np.ndarray:
 
 
 def pdf(time: float, params: Tuple):
-    """ PDF of efficiency(t) * e^t """
+    """PDF of efficiency(t) * e^t"""
     # Have to convert to an array/back for annoying reasons
     return time_fitter.normalised_pdf(np.array([time]), *params)[1][0]
 
@@ -70,7 +70,7 @@ def _orig_points(gen: np.random.Generator, n_gen: int) -> np.ndarray:
     n_generated = 0
     max_lifetimes = 8
     max_pdf = 0.5
-    with tqdm(total = n_gen) as pbar:
+    with tqdm(total=n_gen) as pbar:
         while n_generated < n_gen:
             x = max_lifetimes * gen.random()
             y = max_pdf * gen.random()

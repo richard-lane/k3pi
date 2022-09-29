@@ -1,0 +1,46 @@
+# Install python dependencies, check formatting, lint and run some minimal tests
+
+name: dk3pi CI
+
+on: [push]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check formatting
+        run: |
+          python -m black k3pi-data --check
+          python -m black k3pi_signal_cuts --check
+          python -m black k3pi_efficiency --check
+          python -m black k3pi_mass_fit --check
+          python -m black k3pi_fitter --check
+
+      - name: Lint (errors only)
+        run: |
+          # Disable E0401 - import errors, because I've hacked sys.path everywhere
+          python -m pylint k3pi-data/ -j 4 --errors-only --disable E0401
+          python -m pylint k3pi_signal_cuts -j 4 --errors-only --disable E0401
+
+          # Ignore scipy.spatial because pylint gives a false positive
+          python -m pylint k3pi_efficiency -j 4 --errors-only --disable E0401 --ignored-modules=scipy.spatial
+          python -m pylint k3pi_mass_fit -j 4 --errors-only --disable E0401
+          python -m pylint k3pi_fitter -j 4 --errors-only --disable E0401
+
+      - name: Test
+        run: |
+          python -m pytest test/
+

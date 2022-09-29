@@ -62,7 +62,7 @@ def projections(
 def _plot_shaded_area(
     ax: plt.Axes, opt: np.ndarray, cov: np.ndarray, pts: np.ndarray
 ) -> None:
-    """ Plot shaded area around the best fit on the axis """
+    """Plot shaded area around the best fit on the axis"""
     err = np.sqrt(np.diag(cov))
     a_max, b_max = opt[0] + err[0], opt[1] + err[1]
     a_min, b_min = opt[0] - err[0], opt[1] - err[1]
@@ -135,7 +135,7 @@ def _plot_ratio(
     )
 
     def best_fit(t: float) -> float:
-        """ Best fit fcn """
+        """Best fit fcn"""
         return opt[0] * t + opt[1]
 
     ax.plot(pts, [best_fit(x) for x in pts], "r--")
@@ -145,7 +145,7 @@ def _plot_ratio(
 
     # Find chi2
     n_dof = (len(bins) - 1) - 2  # n_bins - 2 since we have 2 fit params
-    return np.sum(((ratio - best_fit(centres)) ** 2) / (n_dof * err ** 2))
+    return np.sum(((ratio - best_fit(centres)) ** 2) / (n_dof * err**2))
 
 
 def plot_ratios(
@@ -164,9 +164,9 @@ def plot_ratios(
     )
     reweighted_chi2 = _plot_ratio(ax[2], ws_mc_t, rs_mc_t, ws_mc_wt, rs_mc_wt, bins)
 
-    ax[0].set_title(fr"MC, $\chi^2=${mc_chi2:.3f}")
-    ax[1].set_title(fr"AmpGen, $\chi^2=${ag_chi2:.3f}")
-    ax[2].set_title(fr"Reweighted, $\chi^2=${reweighted_chi2:.3f}")
+    ax[0].set_title(rf"MC, $\chi^2=${mc_chi2:.3f}")
+    ax[1].set_title(rf"AmpGen, $\chi^2=${ag_chi2:.3f}")
+    ax[2].set_title(rf"Reweighted, $\chi^2=${reweighted_chi2:.3f}")
 
     ax[0].set_ylabel(r"$\frac{WS}{RS}$ ratio")
     for a in ax:

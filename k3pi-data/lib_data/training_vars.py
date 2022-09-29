@@ -67,7 +67,7 @@ def _pt(p_x: np.ndarray, p_y: np.ndarray) -> np.ndarray:
 
     """
     # pT is magnitude of px and py
-    return np.sqrt(p_x ** 2 + p_y ** 2)
+    return np.sqrt(p_x**2 + p_y**2)
 
 
 def _particle_names() -> Tuple[str, str, str, str]:

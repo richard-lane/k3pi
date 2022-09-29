@@ -5,11 +5,14 @@ Histograms of classification probabilities for testing data
 import sys
 import pathlib
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
-from lib_cuts import read_data, util
+from lib_cuts.get import classifier as get_clf
+from lib_data import get, training_vars
 
 
 def main():
@@ -18,17 +21,19 @@ def main():
 
     """
     # Read dataframes of stuff
-    sig_df = util.read_dataframe(background=False)
-    bkg_df = util.read_dataframe(background=True)
+    year, sign, magnetisation = "2018", "dcs", "magdown"
+    sig_df = get.mc(year, sign, magnetisation)
+    bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
     # We only want the testing data here
     sig_df = sig_df[~sig_df["train"]]
     bkg_df = bkg_df[~bkg_df["train"]]
 
     # Predict which of these are signal and background using our classifier
-    clf = util.get_classifier()
-    sig_proba = clf.predict_proba(sig_df[list(read_data.training_var_names())])[:, 1]
-    bkg_proba = clf.predict_proba(bkg_df[list(read_data.training_var_names())])[:, 1]
+    clf = get_clf(year, sign, magnetisation)
+    var_names = list(training_vars.training_var_names())
+    sig_proba = clf.predict_proba(sig_df[var_names])[:, 1]
+    bkg_proba = clf.predict_proba(bkg_df[var_names])[:, 1]
 
     # Plot histograms of our variables before/after doing these cuts
     fig, ax = plt.subplots()

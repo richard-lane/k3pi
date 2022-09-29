@@ -129,8 +129,8 @@ def plot_ratio(
         n_num = np.sum(this_bin_num_wt)
         n_denom = np.sum(this_bin_denom_wt)
 
-        err_num = np.sqrt(np.sum(this_bin_num_wt ** 2))
-        err_denom = np.sqrt(np.sum(this_bin_denom_wt ** 2))
+        err_num = np.sqrt(np.sum(this_bin_num_wt**2))
+        err_denom = np.sqrt(np.sum(this_bin_denom_wt**2))
 
         ratio.append(n_num / n_denom)
         error.append(
@@ -154,4 +154,4 @@ def plot_ratio(
         label=label,
     )
 
-    return np.sum((ratio - np.ones_like(ratio)) ** 2 / (error ** 2))
+    return np.sum((ratio - np.ones_like(ratio)) ** 2 / (error**2))

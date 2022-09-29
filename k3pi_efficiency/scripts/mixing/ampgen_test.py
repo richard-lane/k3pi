@@ -24,7 +24,7 @@ from lib_time_fit import fitter, plotting
 
 
 def _weight_hist(weights: np.ndarray) -> None:
-    """ Show histogram of weights """
+    """Show histogram of weights"""
     plt.hist(weights, bins=100)
     plt.show()
 
@@ -68,7 +68,7 @@ def _bc_params(
     z_im = z_mag * np.sin(np.pi + z_phase)
 
     return (params.mixing_x * z_im + params.mixing_y * z_re), (
-        params.mixing_x ** 2 + params.mixing_y ** 2
+        params.mixing_x**2 + params.mixing_y**2
     ) / 4
 
 

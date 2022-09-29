@@ -39,7 +39,7 @@ def _shift(particle: np.ndarray, scale_factor: float) -> np.ndarray:
     new_momenta = scale_factor * particle[0:3]
 
     mass = _inv_mass(particle)
-    new_energy = np.sqrt(mass ** 2 + np.sum(new_momenta ** 2, axis=0))
+    new_energy = np.sqrt(mass**2 + np.sum(new_momenta**2, axis=0))
 
     return np.row_stack((*new_momenta, new_energy))
 

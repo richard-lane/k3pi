@@ -48,7 +48,7 @@ def _gen(
     max_x = np.max(x)
 
     def gen_func(x):
-        """ Exponential to draw from """
+        """Exponential to draw from"""
         return 0.25 * np.exp(-scale * x)
 
     y = gen_func(x) * rng.random(n_gen)
@@ -151,7 +151,9 @@ def _plot_pulls(
     labels = ("t0", "n", "m", "a", "b", "k")
 
     for a, p, l in zip(ax.ravel(), pulls, labels):
-        a.hist(p, label=f"{np.mean(p):.4f}+-{np.std(p):.4f}", bins=np.linspace(-10, 10, 21))
+        a.hist(
+            p, label=f"{np.mean(p):.4f}+-{np.std(p):.4f}", bins=np.linspace(-10, 10, 21)
+        )
         a.set_title(l)
         a.legend()
 

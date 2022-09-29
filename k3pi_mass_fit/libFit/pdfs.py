@@ -22,12 +22,12 @@ def background(x: np.ndarray, a: float, b: float) -> np.ndarray:
 
     """
     tmp = np.sqrt(x - low_mass_threshhold())
-    return tmp + a * tmp ** 3 + b * tmp ** 5
+    return tmp + a * tmp**3 + b * tmp**5
 
 
 def _bkg_integral_dispatcher(x: float, a: float, b: float) -> float:
     tmp = np.sqrt(x - low_mass_threshhold())
-    return 2 / 3 * tmp ** 3 + 2 * a / 5 * tmp ** 5 + 2 * b / 7 * tmp ** 7
+    return 2 / 3 * tmp**3 + 2 * a / 5 * tmp**5 + 2 * b / 7 * tmp**7
 
 
 def _bkg_integral(a: float, b: float) -> float:
@@ -54,7 +54,7 @@ def signal_base(
     diff_sq = (x - centre) ** 2
 
     numerator = diff_sq * (1 + beta * diff_sq)
-    denominator = 2 * width ** 2 + alpha * diff_sq
+    denominator = 2 * width**2 + alpha * diff_sq
 
     return np.exp(-numerator / denominator)
 
@@ -129,19 +129,15 @@ def fractional_pdf(
     returns n_evts, n_sig * normalised sig pdf + n_bkg * normalised bkg pdf
 
     """
-    return (
-        signal_fraction
-        * normalised_signal(
-            x,
-            centre,
-            width_l,
-            width_r,
-            alpha_l,
-            alpha_r,
-            beta,
-        )
-        + (1 - signal_fraction) * normalised_bkg(x, a, b)
-    )
+    return signal_fraction * normalised_signal(
+        x,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+    ) + (1 - signal_fraction) * normalised_bkg(x, a, b)
 
 
 def pdf(

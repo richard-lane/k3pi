@@ -260,7 +260,8 @@ def main():
     pulls = np.concatenate(out_list, axis=1)
 
     _plot_pulls(
-        pulls, f"pulls_{sign}_{time_bin=}_{n_sig=}_{n_bkg=}_{n_procs=}_{n_experiments=}.png"
+        pulls,
+        f"pulls_{sign}_{time_bin=}_{n_sig=}_{n_bkg=}_{n_procs=}_{n_experiments=}.png",
     )
 
 

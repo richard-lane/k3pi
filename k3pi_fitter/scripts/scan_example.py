@@ -136,7 +136,7 @@ def _polar_plot(
     """
     # Convert to polar
     xx, yy = np.meshgrid(allowed_rez, allowed_imz)
-    mag = np.sqrt(xx ** 2 + yy ** 2)
+    mag = np.sqrt(xx**2 + yy**2)
     phase = np.arctan2(yy, xx)
 
     ax.contourf(mag, phase, chi2s, levels=np.arange(n_levels))

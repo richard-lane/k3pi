@@ -146,7 +146,7 @@ def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
 
     """
     decay_times_ps = lifetimes * 0.4103
-    return decay_times_ps * (10 ** 10) / 6.58
+    return decay_times_ps * (10**10) / 6.58
 
 
 def _ws_weights(

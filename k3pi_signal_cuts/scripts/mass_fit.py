@@ -25,7 +25,7 @@ from lib_data import get
 
 
 def _delta_m(data: pd.DataFrame) -> np.ndarray:
-    """ D* - D0 Mass """
+    """D* - D0 Mass"""
     return data["D* mass"] - data["D0 mass"]
 
 
@@ -169,7 +169,7 @@ def _plot_fit(
 
     # Scale and shade also the RS signal on the WS plot
     def _scaled_signal(domain):
-        return amplitude_ratio ** 2 * _rs_signal(
+        return amplitude_ratio**2 * _rs_signal(
             domain, rs_scale, rs_params[0], rs_params[1:-2]
         )
 
@@ -186,7 +186,7 @@ def _plot_fit(
 
     # Draw an arrow between the signal peaks to show it's scaled
     start = 145.5, 20000
-    end = (start[0], start[1] * amplitude_ratio ** 2)
+    end = (start[0], start[1] * amplitude_ratio**2)
     connector = ConnectionPatch(
         xyA=start,
         xyB=end,
@@ -218,7 +218,7 @@ def _plot_fit(
     dirn = (arrow_end - arrow_start) / length
     text_locn = arrow_start + 0.85 * length * dirn
 
-    plt.text(*text_locn, fr"$\times{amplitude_ratio:.3f}^2$", transform=fig.transFigure)
+    plt.text(*text_locn, rf"$\times{amplitude_ratio:.3f}^2$", transform=fig.transFigure)
 
     # Find the areas of the shaded bits
     factor = (bins[1] - bins[0]) / (signal_region[1] - signal_region[0])

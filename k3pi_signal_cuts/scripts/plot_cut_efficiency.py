@@ -189,7 +189,7 @@ def _time_eff(
 
 
 def main():
-    """ Plot various efficiencies """
+    """Plot various efficiencies"""
     year, sign, magnetisation = "2018", "dcs", "magdown"
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))

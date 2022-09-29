@@ -71,7 +71,7 @@ def invariant_masses(
     :returns: array of particle invariant masses
 
     """
-    return np.sqrt(energy ** 2 - px ** 2 - py ** 2 - pz ** 2)
+    return np.sqrt(energy**2 - px**2 - py**2 - pz**2)
 
 
 def momentum_order(
