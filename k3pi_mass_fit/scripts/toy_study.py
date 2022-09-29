@@ -4,6 +4,7 @@ Toy study for mass fit
 """
 import sys
 import pathlib
+import argparse
 from typing import Callable, Tuple
 from multiprocessing import Process, Manager
 
@@ -146,13 +147,12 @@ def _pull(
     fit_errs = fitter.errors
 
     pull = (true_params - fit_params) / fit_errs
-    print(pull)
 
     # Keeping this in in case I want to plot later for debug
     if (np.abs(pull) > 10).any():
 
         def fitted_pdf(x: np.ndarray) -> np.ndarray:
-            return pdfs.fractional_pdf(x, *fitter.values)
+            return pdfs.fractional_pdf(x, *fit_params)
 
         pts = np.linspace(*pdfs.domain(), 250)
         fig, ax = plt.subplots()
@@ -179,6 +179,7 @@ def _pull_study(
     """
     n_sig, n_bkg = n_evts
 
+    # TODO maybe need to be more careful about seeding this, since we're multiprocessing...
     rng = (
         np.random.default_rng()
     )  # seed=3 makes the fitter set some of the parameters to NaN
@@ -232,7 +233,11 @@ def _plot_pulls(
     plt.show()
 
 
-def main():
+def _do_pull_study():
+    """
+    Do the pull study
+
+    """
     sign, time_bin = "RS", 5
 
     # NB these are the total number generated BEFORE we do the accept reject
@@ -241,8 +246,8 @@ def main():
 
     out_list = Manager().list()
 
-    n_procs = 8
-    n_experiments = 200
+    n_procs = 6
+    n_experiments = 15
     procs = [
         Process(
             target=_pull_study,
@@ -265,5 +270,53 @@ def main():
     )
 
 
+def _toy_fit():
+    """
+    Generate some stuff, do a fit to it
+
+    """
+    sign, time_bin = "RS", 5
+
+    # NB these are the total number generated BEFORE we do the accept reject
+    # The bkg acc-rej is MUCH more efficient than the signal!
+    n_sig, n_bkg = 1600000, 800000
+    combined, true_params = _gen_points(
+        np.random.default_rng(), n_sig, n_bkg, sign, time_bin
+    )
+
+    # Perform fit
+    sig_frac = true_params[0]
+    fitter = fit.fit(combined, sign, time_bin, sig_frac)
+
+    def fitted_pdf(x: np.ndarray) -> np.ndarray:
+        return pdfs.fractional_pdf(x, *fitter.values)
+
+    pts = np.linspace(*pdfs.domain(), 250)
+    fig, ax = plt.subplots()
+    ax.plot(pts, fitted_pdf(pts), "r--")
+    ax.hist(combined, bins=250, density=True)
+    fig.suptitle("toy data")
+    plt.savefig("toy_mass_fit.png")
+
+
+def main(args: argparse.Namespace):
+    """
+    Either do a pull study, or just do 1 fit
+
+    """
+    if args.pull:
+        _do_pull_study()
+
+    else:
+        _toy_fit()
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--pull",
+        action="store_true",
+        help="Whether to do a full pull study, or just plot one fit",
+    )
+
+    main(parser.parse_args())

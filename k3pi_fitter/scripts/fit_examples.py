@@ -102,7 +102,7 @@ def main():
     ax.set_ylabel(r"$\frac{WS}{RS}$")
     fig.suptitle("Toy fits")
 
-    plt.show()
+    fig.savefig("fit_examples.png")
 
 
 if __name__ == "__main__":

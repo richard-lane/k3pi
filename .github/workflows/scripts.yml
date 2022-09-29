@@ -1,0 +1,60 @@
+# Install python dependencies, run some scripts that don't depend on having access to the data
+
+name: dk3pi scripts
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Mixing Analytical Example
+        run: |
+          python k3pi_efficiency/scripts/mixing/analytical_test.py
+
+      - name: Toy Mass Fit
+        run: |
+          python k3pi_mass_fit/scripts/toy_study.py
+
+      - name: Fitter Toys
+        run: |
+          python k3pi_fitter/scripts/fit_examples.py
+          python k3pi_fitter/scripts/scan_example.py
+          python k3pi_fitter/scripts/pulls/scan_coverage.py
+
+      - name: Check out another repo
+        uses: actions/checkout@v2
+        with:
+          path: other_repo
+          ref: example_plots
+
+      - name: Cache plots
+        # Checkout my plot storage branch, amend the commit on it to contain the lastest plots, push
+        run: |
+          cd other_repo
+          mv ../mixing.png ../scaled_mixing.png ../more_mixing.png ../toy_mass_fit.png ../scan.png ../coverage.png ../fit_examples.png .
+          git config user.name "Automated Commit"
+          git config user.email "none@none.com"
+          git add mixing.png scaled_mixing.png more_mixing.png toy_mass_fit.png scan.png coverage.png fit_examples.png
+
+          # Amend commit to prevent the repo from growing out of control
+          git commit --amend -m "Plots cached on: `date` by GitHub Actions"
+          git push -f origin example_plots
+          git gc
+
