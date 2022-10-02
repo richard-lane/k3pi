@@ -39,6 +39,7 @@ def main():
 
     cleo_likelihood_vals = []
     bes_chi2_vals = []
+    combined_vals = []
     re_z_vals, im_z_vals = [], []
 
     cleo_fcn = likelihoods.cleo_fcn()
@@ -51,16 +52,33 @@ def main():
             bes_chi2_vals.append(
                 likelihoods.bes_chi2(bin_number, r, i, x, y, fcn=bes_fcn)
             )
+            combined_vals.append(
+                likelihoods.combined_chi2(
+                    bin_number,
+                    r,
+                    i,
+                    x,
+                    y,
+                    r_d,
+                    cleo_fcn=cleo_fcn,
+                    bes_fcn=bes_fcn,
+                )
+            )
             re_z_vals.append(r)
             im_z_vals.append(i)
 
     re_z_vals = np.array(re_z_vals)
     im_z_vals = np.array(im_z_vals)
-    bes_chi2_vals = np.array(bes_chi2_vals)
-    bes_chi2_vals -= bes_chi2_vals.min()
     cleo_chi2_vals = _ll2chi2(cleo_likelihood_vals)
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+    bes_chi2_vals = np.array(bes_chi2_vals)
+    bes_chi2_vals -= bes_chi2_vals.min()
+
+    combined_vals = np.array(combined_vals)
+    not_nan = ~np.isnan(combined_vals)
+    combined_vals[not_nan] -= combined_vals[not_nan].min()
+
+    fig, ax = plt.subplots(1, 3, figsize=(18, 6))
     contour_kw = {"levels": [0, 1, 2, 3, 4], "cmap": "turbo"}
     contours = ax[0].contourf(
         re_z_vals.reshape((n_re, n_im)),
@@ -74,12 +92,19 @@ def main():
         bes_chi2_vals.reshape((n_re, n_im)),
         **contour_kw,
     )
+    contours = ax[2].contourf(
+        re_z_vals.reshape((n_re, n_im)),
+        im_z_vals.reshape((n_re, n_im)),
+        combined_vals.reshape((n_re, n_im)),
+        **contour_kw,
+    )
 
     for axis in ax:
         axis.add_patch(Circle((0, 0), radius=1, facecolor="none", edgecolor="k"))
         axis.set_aspect("equal")
 
-    fig.colorbar(contours, ax=ax)
+    fig.colorbar(contours, ax=ax.ravel()[-1])
+    fig.tight_layout()
     fig.savefig(f"charm_bin_{bin_number}.png")
 
 
