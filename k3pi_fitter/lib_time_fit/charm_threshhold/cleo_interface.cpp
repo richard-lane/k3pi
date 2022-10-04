@@ -84,6 +84,8 @@ constexpr double defaultCleoParams[numParams]{20418.9,    // D0{K-,pi+,pi+,pi-}_
  * Events are binned based on the phase of the interference parameter
  *
  * Phase should be provided in degrees
+ *
+ * Just keeping this in to remind me of the bins
  */
 short binNumber(const double phase)
 {
@@ -123,7 +125,7 @@ double cleoLikelihood(const short phspBin, const double z_re, const double z_im,
     // Need to convert Re and Im parts of Z to magnitude and phase
     const std::complex<double> z{z_re, z_im};
     const double               mag   = std::abs(z);
-    const double               phase = 180.0 * std::arg(z) / M_PI;
+    const double               phase = 180.0 + 180.0 * std::arg(z) / M_PI;
 
     // Construct an array of the parameter we want to pass to the CLEO likelihood function
     std::array<double, numParams> cleoParams{};

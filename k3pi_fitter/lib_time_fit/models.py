@@ -7,6 +7,7 @@ import numpy as np
 from iminuit import Minuit
 from iminuit.util import make_func_code
 from .util import ConstraintParams, MixingParams, ScanParams
+from .charm_threshhold import likelihoods
 
 
 def abc(params: ConstraintParams) -> MixingParams:
@@ -359,3 +360,102 @@ class Scan:
         )
 
         return chi2 + constraint
+
+
+class CharmThreshholdScan:
+    """
+    Cost function for the fitter with
+    fixed Z and Gaussian constraints on x and y
+    with the chi2 from the charm threshhold experiments
+    (CLEO and BES-III) combined
+
+    """
+
+    # TODO make this share implementation with the other fitters
+    errordef = Minuit.LEAST_SQUARES
+
+    def __init__(
+        self,
+        ratio: np.ndarray,
+        error: np.ndarray,
+        bins: np.ndarray,
+        x_y_means: Tuple[float, float],
+        x_y_widths: Tuple[float, float],
+        x_y_correlation: float,
+        z: Tuple[float, float],
+        bin_number: int,
+    ):
+        """
+        Set parameters for doing a fit with Gaussian constraint
+        on x and y, and also constraints from CLEO and BES
+
+        :param ratio: WS/RS ratio
+        :param error: error in ratio
+        :param bins: bins used when finding the ratio
+        :param x_y_means: mean for Gaussian constraint
+        :param x_y_widths: widths for Gaussian constraint
+        :param x_y_correlation: correlation for Gaussian constraint
+        :param z: (reZ, imZ) that will be used for this fit
+        :param bin_number: bin number used for the charm threshhold constraint
+
+        """
+        self.ratio = ratio
+        self.error = error
+        self.bins = bins
+        self.re_z, self.im_z = z
+        self.bin_number = bin_number
+
+        # We need to tell Minuit what our function signature is explicitly
+        self.func_code = make_func_code(["r_d", "x", "y"])
+
+        # Denominator (RS) integral doesn't depend on the params
+        # so we only need to evaluate it once
+        self._expected_rs_integral = rs_integral(bins)
+
+        # Similarly we can pre-compute two of the terms needed
+        # for the constraint term
+        self._x_width, self._y_width = x_y_widths
+        self._x_mean, self._y_mean = x_y_means
+        self._constraint_scale = 1 / (1 - x_y_correlation**2)
+        self._constraint_cross_term = (
+            2 * x_y_correlation / (self._x_width * self._y_width)
+        )
+
+    def _expected_ws_integral(self, params: ScanParams) -> np.ndarray:
+        """
+        Given our parameters, find the expected WS integral
+
+        """
+        return ws_integral(self.bins, *abc_scan(params))
+
+    def __call__(self, r_d: float, x: float, y: float):
+        """
+        Evaluate the chi2 given our parameters
+
+        """
+        if self.re_z**2 + self.im_z**2 > 1.0:
+            return np.inf
+
+        expected_ratio = (
+            self._expected_ws_integral(ScanParams(r_d, x, y, self.re_z, self.im_z))
+            / self._expected_rs_integral
+        )
+
+        chi2 = np.sum(((self.ratio - expected_ratio) / self.error) ** 2)
+
+        # Need a term for the Gaussian constraint
+        dx, dy = x - self._x_mean, y - self._y_mean
+        xy_constraint = self._constraint_scale * (
+            (dx / self._x_width) ** 2
+            + (dy / self._y_width) ** 2
+            - self._constraint_cross_term * dx * dy
+        )
+
+        # Also need a term for the charm threshhold
+        # TODO could make this faster by preloading the CLEO
+        # and BES functions from the DLLs
+        threshhold_constraint = likelihoods.combined_chi2(
+            self.bin_number, self.re_z, self.im_z, x, y, r_d
+        )
+
+        return chi2 + xy_constraint + threshhold_constraint

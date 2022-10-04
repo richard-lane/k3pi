@@ -109,7 +109,7 @@ double besChi2(const short phspBin, const double z_re, const double z_im, const 
     // Need to convert Re and Im parts of Z to magnitude and phase
     const std::complex z{z_re, z_im};
     const double       mag   = std::abs(z);
-    const double       phase = 180.0 * std::arg(z) / M_PI;
+    const double       phase = 180.0 + 180.0 * std::arg(z) / M_PI;
 
     // Construct an array of the parameter we want to pass to the BES likelihood function
     std::array<double, numParams> besParams{};

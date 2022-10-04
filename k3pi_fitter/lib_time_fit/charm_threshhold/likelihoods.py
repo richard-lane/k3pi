@@ -178,7 +178,7 @@ def combined_chi2(
     bes_fcn=None,
 ) -> float:
     """
-    BES chi^2
+    combined BES + CLEO chi^2
 
     :param bin_number: phase space bin number, 0->3
     :param z_re: real part of interference parameter

@@ -21,7 +21,7 @@ def _gen(
     Generate some RS and WS times
 
     """
-    n_rs = 5000000
+    n_rs = 24000000
     gen = np.random.default_rng()
 
     rs_t = common.gen_rs(gen, n_rs, domain)
@@ -48,7 +48,7 @@ def main():
 
     """
     # Define our fit parameters
-    params = util.ScanParams(1.0, 0.06, 0.03, 0.5, 0.5)
+    params = util.ScanParams(0.055, 0.06, 0.03, 0.25, -0.5)
     constraint_params = models.scan2constraint(params)
     abc_params = models.abc(constraint_params)
 
