@@ -153,13 +153,40 @@ def ws_integral(bins: np.ndarray, a: float, b: float, c: float) -> np.ndarray:
     )
 
 
-class NoConstraints:
+class BaseChi2:
     """
-    Cost function for the fitter without constraints
+    Base class for the chi2 cost functions
 
     """
 
     errordef = Minuit.LEAST_SQUARES
+
+    def __init__(self, ratio: np.ndarray, error: np.ndarray, bins: np.ndarray):
+        """
+        Set common attributes for the fit - the bins, ratio etc.
+
+        """
+        self.ratio = ratio
+        self.error = error
+        self.bins = bins
+
+        # Denominator (RS) integral doesn't depend on the params
+        # so we only need to evaluate it once
+        self.expected_rs_integral = rs_integral(bins)
+
+    def chi2(self, expected_ratio: np.ndarray) -> float:
+        """
+        Evaluate chi2 from expected and actual parameters
+
+        """
+        return np.sum(((self.ratio - expected_ratio) / self.error) ** 2)
+
+
+class NoConstraints(BaseChi2):
+    """
+    Cost function for the fitter without constraints
+
+    """
 
     def __init__(self, ratio: np.ndarray, error: np.ndarray, bins: np.ndarray):
         """
@@ -170,16 +197,10 @@ class NoConstraints:
         :param bins: bins used when finding the ratio
 
         """
-        self.ratio = ratio
-        self.error = error
-        self.bins = bins
-
         # We need to tell Minuit what our function signature is explicitly
         self.func_code = make_func_code(["a", "b", "c"])
 
-        # Denominator (RS) integral doesn't depend on the params
-        # so we only need to evaluate it once
-        self._expected_rs_integral = rs_integral(bins)
+        super().__init__(ratio, error, bins)
 
     def _expected_ws_integral(self, a: float, b: float, c: float) -> np.ndarray:
         """
@@ -193,21 +214,60 @@ class NoConstraints:
         Evaluate the chi2 given our parameters
 
         """
-        expected_ratio = (
-            self._expected_ws_integral(a, b, c) / self._expected_rs_integral
+        return BaseChi2.chi2(
+            self, self._expected_ws_integral(a, b, c) / self.expected_rs_integral
         )
 
-        return np.sum(((self.ratio - expected_ratio) / self.error) ** 2)
+
+class ConstrainedBase(BaseChi2):
+    """
+    Base class for fitters implementing a Gaussian constraint on mixing parameters x and y
+
+    """
+
+    def __init__(
+        self,
+        ratio: np.ndarray,
+        error: np.ndarray,
+        bins: np.ndarray,
+        x_y_means: Tuple[float, float],
+        x_y_widths: Tuple[float, float],
+        x_y_correlation: float,
+    ):
+        """
+        Precompute some terms used in the
+
+        """
+        # We can pre-compute two of the terms used for the Gaussian constraint
+        self._x_width, self._y_width = x_y_widths
+        self._x_mean, self._y_mean = x_y_means
+        self._constraint_scale = 1 / (1 - x_y_correlation**2)
+        self._constraint_cross_term = (
+            2 * x_y_correlation / (self._x_width * self._y_width)
+        )
+        super().__init__(ratio, error, bins)
+
+    def constraint(self, x: float, y: float) -> float:
+        """
+        term in the chi^2 for the Gaussian constraint
+
+        """
+        delta_x = x - self._x_mean
+        delta_y = y - self._y_mean
+
+        return self._constraint_scale * (
+            (delta_x / self._x_width) ** 2
+            + (delta_y / self._y_width) ** 2
+            - self._constraint_cross_term * delta_x * delta_y
+        )
 
 
-class Constraints:
+class Constraints(ConstrainedBase):
     """
     Cost function for the fitter with Gaussian constraints
     on mixing parameters x and y
 
     """
-
-    errordef = Minuit.LEAST_SQUARES
 
     def __init__(
         self,
@@ -229,25 +289,9 @@ class Constraints:
         :param x_y_correlation: correlation for Gaussian constraint
 
         """
-        self.ratio = ratio
-        self.error = error
-        self.bins = bins
-
         # We need to tell Minuit what our function signature is explicitly
         self.func_code = make_func_code(["r_d", "x", "y", "b"])
-
-        # Denominator (RS) integral doesn't depend on the params
-        # so we only need to evaluate it once
-        self._expected_rs_integral = rs_integral(bins)
-
-        # Similarly we can pre-compute two of the terms needed
-        # for the constraint term
-        self._x_width, self._y_width = x_y_widths
-        self._x_mean, self._y_mean = x_y_means
-        self._constraint_scale = 1 / (1 - x_y_correlation**2)
-        self._constraint_cross_term = (
-            2 * x_y_correlation / (self._x_width * self._y_width)
-        )
+        super().__init__(ratio, error, bins, x_y_means, x_y_widths, x_y_correlation)
 
     def _expected_ws_integral(self, params: ScanParams) -> np.ndarray:
         """
@@ -263,31 +307,22 @@ class Constraints:
         """
         expected_ratio = (
             self._expected_ws_integral(ConstraintParams(r_d, x, y, b))
-            / self._expected_rs_integral
+            / self.expected_rs_integral
         )
-
-        chi2 = np.sum(((self.ratio - expected_ratio) / self.error) ** 2)
+        chi2 = BaseChi2.chi2(self, expected_ratio)
 
         # Also need a term for the constraint
-        dx, dy = x - self._x_mean, y - self._y_mean
-        constraint = self._constraint_scale * (
-            (dx / self._x_width) ** 2
-            + (dy / self._y_width) ** 2
-            - self._constraint_cross_term * dx * dy
-        )
+        constraint = super().constraint(x, y)
 
         return chi2 + constraint
 
 
-class Scan:
+class Scan(ConstrainedBase):
     """
     Cost function for the fitter with
     fixed Z and Gaussian constraints on x and y
 
     """
-
-    # TODO make this share implementation with the constrained fitter
-    errordef = Minuit.LEAST_SQUARES
 
     def __init__(
         self,
@@ -311,26 +346,12 @@ class Scan:
         :param z: (reZ, imZ) that will be used for this fit
 
         """
-        self.ratio = ratio
-        self.error = error
-        self.bins = bins
         self.re_z, self.im_z = z
 
         # We need to tell Minuit what our function signature is explicitly
         self.func_code = make_func_code(["r_d", "x", "y"])
 
-        # Denominator (RS) integral doesn't depend on the params
-        # so we only need to evaluate it once
-        self._expected_rs_integral = rs_integral(bins)
-
-        # Similarly we can pre-compute two of the terms needed
-        # for the constraint term
-        self._x_width, self._y_width = x_y_widths
-        self._x_mean, self._y_mean = x_y_means
-        self._constraint_scale = 1 / (1 - x_y_correlation**2)
-        self._constraint_cross_term = (
-            2 * x_y_correlation / (self._x_width * self._y_width)
-        )
+        super().__init__(ratio, error, bins, x_y_means, x_y_widths, x_y_correlation)
 
     def _expected_ws_integral(self, params: ScanParams) -> np.ndarray:
         """
@@ -346,23 +367,14 @@ class Scan:
         """
         expected_ratio = (
             self._expected_ws_integral(ScanParams(r_d, x, y, self.re_z, self.im_z))
-            / self._expected_rs_integral
+            / self.expected_rs_integral
         )
+        chi2 = BaseChi2.chi2(self, expected_ratio)
 
-        chi2 = np.sum(((self.ratio - expected_ratio) / self.error) ** 2)
-
-        # Also need a term for the constraint
-        dx, dy = x - self._x_mean, y - self._y_mean
-        constraint = self._constraint_scale * (
-            (dx / self._x_width) ** 2
-            + (dy / self._y_width) ** 2
-            - self._constraint_cross_term * dx * dy
-        )
-
-        return chi2 + constraint
+        return chi2 + super().constraint(x, y)
 
 
-class CharmThreshholdScan:
+class CharmThreshholdScan(ConstrainedBase):
     """
     Cost function for the fitter with
     fixed Z and Gaussian constraints on x and y
@@ -370,9 +382,6 @@ class CharmThreshholdScan:
     (CLEO and BES-III) combined
 
     """
-
-    # TODO make this share implementation with the other fitters
-    errordef = Minuit.LEAST_SQUARES
 
     def __init__(
         self,
@@ -399,27 +408,13 @@ class CharmThreshholdScan:
         :param bin_number: bin number used for the charm threshhold constraint
 
         """
-        self.ratio = ratio
-        self.error = error
-        self.bins = bins
         self.re_z, self.im_z = z
         self.bin_number = bin_number
 
         # We need to tell Minuit what our function signature is explicitly
         self.func_code = make_func_code(["r_d", "x", "y"])
 
-        # Denominator (RS) integral doesn't depend on the params
-        # so we only need to evaluate it once
-        self._expected_rs_integral = rs_integral(bins)
-
-        # Similarly we can pre-compute two of the terms needed
-        # for the constraint term
-        self._x_width, self._y_width = x_y_widths
-        self._x_mean, self._y_mean = x_y_means
-        self._constraint_scale = 1 / (1 - x_y_correlation**2)
-        self._constraint_cross_term = (
-            2 * x_y_correlation / (self._x_width * self._y_width)
-        )
+        super().__init__(ratio, error, bins, x_y_means, x_y_widths, x_y_correlation)
 
     def _expected_ws_integral(self, params: ScanParams) -> np.ndarray:
         """
@@ -433,23 +428,18 @@ class CharmThreshholdScan:
         Evaluate the chi2 given our parameters
 
         """
+        # If Z is outside the allowed region, the BES chi2^2 will raise some ROOT errors
+        # and all bets are off. Prevent this by just returning inf if we're outside the range
+        # this will cause the fit to "fail" but that's probably ok
+        # TODO raise instead
         if self.re_z**2 + self.im_z**2 > 1.0:
             return np.inf
 
         expected_ratio = (
             self._expected_ws_integral(ScanParams(r_d, x, y, self.re_z, self.im_z))
-            / self._expected_rs_integral
+            / self.expected_rs_integral
         )
-
-        chi2 = np.sum(((self.ratio - expected_ratio) / self.error) ** 2)
-
-        # Need a term for the Gaussian constraint
-        dx, dy = x - self._x_mean, y - self._y_mean
-        xy_constraint = self._constraint_scale * (
-            (dx / self._x_width) ** 2
-            + (dy / self._y_width) ** 2
-            - self._constraint_cross_term * dx * dy
-        )
+        chi2 = BaseChi2.chi2(self, expected_ratio)
 
         # Also need a term for the charm threshhold
         # TODO could make this faster by preloading the CLEO
@@ -458,4 +448,4 @@ class CharmThreshholdScan:
             self.bin_number, self.re_z, self.im_z, x, y, r_d
         )
 
-        return chi2 + xy_constraint + threshhold_constraint
+        return chi2 + super().constraint(x, y) + threshhold_constraint
