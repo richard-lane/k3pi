@@ -53,3 +53,7 @@ We can do many of these scans and see how often the true value is within our 1$\
 
 ![coverage](/../example_plots/coverage.png)
 
+The Gaussian constraint on $x$ and $y$ looks like this:
+
+![constraint](/../example_plots/xy_constraint.png)
+

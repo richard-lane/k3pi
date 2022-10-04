@@ -38,6 +38,10 @@ jobs:
           python k3pi_fitter/scripts/scan_example.py
           python k3pi_fitter/scripts/pulls/scan_coverage.py
 
+      - name: Gaussian Constraint
+        run: |
+          python k3pi_fitter/scripts/constraint_landscape.py
+
       - name: Check out another repo
         uses: actions/checkout@v2
         with:
@@ -48,10 +52,10 @@ jobs:
         # Checkout my plot storage branch, amend the commit on it to contain the lastest plots, push
         run: |
           cd other_repo
-          mv ../mixing.png ../scaled_mixing.png ../more_mixing.png ../toy_mass_fit.png ../scan.png ../coverage.png ../fit_examples.png .
+          mv ../mixing.png ../scaled_mixing.png ../more_mixing.png ../toy_mass_fit.png ../scan.png ../coverage.png ../fit_examples.png ../xy_constraint.png .
           git config user.name "Automated Commit"
           git config user.email "none@none.com"
-          git add mixing.png scaled_mixing.png more_mixing.png toy_mass_fit.png scan.png coverage.png fit_examples.png
+          git add mixing.png scaled_mixing.png more_mixing.png toy_mass_fit.png scan.png coverage.png fit_examples.png xy_constraint.png
 
           # Amend commit to prevent the repo from growing out of control
           git commit --amend -m "Plots cached on: `date` by GitHub Actions"
