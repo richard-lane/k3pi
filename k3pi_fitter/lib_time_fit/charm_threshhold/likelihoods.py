@@ -117,7 +117,7 @@ def bes_fcn():
 
     """
     bes_lib = ctypes.cdll.LoadLibrary(_bes_lib_path())
-    fcn = getattr(bes_lib, "besChi2")
+    fcn = getattr(bes_lib, "besChi2Standalone")
 
     # Tell python about the argument/return types of this function
     fcn.argtypes = [

@@ -96,8 +96,7 @@ constexpr double defaultBESParams[numParams]{
  * Find the BES chi^2
  *
  */
-extern "C"
-double besChi2(const short phspBin, const double z_re, const double z_im, const double x, const double y)
+extern "C" double besChi2(const short phspBin, const double z_re, const double z_im, const double x, const double y)
 {
     // R and d (mag and phase of interference parameter) depend on the bin we're considering...
     std::map<const short, const short> rIndices{{0, 0}, {1, 1}, {2, 2}, {3, 3}};
@@ -121,4 +120,43 @@ double besChi2(const short phspBin, const double z_re, const double z_im, const 
     besParams[dIndices[phspBin]] = phase;
 
     return BESIII_chi2(besParams.data());
+}
+
+/*
+ * Find the BES chi^2, without needing to open the ROOT file
+ *
+ */
+// Forward declare the auto-generated fcn
+std::vector<TMatrixD> vectors(void);
+
+extern "C" double
+besChi2Standalone(const short phspBin, const double z_re, const double z_im, const double x, const double y)
+{
+    // R and d (mag and phase of interference parameter) depend on the bin we're considering...
+    std::map<const short, const short> rIndices{{0, 0}, {1, 1}, {2, 2}, {3, 3}};
+    std::map<const short, const short> dIndices{{0, 4}, {1, 5}, {2, 6}, {3, 7}};
+
+    // I guess they measured r_D in each bin?
+    std::map<const short, const short> rdIndices{{0, 22}, {1, 23}, {2, 24}, {3, 25}};
+
+    // Need to convert Re and Im parts of Z to magnitude and phase
+    const std::complex z{z_re, z_im};
+    const double       mag   = std::abs(z);
+    const double       phase = 180.0 + 180.0 * std::arg(z) / M_PI;
+
+    // Construct an array of the parameter we want to pass to the BES likelihood function
+    std::array<double, numParams> besParams{};
+    std::copy(std::begin(defaultBESParams), std::end(defaultBESParams), besParams.begin());
+    besParams[26] = x;
+    besParams[27] = y;
+
+    besParams[rIndices[phspBin]] = mag;
+    besParams[dIndices[phspBin]] = phase;
+
+    // Build a vector of pointers from a vector of matrices
+    auto                   covMatrices = vectors();
+    std::vector<TMatrixD*> covMatPtrs(covMatrices.size());
+    std::transform(covMatrices.begin(), covMatrices.end(), covMatPtrs.begin(), [](TMatrixD& m) { return &m; });
+
+    return total(besParams.data(), covMatPtrs);
 }

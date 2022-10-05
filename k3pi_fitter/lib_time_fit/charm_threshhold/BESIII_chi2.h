@@ -604,8 +604,6 @@ Double_t BESIII_chi2(const Double_t* parameters)
     std::string            file_path = __FILE__;
     std::string            dir_path  = file_path.substr(0, file_path.rfind("/"));
 
-    // This would be a LOT faster if we didn't have to open the ROOT file every time
-    // TODO that^
     TFile*                 fmatrix   = new TFile((dir_path + "/BESIII_CovMat.root").c_str(), "open");
     std::vector<TMatrixD*> BESIII_CovMat;
     BESIII_CovMat.push_back((TMatrixD*)fmatrix->Get("CPCOV"));
