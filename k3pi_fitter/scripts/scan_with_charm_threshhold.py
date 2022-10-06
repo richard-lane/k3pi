@@ -200,6 +200,7 @@ def _charm_only_scan(
                 pbar.update(1)
 
     threshhold_chi2s -= np.nanmin(threshhold_chi2s)
+    threshhold_chi2s = np.sqrt(threshhold_chi2s)
 
     # Find the best value of Z from these fits
     best_index = np.unravel_index(
@@ -366,7 +367,7 @@ def main():
     plotting_params = {
         "allowed_rez": np.linspace(-1, 1, 20),
         "allowed_imz": np.linspace(-1, 1, 21),
-        "n_levels": 7,
+        "n_levels": 5,
     }
 
     # Scan the charm threshhold likelihood to find the best values of z to use
