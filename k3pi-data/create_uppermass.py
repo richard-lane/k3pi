@@ -23,33 +23,6 @@ from lib_data import training_vars
 from lib_data import util
 
 
-def _add_momenta(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
-    """
-    Read momenta into the dataframe, in place
-
-    Reads from the tree, applies the keep mask, adds columns to df
-
-    """
-    suffices = "PX", "PY", "PZ", "PE"
-    branches = (
-        *(f"Dst_ReFit_D0_Kplus_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_0_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_1_{s}" for s in suffices),
-        *(f"Dst_ReFit_piplus_{s}" for s in suffices),
-    )
-
-    for branch, column in zip(
-        branches,
-        [
-            *definitions.MOMENTUM_COLUMNS,
-            *(f"slowpi_{s}" for s in ("Px", "Py", "Pz", "E")),
-        ],
-    ):
-        # Take the first (best fit) value for each momentum
-        df[column] = tree[branch].array()[:, 0][keep]
-
-
 def _bkg_keep(d_mass: np.ndarray, delta_m: np.ndarray) -> np.ndarray:
     """
     Mask of events to keep after background mass cuts
@@ -74,49 +47,34 @@ def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     Populate a pandas dataframe information used for the classification
 
     """
-    df = pd.DataFrame()
+    dataframe = pd.DataFrame()
 
-    # Mask to perform straight cuts
-    # Usually we would do the "sanity cuts" here -
-    # these are D0, delta M and ipchi2 cuts
-    # In this case we just want the ipchi2
-    keep = cuts._ipchi2(tree)
-
-    # Combine with the mask to perform HLT cuts
-    keep &= cuts.trigger_keep(tree)
+    keep = cuts.uppermass_keep(tree)
 
     # Keep only events in the upper mass sideband
-    d_mass = tree["Dst_ReFit_D0_M"].array()[:, 0]
-    dst_mass = tree["Dst_ReFit_M"].array()[:, 0]
+    d_mass = cuts.d0_mass(tree)
+    dst_mass = cuts.dst_mass(tree)
     keep &= _bkg_keep(d_mass, dst_mass - d_mass)
 
     # Store the D masses
-    df["D0 mass"] = d_mass[keep]
-    df["D* mass"] = dst_mass[keep]
+    util.add_masses(dataframe, tree, keep)
 
     # Read other things that we want to keep for training the signal cut BDT
-    for branch, array in zip(
-        training_vars.training_var_names(), training_vars.training_var_functions()
-    ):
-        df[branch] = array(tree)[keep]
+    training_vars.add_vars(dataframe, tree, keep)
 
     # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    df["K ID"] = tree["Dst_ReFit_D0_Kplus_ID"].array()[:, 0][keep]
-    df["slow pi ID"] = tree["Dst_ReFit_piplus_ID"].array()[:, 0][keep]
+    util.add_k_id(dataframe, tree, keep)
+    util.add_slowpi_id(dataframe, tree, keep)
 
-    # Read times into dataframe
-    # 0.3 to convert from ctau to ps
-    # 0.41 to convert from ps to D lifetimes
-    # Take the first (best fit) value from each
-    df["time"] = tree["Dst_ReFit_D0_ctau"].array()[:, 0][keep] / (0.3 * 0.41)
+    util.add_refit_times(dataframe, tree, keep)
 
     # Also want momenta
-    _add_momenta(df, tree, keep)
+    util.add_momenta(dataframe, tree, keep)
 
     # Train test
-    util.add_train_column(gen, df)
+    util.add_train_column(gen, dataframe)
 
-    return df
+    return dataframe
 
 
 def _create_dump(

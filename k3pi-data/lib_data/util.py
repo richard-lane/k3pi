@@ -149,3 +149,65 @@ def total_luminosity(files: List[str]) -> float:
         total_lumi += luminosity(path)
 
     return total_lumi
+
+
+def add_momenta(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add K3pi, slow pi momenta into the dataframe from a
+    MC/particle gun/ real datatree in place
+
+    """
+    suffices = "PX", "PY", "PZ", "PE"
+    branches = (
+        *(f"Dst_ReFit_D0_Kplus_{s}" for s in suffices),
+        *(f"Dst_ReFit_D0_piplus_{s}" for s in suffices),
+        *(f"Dst_ReFit_D0_piplus_0_{s}" for s in suffices),
+        *(f"Dst_ReFit_D0_piplus_1_{s}" for s in suffices),
+        *(f"Dst_ReFit_piplus_{s}" for s in suffices),
+    )
+
+    for branch, column in zip(branches, definitions.MOMENTUM_COLUMNS):
+        # Take the first (best fit) value for each momentum
+        df[column] = tree[branch].array(library="ak")[:, 0][keep].to_numpy()
+
+
+def add_refit_times(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add ReFit decay time in decay lifetimes
+
+    Converts from ctau to lifetimes
+
+    """
+    # 0.3 to convert from ctau to ps
+    # 0.41 to convert from ps to D lifetimes
+    # Take the first (best fit) value from each
+    df["time"] = tree["Dst_ReFit_D0_ctau"].array(library="ak")[:, 0][keep] / (
+        0.3 * 0.41
+    )
+
+
+def add_k_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add Kaon ID branch (after ReFit)
+
+    """
+    dataframe["K ID"] = tree["Dst_ReFit_D0_Kplus_ID"].array(library="ak")[:, 0][keep]
+
+
+def add_masses(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add ReFit D0 and D* masses to the dataframe in place
+
+    """
+    dataframe["D0 mass"] = tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0][keep]
+    dataframe["D* mass"] = tree["Dst_ReFit_M"].array(library="ak")[:, 0][keep]
+
+
+def add_slowpi_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add a slow pion ID branch (after ReFit)
+
+    """
+    dataframe["slow pi ID"] = tree["Dst_ReFit_piplus_ID"].array(library="ak")[:, 0][
+        keep
+    ]

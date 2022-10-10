@@ -1,11 +1,18 @@
-black==22.8.0
-pylint==2.15.3
+# needed for the analysis
 matplotlib>=3.5.1
 numpy>=1.20.0
 pandas>=1.4.2
-pytest>=6.2.2
-tqdm>=4.51.0
-uproot==3.11.7
+fourbody  # my phase space parameterisation package
 hep-ml==0.7.1
-fourbody
 iminuit==2.12.1
+awkward==1.10.1  # needed for uproot4...
+uproot==4.2.4
+
+# Testing/linting
+black==22.8.0
+pylint==2.15.3
+pytest>=6.2.2
+
+# Quality of life
+tqdm>=4.51.0
+

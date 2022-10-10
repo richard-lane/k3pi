@@ -9,12 +9,13 @@ DUMP_DIR = pathlib.Path(__file__).resolve().parents[1] / "dumps"
 
 
 # Column names for momenta
-AMPGEN_MOMENTUM_SUFFICES = "Px", "Py", "Pz", "E"
+MOMENTUM_SUFFICES = "Px", "Py", "Pz", "E"
 MOMENTUM_COLUMNS = [
-    *(f"Kplus_{s}" for s in AMPGEN_MOMENTUM_SUFFICES),
-    *(f"pi1minus_{s}" for s in AMPGEN_MOMENTUM_SUFFICES),
-    *(f"pi2minus_{s}" for s in AMPGEN_MOMENTUM_SUFFICES),
-    *(f"pi3plus_{s}" for s in AMPGEN_MOMENTUM_SUFFICES),
+    *(f"Kplus_{s}" for s in MOMENTUM_SUFFICES),
+    *(f"pi1minus_{s}" for s in MOMENTUM_SUFFICES),
+    *(f"pi2minus_{s}" for s in MOMENTUM_SUFFICES),
+    *(f"pi3plus_{s}" for s in MOMENTUM_SUFFICES),
+    *(f"slowpi_{s}" for s in MOMENTUM_SUFFICES),
 ]
 
 # Particle gun directories

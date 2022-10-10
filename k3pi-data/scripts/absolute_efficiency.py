@@ -35,7 +35,7 @@ def _n_reco(data_tree, hlt_tree) -> Tuple[int, int]:
     keep &= cuts.hlt_keep_pgun(hlt_tree)
 
     # Combine with the background category mask
-    keep &= cuts.bkgcat(data_tree)
+    keep &= cuts._bkgcat(data_tree)
 
     k_id = data_tree["Dst_ReFit_D0_Kplus_ID"].array()[:, 0][keep]
 

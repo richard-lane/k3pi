@@ -9,6 +9,7 @@ Some branches we can just read directly; others require some calculation
 from typing import Tuple, Generator
 
 import numpy as np
+import pandas as pd
 
 
 def refit_chi2(tree) -> np.ndarray:
@@ -268,3 +269,12 @@ def training_var_names() -> Tuple:
 
     """
     return _training_var_names_and_functions()[1]
+
+
+def add_vars(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add branches containing the BDT cut training vars to the dataframe in place
+
+    """
+    for fcn, name in _training_var_names_and_functions():
+        dataframe[name] = fcn(tree)[keep]

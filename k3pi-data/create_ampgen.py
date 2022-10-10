@@ -26,14 +26,22 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
     df = pd.DataFrame()
 
     t_branch = "Dbar0_decayTime" if sign == "cf" else "D0_decayTime"
-    df["time"] = tree[t_branch].array() * 1000 / 0.41  # Convert to d lifetimes
+
+    # There are no ReFit variables or any entries in the tree with multiple candidates
+    # so we can just use numpy to read everything in nicely
+    # Simply passing library="np" here seems to do the right thing, since apparently
+    # setting uproot.default_library = "np" didn't work...
+    df["time"] = (
+        tree[t_branch].array(library="np") * 1000 / 0.41
+    )  # Convert to d lifetimes
 
     # Expect to have K+3pi AmpGen
+    # This is why we have K~ (K+) and two pi# (pi-)
     branches = [
-        *(f"_1_K~_{s}" for s in definitions.AMPGEN_MOMENTUM_SUFFICES),
-        *(f"_2_pi#_{s}" for s in definitions.AMPGEN_MOMENTUM_SUFFICES),
-        *(f"_3_pi#_{s}" for s in definitions.AMPGEN_MOMENTUM_SUFFICES),
-        *(f"_4_pi~_{s}" for s in definitions.AMPGEN_MOMENTUM_SUFFICES),
+        *(f"_1_K~_{s}" for s in definitions.MOMENTUM_SUFFICES),
+        *(f"_2_pi#_{s}" for s in definitions.MOMENTUM_SUFFICES),
+        *(f"_3_pi#_{s}" for s in definitions.MOMENTUM_SUFFICES),
+        *(f"_4_pi~_{s}" for s in definitions.MOMENTUM_SUFFICES),
     ]
 
     for branch, column in zip(branches, definitions.MOMENTUM_COLUMNS):
@@ -50,9 +58,10 @@ def main(path: str, sign: str) -> None:
     if not definitions.AMPGEN_DIR.is_dir():
         os.mkdir(definitions.AMPGEN_DIR)
 
-    # Read the dataframe
+    # We need a random number generator to decide which elements are test/train
     gen = np.random.default_rng()
 
+    # Read the dataframe
     with uproot.open(path) as ag_f:
         dataframe = _ampgen_df(gen, ag_f["DalitzEventList"], sign)
 

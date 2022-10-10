@@ -19,26 +19,6 @@ from lib_data import util
 from lib_data import corrections
 
 
-def _add_momenta(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
-    """
-    Read momenta into the dataframe, in place
-
-    Reads from the tree, applies the keep mask, adds columns to df
-
-    """
-    suffices = "PX", "PY", "PZ", "PE"
-    branches = (
-        *(f"Dst_ReFit_D0_Kplus_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_0_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_1_{s}" for s in suffices),
-    )
-
-    for branch, column in zip(branches, definitions.MOMENTUM_COLUMNS):
-        # Take the first (best fit) value for each momentum
-        df[column] = tree[branch].array()[:, 0][keep]
-
-
 def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     """
     Populate a pandas dataframe with momenta, time and other arrays from the provided trees
@@ -46,45 +26,32 @@ def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     Provide the data + HLT information trees separately, since they live in different files
 
     """
-    df = pd.DataFrame()
+    dataframe = pd.DataFrame()
 
     # Mask to perform straight cuts
-    keep = cuts.sanity_keep(tree)
-
-    # Combine with the mask to perform HLT cuts
-    keep &= cuts.trigger_keep(tree)
-
-    # Combine with the background category mask
-    keep &= cuts.bkgcat(tree)
+    keep = cuts.simulation_keep(tree)
 
     # Read momenta into the dataframe
-    _add_momenta(df, tree, keep)
+    util.add_momenta(dataframe, tree, keep)
 
     # Read training variables used for the classifier
-    for branch, array in zip(
-        training_vars.training_var_names(), training_vars.training_var_functions()
-    ):
-        df[branch] = array(tree)[keep]
+    training_vars.add_vars(dataframe, tree, keep)
 
     # Read times into dataframe
-    # 0.3 to convert from ctau to ps
-    # 0.41 to convert from ps to D lifetimes
-    # Take the first (best fit) value from each
-    df["time"] = tree["Dst_ReFit_D0_ctau"].array()[:, 0][keep] / (0.3 * 0.41)
+    util.add_refit_times(dataframe, tree, keep)
 
     # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    df["K ID"] = tree["Dst_ReFit_D0_Kplus_ID"].array()[:, 0][keep]
+    util.add_k_id(dataframe, tree, keep)
 
-    df["D0 mass"] = tree["Dst_ReFit_D0_M"].array()[:, 0][keep]
-    df["D* mass"] = tree["Dst_ReFit_M"].array()[:, 0][keep]
+    util.add_masses(dataframe, tree, keep)
 
     # track/SPD for event multiplicity reweighting
-    corrections.add_multiplicity_columns(tree, df, keep)
+    corrections.add_multiplicity_columns(tree, dataframe, keep)
 
     # Train test
-    util.add_train_column(gen, df)
+    util.add_train_column(gen, dataframe)
 
-    return df
+    return dataframe
 
 
 def main(year: str, sign: str, magnetisation: str) -> None:

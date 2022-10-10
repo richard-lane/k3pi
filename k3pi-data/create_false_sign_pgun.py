@@ -12,32 +12,10 @@ import os
 import pickle
 import argparse
 import uproot
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from lib_data import definitions
-from lib_data import cuts
-
-
-def _add_momenta(df: pd.DataFrame, data_tree, keep: np.ndarray) -> None:
-    """
-    Read momenta into the dataframe, in place
-
-    Reads from the tree, applies the keep mask, adds columns to df
-
-    """
-    suffices = "PX", "PY", "PZ", "PE"
-    branches = (
-        *(f"Dst_ReFit_D0_Kplus_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_1_{s}" for s in suffices),
-        *(f"Dst_ReFit_D0_piplus_0_{s}" for s in suffices),
-    )
-
-    for branch, column in zip(branches, definitions.MOMENTUM_COLUMNS):
-        # Take the first (best fit) value for each momentum
-        df[column] = data_tree[branch].array()[:, 0][keep]
+from lib_data import definitions, cuts, util
 
 
 def _false_sign_df(data_tree, hlt_tree) -> pd.DataFrame:
@@ -47,30 +25,17 @@ def _false_sign_df(data_tree, hlt_tree) -> pd.DataFrame:
     Provide the data + HLT information trees separately, since they live in different files
 
     """
-    df = pd.DataFrame()
+    dataframe = pd.DataFrame()
 
-    # Mask to perform straight cuts
-    keep = cuts.sanity_keep(data_tree)
+    keep = cuts.pgun_keep(data_tree, hlt_tree)
 
-    # Combine with the mask to perform HLT cuts
-    keep &= cuts.hlt_keep_pgun(hlt_tree)
+    util.add_momenta(dataframe, data_tree, keep)
 
-    # Combine with the background category mask
-    keep &= cuts.bkgcat(data_tree)
+    util.add_refit_times(dataframe, data_tree, keep)
 
-    # Read momenta into the dataframe
-    _add_momenta(df, data_tree, keep)
+    util.add_k_id(dataframe, data_tree, keep)
 
-    # Read times into dataframe
-    # 0.3 to convert from ctau to ps
-    # 0.41 to convert from ps to D lifetimes
-    # Take the first (best fit) value from each
-    df["time"] = data_tree["Dst_ReFit_D0_ctau"].array()[:, 0][keep] / (0.3 * 0.41)
-
-    # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    df["K ID"] = data_tree["Dst_ReFit_D0_Kplus_ID"].array()[:, 0][keep]
-
-    return df
+    return dataframe
 
 
 def main() -> None:
