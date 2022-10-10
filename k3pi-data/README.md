@@ -47,3 +47,24 @@ analysis.
 The scripts will pick up where they left off if you do this, so won't waste time creating/dumping dataframes that
 already exist.
 
+
+## PID calib
+Create some histograms for PID calibration using `pidcalib2` on lxplus.  
+This can be done by learning how to do that.
+
+Commands, assuming the cuts look like `(probNNpi * (1 - probNNk)) > 0.6` (for pion; converse for kaon):
+```
+pidcalib2.make_eff_hists --sample Turbo18 --magnet down --particle Pi --pid-cut "MC15TuneV1_ProbNNk * (1 - MC15TuneV1_ProbNNpi) < 0.6" --bin-var P --bin-var ETA
+
+pidcalib2.make_eff_hists --sample Turbo18 --magnet down --particle K --pid-cut "MC15TuneV1_ProbNNk * (1 - MC15TuneV1_ProbNNpi) > 0.6" --bin-var P --bin-var ETA
+
+```
+
+This will make pi/K efficiency histograms.
+You then simply have to reweight using the right weights, which i will figure out how to do and then
+write a bit of code that does it.
+
+#### Mysteries
+ 
+ - I haven't added any cuts to the pidcalib options: things like delta M, D0 ipchi2, etc... does this matter?
+  

@@ -103,6 +103,27 @@ def _bkgcat(tree) -> np.ndarray:
     )
 
 
+def _pid_keep(tree) -> np.ndarray:
+    """
+    Keep only events with good enough slowpi probNNpi and probNNk
+
+    """
+    # Find kaon and pion probabilities for each daughter,
+    # cut on some combination of these
+    keep = []
+    for i in range(4):
+        pi_prob = tree[f"D0_P{i}_ProbNNpi"].array(library="np")
+        k_prob = tree[f"D0_P{i}_ProbNNk"].array(library="np")
+
+        keep.append((pi_prob * (1 - k_prob)) > 0.6)
+
+    # We want the kaon selection criterion to be the opposite of the pions
+    keep[0] = ~keep[0]
+
+    # Keep only events which pass all of the PID criteria
+    return np.logical_and.reduce(keep)
+
+
 # ==== Combinations of cuts
 def _sanity_keep(tree) -> np.ndarray:
     """
@@ -116,6 +137,7 @@ def _sanity_keep(tree) -> np.ndarray:
                 _d0_mass_keep,
                 _delta_m_keep,
                 _ipchi2_keep,
+                _pid_keep,
             )
         ]
     )
@@ -166,4 +188,4 @@ def uppermass_keep(tree) -> np.ndarray:
     This is just the ipchi2 and trigger cuts
 
     """
-    return _trigger_keep(tree) & _ipchi2_keep(tree)
+    return _trigger_keep(tree) & _ipchi2_keep(tree) & _pid_keep(tree)

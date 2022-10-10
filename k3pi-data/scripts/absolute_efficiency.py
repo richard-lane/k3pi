@@ -29,15 +29,9 @@ def _n_reco(data_tree, hlt_tree) -> Tuple[int, int]:
 
     """
     # Mask to perform straight cuts
-    keep = cuts.sanity_keep(data_tree)
+    keep = cuts.pgun_keep(data_tree, hlt_tree)
 
-    # Combine with the mask to perform HLT cuts
-    keep &= cuts.hlt_keep_pgun(hlt_tree)
-
-    # Combine with the background category mask
-    keep &= cuts._bkgcat(data_tree)
-
-    k_id = data_tree["Dst_ReFit_D0_Kplus_ID"].array()[:, 0][keep]
+    k_id = data_tree["Dst_ReFit_D0_Kplus_ID"].array(library="ak")[:, 0][keep]
 
     return np.sum(k_id > 0), np.sum(k_id < 0)
 

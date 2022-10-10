@@ -276,5 +276,5 @@ def add_vars(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     Add branches containing the BDT cut training vars to the dataframe in place
 
     """
-    for fcn, name in _training_var_names_and_functions():
+    for fcn, name in zip(*_training_var_names_and_functions()):
         dataframe[name] = fcn(tree)[keep]
