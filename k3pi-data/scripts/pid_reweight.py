@@ -7,6 +7,7 @@ import pickle
 import pathlib
 from typing import Tuple
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import boost_histogram as bh
 
@@ -40,6 +41,38 @@ def _get_hists() -> Tuple[bh.Histogram, bh.Histogram]:
     return pi_hist, k_hist
 
 
+def _eta_and_momenta(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Get K3pi eta and momentum from a dataframe
+
+    """
+    k_eta = util.eta(
+        dataframe["Kplus_Px"], dataframe["Kplus_Py"], dataframe["Kplus_Pz"]
+    )
+    pi_eta = tuple(
+        util.eta(dataframe[f"pi{s}_Px"], dataframe[f"pi{s}_Py"], dataframe[f"pi{s}_Pz"])
+        for s in ("1minus", "2minus", "3plus")
+    )
+    etas = np.row_stack((k_eta, *pi_eta))
+
+    k_p = np.sqrt(
+        dataframe["Kplus_Px"] ** 2
+        + dataframe["Kplus_Py"] ** 2
+        + dataframe["Kplus_Pz"] ** 2
+    )
+    pi_p = tuple(
+        np.sqrt(
+            dataframe[f"pi{s}_Px"] ** 2
+            + dataframe[f"pi{s}_Py"] ** 2
+            + dataframe[f"pi{s}_Pz"] ** 2
+        )
+        for s in ("1minus", "2minus", "3plus")
+    )
+    momenta = np.row_stack((k_p, *pi_p))
+
+    return etas, momenta
+
+
 def main():
     """
     Read MC, find the right weights, plot histograms before/after reweighting
@@ -50,42 +83,33 @@ def main():
 
     # Get the MC dataframe
     mc_df = get.mc("2018", "dcs", "magdown")
-    kw = {"bins": np.linspace(1.5, 5.2, 300), "histtype": "step"}
-    k_eta = util.eta(mc_df["Kplus_Px"], mc_df["Kplus_Py"], mc_df["Kplus_Pz"])
-    pi_eta = tuple(
-        util.eta(mc_df[f"pi{s}_Px"], mc_df[f"pi{s}_Py"], mc_df[f"pi{s}_Pz"])
-        for s in ("1minus", "2minus", "3plus")
-    )
-    etas = np.row_stack((k_eta, *pi_eta))
+    mc_etas, mc_ps = _eta_and_momenta(mc_df)
+    wt = corrections.pid_weights(mc_etas, mc_ps, pi_hist, k_hist)
 
-    k_p = np.sqrt(
-        mc_df["Kplus_Px"] ** 2 + mc_df["Kplus_Py"] ** 2 + mc_df["Kplus_Pz"] ** 2
-    )
-    pi_p = tuple(
-        np.sqrt(
-            mc_df[f"pi{s}_Px"] ** 2 + mc_df[f"pi{s}_Py"] ** 2 + mc_df[f"pi{s}_Pz"] ** 2
-        )
-        for s in ("1minus", "2minus", "3plus")
-    )
-    momenta = np.row_stack((k_p, *pi_p))
+    # Get real data
+    data_etas, data_ps = _eta_and_momenta(pd.concat(get.data("2018", "dcs", "magdown")))
 
-    wt = corrections.pid_weights(etas, momenta, pi_hist, k_hist)
-
+    # plot
     fig, ax = plt.subplots(4, 2, figsize=(10, 5))
     kw = {"density": False, "histtype": "step"}
 
-    for eta, axis, label in zip(
-        etas, ax[:, 0], (r"$K^+$", r"$\pi^-$", r"$\pi^+$", r"$\pi^-$")
+    # Weight real data so the histograms look more sensible
+    data_wt = np.ones_like(data_etas[0]) * len(mc_etas[0]) / len(data_etas[0])
+
+    for mc_eta, data_eta, axis, label in zip(
+        mc_etas, data_etas, ax[:, 0], (r"$K^+$", r"$\pi^-$", r"$\pi^+$", r"$\pi^-$")
     ):
         bins = np.linspace(1.5, 5.5, 100)
-        axis.hist(eta, **kw, bins=bins)
-        axis.hist(eta, **kw, bins=bins, weights=wt, label="Weighted")
+        axis.hist(mc_eta, **kw, bins=bins, label="MC unweighted")
+        axis.hist(mc_eta, **kw, bins=bins, weights=wt, label="MC PIDcalib Weighted")
+        axis.hist(data_eta, **kw, bins=bins, weights=data_wt, label="Data")
         axis.set_ylabel(label)
 
-    for momentum, axis in zip(momenta, ax[:, 1]):
+    for mc_p, data_p, axis in zip(mc_ps, data_ps, ax[:, 1]):
         bins = np.linspace(0, 100000, 100)
-        axis.hist(momentum, **kw, bins=bins)
-        axis.hist(momentum, **kw, bins=bins, weights=wt, label="Weighted")
+        axis.hist(mc_p, **kw, bins=bins, label="MC unweighted")
+        axis.hist(mc_p, **kw, bins=bins, weights=wt, label="MC PIDcalib Weighted")
+        axis.hist(data_p, **kw, bins=bins, weights=data_wt, label="Data")
 
     for axis in ax.ravel():
         axis.set_yticks([])
