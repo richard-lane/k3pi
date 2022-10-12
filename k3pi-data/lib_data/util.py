@@ -211,3 +211,11 @@ def add_slowpi_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     dataframe["slow pi ID"] = tree["Dst_ReFit_piplus_ID"].array(library="ak")[:, 0][
         keep
     ]
+
+
+def eta(p_x: np.ndarray, p_y: np.ndarray, p_z: np.ndarray) -> np.ndarray:
+    """
+    Pseudorapidity
+
+    """
+    return np.arctanh(p_z / np.sqrt(p_x**2 + p_y**2 + p_z**2))

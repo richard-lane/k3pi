@@ -137,7 +137,6 @@ def _sanity_keep(tree) -> np.ndarray:
                 _d0_mass_keep,
                 _delta_m_keep,
                 _ipchi2_keep,
-                _pid_keep,
             )
         ]
     )
@@ -156,7 +155,7 @@ def data_keep(tree) -> np.ndarray:
     Which events to keep in real data
 
     """
-    return _sanity_keep(tree) & _trigger_keep(tree)
+    return _sanity_keep(tree) & _trigger_keep(tree) & pid_keep(tree)
 
 
 def simulation_keep(tree) -> np.ndarray:
