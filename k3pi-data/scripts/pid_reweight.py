@@ -74,7 +74,9 @@ def main():
     fig, ax = plt.subplots(4, 2, figsize=(10, 5))
     kw = {"density": False, "histtype": "step"}
 
-    for eta, axis, label in zip(etas, ax[:, 0], (r"$K^+$", r"$\pi^-$", r"$\pi^+$", r"$\pi^-$")):
+    for eta, axis, label in zip(
+        etas, ax[:, 0], (r"$K^+$", r"$\pi^-$", r"$\pi^+$", r"$\pi^-$")
+    ):
         bins = np.linspace(1.5, 5.5, 100)
         axis.hist(eta, **kw, bins=bins)
         axis.hist(eta, **kw, bins=bins, weights=wt, label="Weighted")
