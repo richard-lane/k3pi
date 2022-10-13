@@ -9,7 +9,6 @@ READMEs.
 """
 import pickle
 import pathlib
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import QuadMesh
 
@@ -22,7 +21,7 @@ def _plot(axis: plt.Axes, path: str) -> QuadMesh:
     with open(path, "rb") as hist_f:
         hist = pickle.load(hist_f)
         return axis.pcolormesh(
-            *hist.axes.edges.T, np.exp(hist.values().T), vmin=1, vmax=np.e, cmap="pink"
+            *hist.axes.edges.T, hist.values().T, vmin=0, vmax=1, cmap="magma"
         )
 
 
@@ -55,8 +54,6 @@ def main():
     for axis in axes:
         axis.set_xlabel(r"$p$")
         axis.set_ylabel(r"$\eta$")
-
-    fig.suptitle(r"$e^\epsilon$; PID efficiency $\epsilon$")
 
     fig.tight_layout()
     fig.subplots_adjust(right=0.85)

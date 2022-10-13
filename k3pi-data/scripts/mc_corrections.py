@@ -74,7 +74,7 @@ def _ntrack_hists(mc_tracks, mc_train, data_tracks, data_train, train_wt, test_w
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(10, 5)
     )
 
-    bins = np.linspace(-1, 155, 50)
+    bins = np.linspace(-1, 155, 20)
     _track_hists(
         (ax["A"], ax["C"]), bins, mc_tracks[mc_train], data_tracks[data_train], train_wt
     )
@@ -105,7 +105,7 @@ def _long_track_hists(
     """
     fig, ax = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(8, 8))
 
-    bins = np.linspace(-1, 150, 50)
+    bins = np.linspace(-1, 150, 20)
     _track_hists((ax["A"], ax["B"]), bins, mc_long_tracks, data_long_tracks, weights)
 
     ax["A"].legend()

@@ -90,7 +90,7 @@ def main():
     data_etas, data_ps = _eta_and_momenta(pd.concat(get.data("2018", "dcs", "magdown")))
 
     # plot
-    fig, ax = plt.subplots(4, 2, figsize=(10, 5))
+    fig, ax = plt.subplots(4, 2, figsize=(14, 7))
     kw = {"density": False, "histtype": "step"}
 
     # Weight real data so the histograms look more sensible
@@ -114,9 +114,9 @@ def main():
     for axis in ax.ravel():
         axis.set_yticks([])
 
-    ax.ravel()[0].legend()
+    ax[0, 1].legend()
     ax[0, 0].set_title(r"$\eta$")
-    ax[0, 1].set_title(r"p")
+    ax[0, 1].set_title(r"p / MeV")
 
     fig.tight_layout()
 
