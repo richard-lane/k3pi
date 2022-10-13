@@ -199,8 +199,8 @@ def add_masses(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     Add ReFit D0 and D* masses to the dataframe in place
 
     """
-    dataframe["D0 mass"] = tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0][keep]
-    dataframe["D* mass"] = tree["Dst_ReFit_M"].array(library="ak")[:, 0][keep]
+    dataframe["D0 mass"] = tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0][keep].to_numpy()
+    dataframe["D* mass"] = tree["Dst_ReFit_M"].array(library="ak")[:, 0][keep].to_numpy()
 
 
 def add_slowpi_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
