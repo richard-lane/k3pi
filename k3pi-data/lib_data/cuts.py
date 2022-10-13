@@ -158,6 +158,16 @@ def data_keep(tree) -> np.ndarray:
     return _sanity_keep(tree) & _trigger_keep(tree) & _pid_keep(tree)
 
 
+def uppermass_keep(tree) -> np.ndarray:
+    """
+    Which events to keep for upper mass sideband
+
+    Same as data but without the cuts on D0 mass/delta M
+
+    """
+    return _ipchi2_keep(tree) & _trigger_keep(tree) & _pid_keep(tree)
+
+
 def simulation_keep(tree) -> np.ndarray:
     """
     Which events to keep in simulated data
@@ -165,7 +175,7 @@ def simulation_keep(tree) -> np.ndarray:
     The same as data cuts, but with BKGCAT cut (truth matching)
 
     """
-    return data_keep(tree) & _bkgcat(tree)
+    return _sanity_keep(tree) & _trigger_keep(tree) & _bkgcat(tree)
 
 
 def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
@@ -177,14 +187,4 @@ def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
     so we just do HLT cuts instead of HLT and L0 trigger
 
     """
-    return _sanity_keep(data_tree) & _hlt_keep(hlt_tree)
-
-
-def uppermass_keep(tree) -> np.ndarray:
-    """
-    Which events to keep for upper mass sideband
-
-    This is just the ipchi2 and trigger cuts
-
-    """
-    return _trigger_keep(tree) & _ipchi2_keep(tree) & _pid_keep(tree)
+    return _sanity_keep(data_tree) & _hlt_keep(hlt_tree) & _bkgcat(tree)
