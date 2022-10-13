@@ -187,4 +187,4 @@ def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
     so we just do HLT cuts instead of HLT and L0 trigger
 
     """
-    return _sanity_keep(data_tree) & _hlt_keep(hlt_tree) & _bkgcat(tree)
+    return _sanity_keep(data_tree) & _hlt_keep(hlt_tree) & _bkgcat(data_tree)
