@@ -117,8 +117,11 @@ def main(args: argparse.Namespace) -> None:
     Used as a background sample
 
     """
+    # We might only want to iterate over a certain number of files
+    n_files = args.n
     year, sign, magnetisation = args.year, args.sign, args.magnetisation
-    data_paths = definitions.data_files(year, magnetisation)
+
+    data_paths = definitions.data_files(year, magnetisation)[:n_files]
 
     if args.print_lumi:
         print(f"total luminosity: {util.total_luminosity(data_paths)}")
@@ -133,10 +136,10 @@ def main(args: argparse.Namespace) -> None:
     dump_paths = [
         definitions.uppermass_dump(path, year, sign, magnetisation)
         for path in data_paths
-    ]
+    ][:n_files]
 
     # Ugly - also have a list of tree names so i can use a starmap
-    tree_names = [definitions.data_tree(sign) for _ in dump_paths]
+    tree_names = [definitions.data_tree(sign) for _ in dump_paths][:n_files]
 
     with Pool(processes=8) as pool:
         tqdm(
@@ -172,6 +175,12 @@ if __name__ == "__main__":
         "--print_lumi",
         action="store_true",
         help="Iterate over all files, print total luminosity and exit.",
+    )
+    parser.add_argument(
+        "-n",
+        type=int,
+        default=None,
+        help="number of files to process; defaults to all of them",
     )
 
     main(parser.parse_args())

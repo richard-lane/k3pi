@@ -74,8 +74,11 @@ def _create_dump(
 
 def main(args: argparse.Namespace) -> None:
     """Create a DataFrame holding real data info"""
+    # We might only want to iterate over a certain number of files
+    n_files = args.n
     year, sign, magnetisation = args.year, args.sign, args.magnetisation
-    data_paths = definitions.data_files(year, magnetisation)
+
+    data_paths = definitions.data_files(year, magnetisation)[:n_files]
 
     # If the dir doesnt exist, create it
     if not definitions.DATA_DIR.is_dir():
@@ -85,9 +88,9 @@ def main(args: argparse.Namespace) -> None:
 
     dump_paths = [
         definitions.data_dump(path, year, sign, magnetisation) for path in data_paths
-    ]
+    ][:n_files]
     # Ugly - also have a list of tree names so i can use a starmap to iterate over both in parallel
-    tree_names = [definitions.data_tree(sign) for _ in dump_paths]
+    tree_names = [definitions.data_tree(sign) for _ in dump_paths][:n_files]
 
     with Pool(processes=8) as pool:
         tqdm(
@@ -116,6 +119,12 @@ if __name__ == "__main__":
         type=str,
         choices={"magdown"},
         help="magnetisation direction",
+    )
+    parser.add_argument(
+        "-n",
+        type=int,
+        default=None,
+        help="number of files to process; defaults to all of them",
     )
 
     main(parser.parse_args())

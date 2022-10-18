@@ -14,7 +14,7 @@ def d0_mass(tree) -> np.ndarray:
 
     """
     # Jagged array; take the first (best-fit) value for each
-    return tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0]
+    return tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0].to_numpy()
 
 
 def dst_mass(tree) -> np.ndarray:
@@ -22,7 +22,7 @@ def dst_mass(tree) -> np.ndarray:
     Best fit mass of D* after ReFit
 
     """
-    return tree["Dst_ReFit_M"].array(library="ak")[:, 0]
+    return tree["Dst_ReFit_M"].array(library="ak")[:, 0].to_numpy()
 
 
 # ==== Individual, branch level cuts
