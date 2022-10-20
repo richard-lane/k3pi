@@ -42,14 +42,15 @@ def projections(
     :returns: the figure and axes that we have plotted on
 
     """
-    fig, ax = plt.subplots(2, 3, figsize=(12, 8))
+    fig, ax = plt.subplots(2, 3, figsize=(12, 8), sharey=False)
 
     hist_kw = {"density": True, "histtype": "step"}
     for axis, ag_x, mc_x, label in zip(ax.ravel(), ag.T, mc.T, phsp_labels()):
-        _, bins, _ = axis.hist(ag_x, bins=100, label="AG", **hist_kw)
+        contents, bins, _ = axis.hist(ag_x, bins=100, label="AG", **hist_kw)
         axis.hist(mc_x, bins=bins, label="MC", **hist_kw, alpha=0.5)
         if mc_wt is not None:
             axis.hist(mc_x, bins=bins, label="Reweighted", **hist_kw, weights=mc_wt)
+        axis.set_ylim(0, np.max(contents) * 1.1)
 
         axis.set_xlabel(label)
 
@@ -94,8 +95,8 @@ def _plot_ratio(
 
     """
     # Just use the centre of each bin for plotting
-    centres = (bins[:-1] + bins[1:]) / 2
-    widths = (bins[:-1] - bins[1:]) / 2
+    centres = (bins[1:] + bins[:-1]) / 2
+    widths = (bins[1:] - bins[:-1]) / 2
 
     num_counts, num_errs = _counts(numerator, num_wt, bins)
     denom_counts, denom_errs = _counts(denominator, denom_wt, bins)
