@@ -148,7 +148,7 @@ def dcs_amplitudes(k, pi1, pi2, pi3, k_charge):
     :param k_charge: charge of the kaon, either +1 or -1
 
     """
-    return _amplitudes("dcs", k, pi1, pi2, pi3, k_charge)
+    return _amplitudes("dcs", k, pi1, pi2, pi3, k_charge) / DCS_AVG
 
 
 def cf_amplitudes(k, pi1, pi2, pi3, k_charge):
@@ -167,4 +167,4 @@ def cf_amplitudes(k, pi1, pi2, pi3, k_charge):
     :param k_charge: charge of the kaon, either +1 or -1
 
     """
-    return _amplitudes("cf", k, pi1, pi2, pi3, k_charge)
+    return _amplitudes("cf", k, pi1, pi2, pi3, k_charge) / CF_AVG

@@ -8,19 +8,19 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.optimize import fsolve
 from fourbody.param import helicity_param
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-fitter"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_fitter"))
 import pdg_params
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.plotting import phsp_labels
-from lib_efficiency.phsp_binning import coherence_factor
 from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
-from lib_time_fit import fitter, plotting
+from lib_time_fit import fitter, plotting, models
 
 
 def _weight_hist(weights: np.ndarray) -> None:
@@ -29,47 +29,50 @@ def _weight_hist(weights: np.ndarray) -> None:
     plt.show()
 
 
-def _z(r_d: float, dataframe: pd.DataFrame, weights: np.ndarray):
+def _z(dataframe: pd.DataFrame, weights: np.ndarray) -> complex:
     """
     Coherence factor given the desired amplitude ratio
 
     """
     k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
 
+    # I don't think it actually matters if we scale the amplitudes here
     cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.CF_AVG
-    # TODO try rotating
-    # TODO try scaling a bit
-    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1) * r_d / amplitudes.DCS_AVG
+    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.DCS_AVG
 
     # Find Z and integrals
     z = np.sum(cf * dcs.conjugate() * weights)
     num_dcs = np.sum((np.abs(dcs) ** 2) * weights)
     num_cf = np.sum((np.abs(cf) ** 2) * weights)
 
-    # Find R, d and return
-    R = abs(z) / np.sqrt(num_dcs * num_cf)
-    d = np.angle(z, deg=True)
-
-    return R, d
+    return z / np.sqrt(num_dcs * num_cf)
 
 
-def _bc_params(
-    dataframe: pd.DataFrame,
-    weights: np.ndarray,
-    params: mixing.MixingParams,
-    r_d: float,
-) -> Tuple[float, float]:
+def _rd(*, x: float, y: float, z: complex, n_dcs: float, n_cf: float) -> float:
     """
-    Time ratio params, assuming rD = 1 and times in lifetimes
+    Expected rD from the other parameters in the equation and
+    the DCS and CF statistics
+
+    Finds rD by equating int(DCS rate) / nDCS = int(CF rate) / nCF
+
+    Performs the integrals to infinity
 
     """
-    z_mag, z_phase = _z(r_d, dataframe, weights)
-    z_re = z_mag * np.cos(np.pi + z_phase)
-    z_im = z_mag * np.sin(np.pi + z_phase)
+    # CF rate is just exponential
+    cf_integral = 1
 
-    return (params.mixing_x * z_im + params.mixing_y * z_re), (
-        params.mixing_x**2 + params.mixing_y**2
-    ) / 4
+    def dcs_integral(r_d: float):
+        abc_params = models.abc_scan(
+            fit_util.ScanParams(r_d=r_d, x=x, y=y, re_z=z.real, im_z=z.imag)
+        )
+        # Assume the integral evaluated at infinity is 0... otherwise we run into trouble...?
+        return -models._ws_integral_dispatcher(0, *abc_params)
+
+    def target_fcn(r_d: float):
+        return dcs_integral(r_d) - cf_integral * n_dcs / n_cf
+
+    # Initial guess is just the sqrt of ratio of counts
+    return fsolve(target_fcn, x0=np.sqrt(n_dcs / n_cf))[0]
 
 
 def _ratio_err(
@@ -97,8 +100,7 @@ def _time_plot(
     Plot ratio of WS/RS decay times
 
     """
-    bins = np.linspace(0, 8, 15)
-    bins = np.append(bins, 17.71)
+    bins = np.concatenate((np.linspace(0, 7, 10), [11, 18]))
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
@@ -117,23 +119,40 @@ def _time_plot(
         fmt="r+",
     )
 
-    initial_guess = fit_util.MixingParams(1, 1, 1)
-    weighted_minuit = fitter.no_constraints(
-        weighted_ratio, weighted_err, bins, initial_guess
-    )
-
     # No Mixing
     best_val, _ = fitter.weighted_mean(ratio, err)
     plotting.no_mixing(ax, best_val, "k--")
 
     # Mixing
+    initial_guess = fit_util.MixingParams(1, 1, 1)
+    weighted_minuit = fitter.no_constraints(
+        weighted_ratio, weighted_err, bins, initial_guess
+    )
     print(weighted_minuit)
     plotting.no_constraints(ax, weighted_minuit.values, "r--", "Fit (mixing)")
 
     # Actual value
-    # rD of 1
-    ideal = (best_val, *_bc_params(dcs_df, dcs_wt, params, 1))
-    plotting.no_constraints(ax, ideal, "k--", "True")
+    # We can find the expected x and y easily - they're the mixing parameters
+    expected_x = params.mixing_x
+    expected_y = params.mixing_y
+
+    # Find expected Z with a numerical integral
+    expected_z = _z(dcs_df, dcs_wt)
+
+    # Find expected rD by integrating the rates
+    expected_rd = _rd(
+        x=expected_x, y=expected_y, z=expected_z, n_dcs=np.sum(dcs_wt), n_cf=len(cf_df)
+    )
+
+    ideal = fit_util.ScanParams(
+        r_d=expected_rd,
+        x=expected_x,
+        y=expected_y,
+        re_z=expected_z.real,
+        im_z=expected_z.imag,
+    )
+    print(f"{ideal=}")
+    plotting.scan_fit(ax, ideal, "k--", "True")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")

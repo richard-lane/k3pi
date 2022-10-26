@@ -18,8 +18,7 @@ def test_rs_integral():
 
 def test_ws_integral():
     """
-    Check we get the right integral by comparing with scipy
-    numerical integral
+    Check we get the right integral by comparing with analytic integral
 
     """
     lims = np.array([0.0, 1.0])

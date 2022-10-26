@@ -22,7 +22,7 @@ MixingParams = namedtuple(
 )
 
 
-def _propagate(times: np.ndarray, d_mass: float, d_width: float) -> np.ndarray:
+def _propagate(*, times: np.ndarray, d_mass: float, d_width: float) -> np.ndarray:
     """
     Time propagation part of the mixing functions
 
@@ -31,16 +31,21 @@ def _propagate(times: np.ndarray, d_mass: float, d_width: float) -> np.ndarray:
 
 
 def _phase_arg(
-    times: np.ndarray, d_width: float, mixing_x: complex, mixing_y: complex
+    *,
+    times: np.ndarray,
+    d_width: float,
+    d_mass: float,
+    mixing_x: complex,
+    mixing_y: complex,
 ) -> np.ndarray:
     """
     Part that goes inside the sin/cos
 
     """
-    return d_width * times * (mixing_x - mixing_y * 1j) / 2
+    return times * (mixing_x * d_mass - mixing_y * 1j * d_width) / 2
 
 
-def _g_plus(times: np.ndarray, params: MixingParams) -> np.ndarray:
+def _g_plus(*, times: np.ndarray, params: MixingParams) -> np.ndarray:
     """
     Time-dependent mixing function
 
@@ -53,12 +58,20 @@ def _g_plus(times: np.ndarray, params: MixingParams) -> np.ndarray:
     :returns: array of complex
 
     """
-    return _propagate(times, params.d_mass, params.d_width) * np.cos(
-        _phase_arg(times, params.d_width, params.mixing_x, params.mixing_y)
+    return _propagate(
+        times=times, d_mass=params.d_mass, d_width=params.d_width
+    ) * np.cos(
+        _phase_arg(
+            times=times,
+            d_width=params.d_width,
+            d_mass=params.d_mass,
+            mixing_x=params.mixing_x,
+            mixing_y=params.mixing_y,
+        )
     )
 
 
-def _g_minus(times: np.ndarray, params: MixingParams) -> np.ndarray:
+def _g_minus(*, times: np.ndarray, params: MixingParams) -> np.ndarray:
     """
     Time-dependent mixing function
 
@@ -72,13 +85,21 @@ def _g_minus(times: np.ndarray, params: MixingParams) -> np.ndarray:
 
     """
     return (
-        _propagate(times, params.d_mass, params.d_width)
+        _propagate(times=times, d_mass=params.d_mass, d_width=params.d_width)
         * 1j
-        * np.sin(_phase_arg(times, params.d_width, params.mixing_x, params.mixing_y))
+        * np.sin(
+            _phase_arg(
+                times=times,
+                d_width=params.d_width,
+                d_mass=params.d_mass,
+                mixing_x=params.mixing_x,
+                mixing_y=params.mixing_y,
+            )
+        )
     )
 
 
-def _good_p_q(p: complex, q: complex) -> bool:
+def _good_p_q(*, p: complex, q: complex) -> bool:
     """
     Check mag of p+q is 1
 
@@ -88,6 +109,7 @@ def _good_p_q(p: complex, q: complex) -> bool:
 
 
 def mixed_d0_coeffs(
+    *,
     times: np.ndarray,
     p: complex,
     q: complex,
@@ -108,14 +130,15 @@ def mixed_d0_coeffs(
     :returns: Dbar0 coefficient at the times provided
 
     """
-    assert _good_p_q(p, q)
+    assert _good_p_q(p=p, q=q)
     return (
-        _g_plus(times, params),
-        q * _g_minus(times, params) / p,
+        _g_plus(times=times, params=params),
+        q * _g_minus(times=times, params=params) / p,
     )
 
 
 def mixed_dbar0_coeffs(
+    *,
     times: np.ndarray,
     p: complex,
     q: complex,
@@ -136,8 +159,10 @@ def mixed_dbar0_coeffs(
     :returns: Dbar0 coefficient at the times provided
 
     """
-    assert _good_p_q(p, q)
-    return p * _g_minus(times, params) / q, _g_plus(times, params)
+    assert _good_p_q(p=p, q=q)
+    return p * _g_minus(times=times, params=params) / q, _g_plus(
+        times=times, params=params
+    )
 
 
 def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
@@ -172,8 +197,8 @@ def _ws_weights(
     # Convert lifetimes to inverse MeV
     t_invmev = _lifetimes2invmev(times)
 
-    g_plus = _g_plus(t_invmev, params)
-    g_minus = _g_minus(t_invmev, params)
+    g_plus = _g_plus(times=t_invmev, params=params)
+    g_minus = _g_minus(times=t_invmev, params=params)
 
     q, p = q_p
     num = g_plus * d0_amplitudes + q * g_minus * dbar0_amplitudes / p
@@ -210,7 +235,7 @@ def ws_mixing_weights(
     assert k_charge == 1
 
     # Evaluate amplitudes
-    cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge) / amplitudes.CF_AVG
-    dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge) / amplitudes.DCS_AVG
+    cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge)
+    dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge)
 
     return _ws_weights(t_lifetimes, dcs_amplitudes, cf_amplitudes, mixing_params, q_p)
