@@ -24,7 +24,7 @@ def _plot(params: mixing.MixingParams, path: str, scale: bool = False) -> None:
 
     """
     d_lifetime_ps = 0.4103
-    times_ps = np.linspace(0, 20 * d_lifetime_ps, 100)
+    times_ps = np.linspace(0, d_lifetime_ps, 500)
     times_inv_mev = times_ps * (10**10) / 6.58
 
     # Assume no CPV in mixing
@@ -32,7 +32,9 @@ def _plot(params: mixing.MixingParams, path: str, scale: bool = False) -> None:
 
     d0_prob, dbar0_prob = (
         np.abs(amplitude) ** 2
-        for amplitude in mixing.mixed_d0_coeffs(times_inv_mev, p_q, p_q, params)
+        for amplitude in mixing.mixed_d0_coeffs(
+            times=times_inv_mev, p=p_q, q=p_q, params=params
+        )
     )
 
     if scale:
@@ -40,10 +42,12 @@ def _plot(params: mixing.MixingParams, path: str, scale: bool = False) -> None:
         dbar0_prob /= np.exp(-times_ps / d_lifetime_ps)
 
     fig, ax = plt.subplots(figsize=(8, 4))
+    plot_kw = {"linewidth": 1}
     ax.plot(
         times_ps,
         d0_prob,
         label=r"$\frac{p(D^0)}{e^{-t/\tau}}$" if scale else r"$p(D^0)$",
+        **plot_kw,
     )
     ax.plot(
         times_ps,
@@ -51,6 +55,7 @@ def _plot(params: mixing.MixingParams, path: str, scale: bool = False) -> None:
         label=r"$\frac{p(\overline{D}^0)}{e^{-t/\tau}}$"
         if scale
         else r"$p(\overline{D}^0)$",
+        **plot_kw,
     )
 
     fig.suptitle(f"x={params.mixing_x:.4f}, y={params.mixing_y:.4f}")
@@ -80,10 +85,10 @@ def main():
     _plot(params, "scaled_mixing.png", scale=True)
 
     params = mixing.MixingParams(
-        d_mass=1864.84,
+        d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
-        mixing_x=100 * pdg_params.mixing_x(),
-        mixing_y=pdg_params.mixing_y(),
+        mixing_x=10 * pdg_params.mixing_x(),
+        mixing_y=10 * pdg_params.mixing_y(),
     )
     _plot(params, "more_mixing.png", scale=True)
 
