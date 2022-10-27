@@ -2,6 +2,7 @@
 Fit models
 
 """
+from collections import namedtuple
 from typing import Tuple
 import numpy as np
 from iminuit import Minuit
@@ -449,3 +450,154 @@ class CharmThreshholdScan(ConstrainedBase):
         )
 
         return chi2 + super().constraint(x, y) + threshhold_constraint
+
+
+# Hold 4 things
+BinnedStuff = namedtuple("BinnedStuff", ["bin1", "bin2", "bin3", "bin4"])
+
+# TODO I'm tired right now so I can't think but this should definitely
+# inherit somehow
+class MultiBinFit:
+    """
+    Cost function for the fitter with
+    fixed Z and Gaussian constraints on x and y
+    with the chi2 from the charm threshhold experiments
+    (CLEO and BES-III) combined,
+    fitting across all the phase space bins simultaneously.
+
+    """
+
+    errordef = Minuit.LEAST_SQUARES
+
+    def __init__(
+        self,
+        ratios: BinnedStuff,
+        errors: BinnedStuff,
+        bins: np.ndarray,
+        x_y_means: Tuple[float, float],
+        x_y_widths: Tuple[float, float],
+        x_y_correlation: float,
+    ):
+        """
+        Set parameters for doing a fit with Gaussian constraint
+        on x and y, and also constraints from CLEO and BES
+
+        :param ratio: 4 arrays holding WS/RS ratios
+        :param error: 4 arrays holding errors on these ratios
+        :param bins: bins used when finding the ratio.
+                     Should be the same for all phsp bins
+        :param x_y_means: mean for Gaussian constraint
+        :param x_y_widths: widths for Gaussian constraint
+        :param x_y_correlation: correlation for Gaussian constraint
+
+        """
+        self.ratios = ratios
+        self.errors = errors
+        self.bins = bins
+
+        # We can pre-compute two of the terms used for the Gaussian constraint
+        self._x_width, self._y_width = x_y_widths
+        self._x_mean, self._y_mean = x_y_means
+        self._constraint_scale = 1 / (1 - x_y_correlation**2)
+        self._constraint_cross_term = (
+            2 * x_y_correlation / (self._x_width * self._y_width)
+        )
+
+        # Denominator (RS) integral doesn't depend on the params
+        # so we only need to evaluate it once
+        self.expected_rs_integral = rs_integral(bins)
+
+        # We need to tell Minuit what our function signature is explicitly
+        self.func_code = make_func_code(
+            [
+                "rd1",
+                "rd2",
+                "rd3",
+                "rd4",
+                "re_z1",
+                "re_z2",
+                "re_z3",
+                "re_z4",
+                "im_z1",
+                "im_z2",
+                "im_z3",
+                "im_z4",
+                "x",
+                "y",
+            ]
+        )
+
+    def _expected_ws_integral(self, params: ScanParams) -> np.ndarray:
+        """
+        Given our parameters, find the expected WS integral
+
+        """
+        return ws_integral(self.bins, *abc_scan(params))
+
+    def _chi2(self, bin_number: int, params: ScanParams) -> float:
+        """
+        Chi2 for one of the bins
+
+        """
+        expected_ratio = self._expected_ws_integral(params) / self.expected_rs_integral
+        np.sum(
+            ((self.ratios[bin_number] - expected_ratio) / self.errors[bin_number]) ** 2
+        )
+
+    def __call__(
+        self,
+        rd1,
+        rd2,
+        rd3,
+        rd4,
+        re_z1,
+        re_z2,
+        re_z3,
+        re_z4,
+        im_z1,
+        im_z2,
+        im_z3,
+        im_z4,
+        x,
+        y,
+    ):
+        """
+        Evaluate the chi2 given our parameters
+
+        """
+        # If Z is outside the allowed region, the BES chi2^2 will raise some ROOT errors
+        # and all bets are off. Prevent this by just returning inf if we're outside the range
+        # this will cause the fit to "fail" but that's probably ok
+        # TODO raise instead
+        for (re, im) in zip((re_z1, re_z2, re_z3, re_z4), (im_z1, im_z2, im_z3, im_z4)):
+            if re**2 + im**2 > 1.0:
+                return np.inf
+
+        # Chi2 is the sum of LHCb mixing chi2s from each bin + the charm threshhold
+        # constraint in each bin
+        chi2 = 0
+        for bin_number, (re, im, rd) in enumerate(
+            zip(
+                (re_z1, re_z2, re_z3, re_z4),
+                (im_z1, im_z2, im_z3, im_z4),
+                (rd1, rd2, rd3, rd4),
+            )
+        ):
+            chi2 += self._chi2(bin_number, ScanParams(rd, x, y, re, im))
+
+            # Also need a term for the charm threshhold
+            # TODO could make this faster by preloading the CLEO
+            # and BES functions from the DLLs
+            chi2 += likelihoods.combined_chi2(bin_number, re, im, x, y, rd)
+
+        # Add the constraint on x and y
+        delta_x = x - self._x_mean
+        delta_y = y - self._y_mean
+
+        constraint = self._constraint_scale * (
+            (delta_x / self._x_width) ** 2
+            + (delta_y / self._y_width) ** 2
+            - self._constraint_cross_term * delta_x * delta_y
+        )
+
+        return chi2 + constraint
