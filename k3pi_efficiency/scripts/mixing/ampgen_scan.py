@@ -99,7 +99,7 @@ def _scan_plot(
     """
     bins = np.concatenate((np.linspace(0, 7, 10), [11, 18]))
 
-    n_re, n_im = 101, 100
+    n_re, n_im = 51, 50
     allowed_rez, allowed_imz = (np.linspace(-1, 1, num) for num in (n_re, n_im))
 
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))

@@ -27,7 +27,7 @@ def _propagate(*, times: np.ndarray, d_mass: float, d_width: float) -> np.ndarra
     Time propagation part of the mixing functions
 
     """
-    return np.exp(-d_mass * 1j * times) * np.exp(-d_width * times / 2)
+    return np.exp(-(d_mass * 1.0j + d_width / 2) * times)
 
 
 def _phase_arg(
@@ -42,7 +42,7 @@ def _phase_arg(
     Part that goes inside the sin/cos
 
     """
-    return times * d_width * (mixing_x * - mixing_y * 1j) / 2
+    return times * d_width * (mixing_x - mixing_y * 1j) / 2
 
 
 def _g_plus(*, times: np.ndarray, params: MixingParams) -> np.ndarray:
@@ -86,7 +86,7 @@ def _g_minus(*, times: np.ndarray, params: MixingParams) -> np.ndarray:
     """
     return (
         _propagate(times=times, d_mass=params.d_mass, d_width=params.d_width)
-        * 1j
+        * 1.0j
         * np.sin(
             _phase_arg(
                 times=times,
@@ -170,6 +170,7 @@ def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
     Convert from D0 lifetimes to inverse MeV
 
     """
+    return lifetimes / (1.605 * 10 ** -9)
     decay_times_ps = lifetimes * 0.4103
     return decay_times_ps * (10**10) / 6.58
 
