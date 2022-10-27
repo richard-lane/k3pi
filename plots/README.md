@@ -17,12 +17,12 @@ components evolve with time:
 
 Clearly the time dependence is dominated by the exponential decay of the $D^0$ - i.e., charm mixing is a small effect.
 
-We can remove this by dividing by $e^-t$:
+We can take the log to account for this...
 
-![scaled mixing](/../example_plots/scaled_mixing.png)
+![log mixing](/../example_plots/log_mixing.png)
 
 There's still hardly any mixing - we can turn the mixing effect up by increasing the value of the $D^0$ mass difference
-by 100 times:
+by a lot:
 
 ![more mixing](/../example_plots/more_mixing.png)
 
