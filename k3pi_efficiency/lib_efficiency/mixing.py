@@ -170,7 +170,7 @@ def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
     Convert from D0 lifetimes to inverse MeV
 
     """
-    return lifetimes / (1.605 * 10 ** -9)
+    return lifetimes / (1.605 * 10**-9)
     decay_times_ps = lifetimes * 0.4103
     return decay_times_ps * (10**10) / 6.58
 

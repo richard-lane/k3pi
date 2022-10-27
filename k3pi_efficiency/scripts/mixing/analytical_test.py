@@ -24,7 +24,7 @@ def _plot(params: mixing.MixingParams, path: str, *, log: bool = False) -> None:
 
     """
     d_lifetime_ps = 0.4103
-    times_ps = np.linspace(0, 6 * d_lifetime_ps, 200)
+    times_ps = np.linspace(0, 6 * d_lifetime_ps, 500)
     times_inv_mev = times_ps * (10**10) / 6.58
     times_lifetime = times_ps / d_lifetime_ps
 
@@ -104,10 +104,10 @@ def main():
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
-        mixing_x=10 * pdg_params.mixing_x(),
+        mixing_x=10000 * pdg_params.mixing_x(),
         mixing_y=10 * pdg_params.mixing_y(),
     )
-    _plot(params, "more_mixing.png", log=True)
+    _plot(params, "more_mixing.png", log=False)
 
 
 if __name__ == "__main__":
