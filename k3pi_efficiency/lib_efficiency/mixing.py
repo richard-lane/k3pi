@@ -42,7 +42,7 @@ def _phase_arg(
     Part that goes inside the sin/cos
 
     """
-    return times * (mixing_x * d_mass - mixing_y * 1j * d_width) / 2
+    return times * d_width * (mixing_x * - mixing_y * 1j) / 2
 
 
 def _g_plus(*, times: np.ndarray, params: MixingParams) -> np.ndarray:
