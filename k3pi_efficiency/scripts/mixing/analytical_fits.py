@@ -197,6 +197,24 @@ def _expected_ratio(times: np.ndarray, x: float, y: float) -> np.ndarray:
     return const + linear * times + quadratic * times**2
 
 
+def _exact_expected(times: np.ndarray, x: float, y: float) -> np.ndarray:
+    """
+    Time dependent ratio, without assuming x and y are small
+
+    """
+    r_d = _rd()
+    z = _interference_z()
+
+    yt = y * times
+    xt = x * times
+
+    return 0.5 * (
+        r_d**2 * (np.cosh(yt) + np.cos(xt))
+        + (np.cosh(yt) - np.cos(xt))
+        + 2 * r_d * (z.real * np.sinh(yt) + z.imag * np.sin(xt))
+    )
+
+
 def _plot_mixed_dists(
     dbar0_times: np.ndarray, dbar0_pts: np.ndarray, weights: np.ndarray
 ):
@@ -252,8 +270,20 @@ def _plot_ratio(
     )
 
     pts = np.linspace(*axis.get_xlim())
-    axis.plot(pts, _expected_ratio(pts, 0, 0), "k:")
-    axis.plot(pts, _expected_ratio(pts, params.mixing_x, params.mixing_y), "r:")
+    axis.plot(pts, _expected_ratio(pts, 0, 0), "k:", label="No Mixing")
+    axis.plot(
+        pts,
+        _exact_expected(pts, params.mixing_x, params.mixing_y),
+        "--",
+        color="plum",
+        label="Mixing Exact",
+    )
+    axis.plot(
+        pts,
+        _expected_ratio(pts, params.mixing_x, params.mixing_y),
+        "r:",
+        label="Mixing Quadratic",
+    )
 
     axis.legend()
     axis.set_xlabel(r"$t/\tau$")
@@ -351,8 +381,8 @@ def _add_mixing(
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
-        mixing_x=0.004,
-        mixing_y=0.008,
+        mixing_x=0.003,
+        mixing_y=0.006,
     )
 
     # Need to pass the amplitudes in in the right order
@@ -411,7 +441,7 @@ def main():
     n_gen = 2_000_000
     d0_pts = []
     dbar0_pts = []
-    for _ in tqdm(range(150)):
+    for _ in tqdm(range(20)):
         d0_pts.append(_generate(generator, n_gen, _d0))
         dbar0_pts.append(_generate(generator, n_gen, _dbar0))
     d0_pts = np.concatenate(d0_pts)
