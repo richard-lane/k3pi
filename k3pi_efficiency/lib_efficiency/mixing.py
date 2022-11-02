@@ -181,6 +181,7 @@ def _ws_weights(
     dbar0_amplitudes: np.ndarray,
     params: MixingParams,
     q_p: Tuple,
+    scales: Tuple = (1.0, 1.0),
 ) -> np.ndarray:
     """
     Weights from amplitudes + times
@@ -192,6 +193,7 @@ def _ws_weights(
     :param dbar0_amplitudes: CF amplitudes
     :param params: mixing parameters
     :param q_p: values of q and p.
+    :param scales: (CF, DCS) amplitude scaling factors to apply to the numerator
     :returns: weights
 
     """
@@ -202,7 +204,10 @@ def _ws_weights(
     g_minus = _g_minus(times=t_invmev, params=params)
 
     q, p = q_p
-    num = g_plus * d0_amplitudes + q * g_minus * dbar0_amplitudes / p
+    num = (
+        scales[1] * g_plus * d0_amplitudes
+        + scales[0] * q * g_minus * dbar0_amplitudes / p
+    )
     num = np.abs(num) ** 2
 
     denom = np.exp(-times) * np.abs(d0_amplitudes) ** 2
@@ -216,6 +221,8 @@ def ws_mixing_weights(
     mixing_params: MixingParams,
     k_charge: int,
     q_p: Tuple = None,
+    cf_scale: float = 1.0,
+    dcs_scale: float = 1.0,
 ) -> np.ndarray:
     """
     Weights to apply to WS events to add mixing as defined by the mixing parameters provided
@@ -226,6 +233,10 @@ def ws_mixing_weights(
                           The dimensionful parameters (D mass and width) should be in MeV.
     :param k_charge: +1 or -1;
     :param q_p: values of q and p. If not provided defaults to no CPV
+    :param cf_scale: scaling factor to multiply CF amplitudes by
+    :param dcs_scale: scaling factor to multiply DCS amplitudes by
+
+    :returns: array of weights
 
     """
     if not q_p:
@@ -239,4 +250,11 @@ def ws_mixing_weights(
     cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge)
     dcs_amplitudes = amplitudes.dcs_amplitudes(*k3pi, k_charge)
 
-    return _ws_weights(t_lifetimes, dcs_amplitudes, cf_amplitudes, mixing_params, q_p)
+    return _ws_weights(
+        t_lifetimes,
+        dcs_amplitudes,
+        cf_amplitudes,
+        mixing_params,
+        q_p,
+        (cf_scale, dcs_scale),
+    )

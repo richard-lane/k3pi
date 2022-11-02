@@ -48,11 +48,11 @@ def _amplitudes(gen, n_gen: int):
 
 def main():
     """
-    Read AmpGen dataframes, add some mixing to the DCS frame, plot the ratio of the decay times
+    Generate phsp evts, evaluate |amplitudes|^2
 
     """
     # Generate lots of phase space events
-    n_gen = 10000000
+    n_gen = 500000
 
     n_tot = 0
     cf_sum = 0
@@ -66,13 +66,16 @@ def main():
         d_mass, (k_mass, pi_mass, pi_mass, pi_mass), names=["k", "pi1", "pi2", "pi3"]
     )
 
-    for _ in range(10):
-        retval = _amplitudes(gen, n_gen)
-        n_tot += retval[0]
-        cf_sum += retval[1]
-        dcs_sum += retval[2]
+    try:
+        for _ in range(1000):
+            retval = _amplitudes(gen, n_gen)
+            n_tot += retval[0]
+            cf_sum += retval[1]
+            dcs_sum += retval[2]
 
-        print(f"{n_tot: <10,}\t{cf_sum / n_tot:.6f}\t{dcs_sum / n_tot:.6f}")
+            print(f"{n_tot: <10,}\t{cf_sum / n_tot:.10f}\t{dcs_sum / n_tot:.10f}")
+    except KeyboardInterrupt:
+        ...
 
 
 if __name__ == "__main__":

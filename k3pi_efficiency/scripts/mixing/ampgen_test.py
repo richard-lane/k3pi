@@ -87,6 +87,7 @@ def _ratio_err(
     """
     cf_counts, cf_errs = fit_util.bin_times(cf_df["time"], bins=bins)
     dcs_counts, dcs_errs = fit_util.bin_times(dcs_df["time"], bins=bins, weights=dcs_wt)
+
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
 
 
@@ -95,12 +96,15 @@ def _time_plot(
     cf_df: pd.DataFrame,
     dcs_df: pd.DataFrame,
     dcs_wt: np.ndarray,
+    r_d: float,
 ) -> None:
     """
     Plot ratio of WS/RS decay times
 
     """
-    bins = np.concatenate((np.linspace(0, 7, 10), [11, 18]))
+    bins = np.concatenate(
+        (np.linspace(0, 7, 30), np.arange(7.5, 12.5), [13, 20])
+    )
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
@@ -124,7 +128,7 @@ def _time_plot(
     plotting.no_mixing(ax, best_val, "k--")
 
     # Mixing
-    initial_guess = fit_util.MixingParams(1, 1, 1)
+    initial_guess = fit_util.MixingParams(r_d**2, 1, 1)
     weighted_minuit = fitter.no_constraints(
         weighted_ratio, weighted_err, bins, initial_guess
     )
@@ -139,20 +143,15 @@ def _time_plot(
     # Find expected Z with a numerical integral
     expected_z = _z(dcs_df, dcs_wt)
 
-    # Find expected rD by integrating the rates
-    expected_rd = _rd(
-        x=expected_x, y=expected_y, z=expected_z, n_dcs=np.sum(dcs_wt), n_cf=len(cf_df)
-    )
-
     ideal = fit_util.ScanParams(
-        r_d=expected_rd,
+        r_d=r_d,
         x=expected_x,
         y=expected_y,
         re_z=expected_z.real,
         im_z=expected_z.imag,
     )
     print(f"{ideal=}")
-    plotting.scan_fit(ax, ideal, "k--", "True")
+    plotting.scan_fit(ax, ideal, "--m", "True")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")
@@ -202,23 +201,47 @@ def main():
     cf_df = efficiency_util.ampgen_df("cf", "k_plus", train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", "k_plus", train=None)
 
-    # Introduce mixing
+    # Parameters determining mixing
+    r_d = np.sqrt(0.5)
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
         mixing_x=5 * pdg_params.mixing_x(),
         mixing_y=5 * pdg_params.mixing_y(),
     )
-    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
-    dcs_lifetimes = dcs_df["time"]
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
-    mixing_weights = mixing.ws_mixing_weights(dcs_k3pi, dcs_lifetimes, params, +1, q_p)
+    # Need to scale the amplitudes by the right amounts
+    dcs_scale = r_d * np.sqrt(amplitudes.DCS_AVG_SQ / amplitudes.CF_AVG_SQ)
+
+    # Introduce mixing
+    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
+    dcs_lifetimes = dcs_df["time"]
+
+    mixing_weights = mixing.ws_mixing_weights(
+        dcs_k3pi, dcs_lifetimes, params, +1, q_p, cf_scale=1.0, dcs_scale=dcs_scale
+    )
 
     # _weight_hist(mixing_weights)
     # _hists(cf_df, dcs_df, mixing_weights)
 
-    _time_plot(params, cf_df, dcs_df, mixing_weights)
+    # Scale weights such that their mean is right
+    # Want sum(wt) = N_{cf} * dcs integral / cf integral
+    # cf integral = 1 since its just an exponential
+    z = _z(dcs_df, mixing_weights)
+    dcs_integral = -models._ws_integral_dispatcher(
+        0,
+        *models.abc_scan(
+            fit_util.ScanParams(
+                r_d=r_d, x=params.mixing_x, y=params.mixing_y, re_z=z.real, im_z=z.imag
+            )
+        ),
+    )
+    scale = dcs_integral * len(cf_df) / (np.mean(mixing_weights) * len(mixing_weights))
+
+    mixing_weights *= scale
+
+    _time_plot(params, cf_df, dcs_df, mixing_weights, r_d)
 
 
 if __name__ == "__main__":
