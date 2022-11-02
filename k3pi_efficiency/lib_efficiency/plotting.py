@@ -24,7 +24,7 @@ def phsp_labels() -> Tuple:
         r"cos($\theta_+$)",
         r"cos($\theta_-$)",
         r"$\phi$",
-        r"t / ps",
+        r"t / $\tau$",
     )
 
 
