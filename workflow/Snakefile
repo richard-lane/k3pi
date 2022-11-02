@@ -1,3 +1,44 @@
+rule k3pi_analysis:
+    input:
+        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl"
+
+rule train_cf_efficiency:
+    input:
+        "k3pi-data/dumps/pgun/cf/0.pkl",
+        "k3pi-data/dumps/pgun/cf/100.pkl",
+        "k3pi-data/dumps/pgun/cf/101.pkl",
+        "k3pi-data/dumps/pgun/cf/102.pkl",
+        "k3pi-data/dumps/pgun/cf/103.pkl",
+        "k3pi-data/dumps/pgun/cf/104.pkl",
+        "k3pi-data/dumps/pgun/cf/10.pkl",
+        "k3pi-data/dumps/pgun/cf/1.pkl",
+        "k3pi-data/dumps/ampgen/cf.pkl"
+    output:
+        # TODO year/magnetisation are currently unused
+        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl"
+    shell:
+        "python k3pi_efficiency/create_reweighter.py cf 2018 magdown both"
+
+rule train_dcs_efficiency:
+    input:
+        "k3pi-data/dumps/pgun/dcs/0.pkl",
+        "k3pi-data/dumps/pgun/dcs/100.pkl",
+        "k3pi-data/dumps/pgun/dcs/101.pkl",
+        "k3pi-data/dumps/pgun/dcs/102.pkl",
+        "k3pi-data/dumps/pgun/dcs/103.pkl",
+        "k3pi-data/dumps/pgun/dcs/104.pkl",
+        "k3pi-data/dumps/pgun/dcs/10.pkl",
+        "k3pi-data/dumps/pgun/dcs/1.pkl",
+        "k3pi-data/dumps/ampgen/dcs.pkl"
+    output:
+        # TODO year/magnetisation are currently unused
+        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl"
+    shell:
+        "python k3pi_efficiency/create_reweighter.py dcs 2018 magdown both"
+
+
 rule train_bdt:
     input:
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
@@ -14,6 +55,40 @@ rule train_bdt:
     shell:
         "python k3pi_signal_cuts/create_classifier.py 2018 dcs magdown"
 
+rule create_dcs_pgun:
+    output:
+        "k3pi-data/dumps/pgun/dcs/0.pkl",
+        "k3pi-data/dumps/pgun/dcs/100.pkl",
+        "k3pi-data/dumps/pgun/dcs/101.pkl",
+        "k3pi-data/dumps/pgun/dcs/102.pkl",
+        "k3pi-data/dumps/pgun/dcs/103.pkl",
+        "k3pi-data/dumps/pgun/dcs/104.pkl",
+        "k3pi-data/dumps/pgun/dcs/10.pkl",
+        "k3pi-data/dumps/pgun/dcs/1.pkl"
+    shell:
+        "python k3pi-data/create_pgun.py dcs -n 8"
+
+rule create_cf_pgun:
+    output:
+        "k3pi-data/dumps/pgun/cf/0.pkl",
+        "k3pi-data/dumps/pgun/cf/100.pkl",
+        "k3pi-data/dumps/pgun/cf/101.pkl",
+        "k3pi-data/dumps/pgun/cf/102.pkl",
+        "k3pi-data/dumps/pgun/cf/103.pkl",
+        "k3pi-data/dumps/pgun/cf/104.pkl",
+        "k3pi-data/dumps/pgun/cf/10.pkl",
+        "k3pi-data/dumps/pgun/cf/1.pkl"
+    shell:
+        "python k3pi-data/create_pgun.py cf -n 8"
+
+rule create_ampgen:
+    output:
+        "k3pi-data/dumps/ampgen/cf.pkl",
+        "k3pi-data/dumps/ampgen/dcs.pkl"
+    run:
+        shell("python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs")
+        shell("python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf")
+
 rule create_dcs_mc:
     output:
         "k3pi-data/dumps/mc/2018_dcs_magdown.pkl"
@@ -26,7 +101,7 @@ rule create_cf_mc:
     shell:
         "python k3pi-data/create_mc.py 2018 cf magdown"
 
-rule create_real:
+rule create_dcs_real:
     output:
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
@@ -36,6 +111,7 @@ rule create_real:
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl"
+    threads: 8
     shell:
         "python k3pi-data/create_real.py 2018 dcs magdown -n 8"
 
@@ -49,5 +125,6 @@ rule create_uppermass:
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl"
+    threads: 8
     shell:
         "python k3pi-data/create_uppermass.py 2018 dcs magdown -n 8"

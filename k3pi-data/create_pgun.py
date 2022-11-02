@@ -44,7 +44,7 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
     return dataframe
 
 
-def main(sign: str) -> None:
+def main(sign: str, n_files: int) -> None:
     """Create a DataFrame holding AmpGen momenta"""
     # If the dir doesnt exist, create it
     if not definitions.PGUN_DIR.is_dir():
@@ -65,7 +65,7 @@ def main(sign: str) -> None:
     gen = np.random.default_rng()
 
     # Iterate over input files
-    for folder in tqdm(tuple(source_dir.glob("*"))):
+    for folder in tqdm(tuple(source_dir.glob("*"))[:n_files]):
         # If the dump already exists, do nothing
         dump_path = definitions.pgun_dump(sign, folder.name)
         if dump_path.is_file():
@@ -107,7 +107,13 @@ if __name__ == "__main__":
         help="Type of decay - favoured or suppressed."
         "D0->K+3pi is DCS; Dbar0->K+3pi is CF.",
     )
+    parser.add_argument(
+        "-n",
+        type=int,
+        default=None,
+        help="number of files to process; defaults to all of them",
+    )
 
     args = parser.parse_args()
 
-    main(args.sign)
+    main(args.sign, args.n)

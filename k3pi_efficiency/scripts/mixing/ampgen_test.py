@@ -102,9 +102,7 @@ def _time_plot(
     Plot ratio of WS/RS decay times
 
     """
-    bins = np.concatenate(
-        (np.linspace(0, 7, 30), np.arange(7.5, 12.5), [13, 20])
-    )
+    bins = np.concatenate((np.linspace(0, 7, 30), np.arange(7.5, 12.5), [13, 20]))
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
