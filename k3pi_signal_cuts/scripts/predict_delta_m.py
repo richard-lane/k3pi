@@ -72,7 +72,9 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
         guessed_in_this_bin = np.sum(predictions == i)
 
         frac_correct.append(100 * num_correct / guessed_in_this_bin)
-        err.append(frac_correct[-1] * np.sqrt(1 / num_correct + 1 / guessed_in_this_bin))
+        err.append(
+            frac_correct[-1] * np.sqrt(1 / num_correct + 1 / guessed_in_this_bin)
+        )
 
         ax["B"].hist(delta_m[~train][true_in_this_bin], bins=hist_bins)
 
