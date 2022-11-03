@@ -30,7 +30,14 @@ def _arrays(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def _classify(dataframe: pd.DataFrame, path: str) -> None:
-    """Print clf report"""
+    """
+    Train a classifier to predict which delta M bin an event is in
+
+    Plot what proportion of our guesses are correct for each bin, i.e. the precision
+
+    Also then print classification report
+
+    """
     # Get the columns we want
     p_t, delta_m = _arrays(dataframe)
 
@@ -60,14 +67,14 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
     hist_bins = np.linspace(bins[0], bins[-1], 200)
     for i in np.unique(indices):
         # Compare how many we get right in this bin to how many we guess are in this bin overall
-        these = indices[~train] == i
-        num_correct = np.sum(correct[these])
-        total = np.sum(predictions == i)
+        true_in_this_bin = indices[~train] == i
+        num_correct = np.sum(correct[true_in_this_bin])
+        guessed_in_this_bin = np.sum(predictions == i)
 
-        frac_correct.append(100 * num_correct / total)
-        err.append(frac_correct[-1] * np.sqrt(1 / num_correct + 1 / total))
+        frac_correct.append(100 * num_correct / guessed_in_this_bin)
+        err.append(frac_correct[-1] * np.sqrt(1 / num_correct + 1 / guessed_in_this_bin))
 
-        ax["B"].hist(delta_m[~train][these], bins=hist_bins)
+        ax["B"].hist(delta_m[~train][true_in_this_bin], bins=hist_bins)
 
     ax["A"].errorbar(centres, frac_correct, xerr=widths, yerr=err, fmt="k.")
     ax["A"].axhline(100 / n_bins, color="r")
@@ -81,8 +88,13 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
     )
 
 
-def _do_stuff(sign: str):
-    """do stuff lol !!!"""
+def _predict_deltam(sign: str):
+    """
+    For MC, upper mass sideband and real data:
+        Train a classifier, find how good we are at predicting
+        deltaM from the pTs
+
+    """
     print("mc:")
     mc = get.mc("2018", sign, "magdown")
     _classify(mc, f"mc_{sign}_predict_deltam.png")
@@ -101,8 +113,8 @@ def main():
     See if we can predict the value of delta M from the D0 and slow pi pT
 
     """
-    _do_stuff("dcs")
-    _do_stuff("cf")
+    _predict_deltam("dcs")
+    _predict_deltam("cf")
 
 
 if __name__ == "__main__":
