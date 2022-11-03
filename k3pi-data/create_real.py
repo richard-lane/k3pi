@@ -88,9 +88,9 @@ def main(args: argparse.Namespace) -> None:
 
     dump_paths = [
         definitions.data_dump(path, year, sign, magnetisation) for path in data_paths
-    ][:n_files]
+    ]
     # Ugly - also have a list of tree names so i can use a starmap to iterate over both in parallel
-    tree_names = [definitions.data_tree(sign) for _ in dump_paths][:n_files]
+    tree_names = [definitions.data_tree(sign) for _ in dump_paths]
 
     with Pool(processes=8) as pool:
         tqdm(
