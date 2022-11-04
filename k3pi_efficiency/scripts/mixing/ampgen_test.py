@@ -23,12 +23,6 @@ from lib_time_fit import util as fit_util
 from lib_time_fit import fitter, plotting
 
 
-def _weight_hist(weights: np.ndarray) -> None:
-    """Show histogram of weights"""
-    plt.hist(weights, bins=100)
-    plt.show()
-
-
 def _z(dataframe: pd.DataFrame, weights: np.ndarray) -> complex:
     """
     Coherence factor given the desired amplitude ratio
@@ -134,9 +128,7 @@ def _time_plot(
 
 def _hists(cf_df: pd.DataFrame, dcs_df: pd.DataFrame, weights: np.ndarray) -> None:
     """
-    Show phase space histograms
-
-    And time ratio plots
+    save phase space histograms
 
     """
     cf_pts = np.column_stack(
@@ -146,21 +138,19 @@ def _hists(cf_df: pd.DataFrame, dcs_df: pd.DataFrame, weights: np.ndarray) -> No
         (helicity_param(*efficiency_util.k_3pi(dcs_df)), dcs_df["time"])
     )
 
-    fig, ax = plt.subplots(2, 3, figsize=(12, 8))
+    _, ax = plt.subplots(2, 3, figsize=(12, 8))
     hist_kw = {"histtype": "step", "density": True}
     for a, cf, dcs, label in zip(ax.ravel(), cf_pts.T, dcs_pts.T, phsp_labels()):
-        _, bins, _ = a.hist(cf, bins=100, label="CF", **hist_kw)
+        contents, bins, _ = a.hist(cf, bins=100, label="CF", **hist_kw)
         a.hist(dcs, bins=bins, label="DCS", **hist_kw)
         a.hist(dcs, bins=bins, label="weighted", weights=weights, **hist_kw)
         a.set_xlabel(label)
+        a.set_ylim(0, np.max(contents) * 1.1)
 
     ax[0, 0].legend()
     ax.ravel()[-1].legend()
 
-    fig.tight_layout()
     plt.savefig("ampgen_mixed_hists.png")
-
-    plt.show()
 
 
 def _exact_dcs_integral(r_d: float, x: float, y: float, z: complex):
@@ -186,6 +176,38 @@ def _exact_dcs_integral(r_d: float, x: float, y: float, z: complex):
     return quad(_exact_dcs, 0, np.inf)[0]
 
 
+def _mixing_weights(
+    cf_df: pd.DataFrame,
+    dcs_df: pd.DataFrame,
+    r_d: float,
+    params: mixing.MixingParams,
+    q_p: Tuple[float, float],
+):
+    """
+    Find weights to apply to the dataframe to introduce mixing
+
+    """
+    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
+    dcs_lifetimes = dcs_df["time"]
+
+    # Need to find the right amount to scale the amplitudes by
+    dcs_scale = r_d * np.sqrt(amplitudes.DCS_AVG_SQ / amplitudes.CF_AVG_SQ)
+    mixing_weights = mixing.ws_mixing_weights(
+        dcs_k3pi, dcs_lifetimes, params, +1, q_p, cf_scale=1.0, dcs_scale=dcs_scale
+    )
+
+    _hists(cf_df, dcs_df, mixing_weights)
+
+    # Scale weights such that their mean is right
+    # Want sum(wt) = N_{cf} * dcs integral / cf integral
+    # cf integral = 1 since its just an exponential
+    z = _z(dcs_df, mixing_weights)
+    dcs_integral = _exact_dcs_integral(r_d, params.mixing_x, params.mixing_y, z)
+    scale = dcs_integral * len(cf_df) / (np.mean(mixing_weights) * len(mixing_weights))
+
+    return mixing_weights * scale
+
+
 def main():
     """
     Read AmpGen dataframes, add some mixing to the DCS frame, plot the ratio of the decay times
@@ -205,28 +227,7 @@ def main():
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
-    # Need to scale the amplitudes by the right amounts
-    dcs_scale = r_d * np.sqrt(amplitudes.DCS_AVG_SQ / amplitudes.CF_AVG_SQ)
-
-    # Introduce mixing
-    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
-    dcs_lifetimes = dcs_df["time"]
-
-    mixing_weights = mixing.ws_mixing_weights(
-        dcs_k3pi, dcs_lifetimes, params, +1, q_p, cf_scale=1.0, dcs_scale=dcs_scale
-    )
-
-    # _weight_hist(mixing_weights)
-    # _hists(cf_df, dcs_df, mixing_weights)
-
-    # Scale weights such that their mean is right
-    # Want sum(wt) = N_{cf} * dcs integral / cf integral
-    # cf integral = 1 since its just an exponential
-    z = _z(dcs_df, mixing_weights)
-    dcs_integral = _exact_dcs_integral(r_d, params.mixing_x, params.mixing_y, z)
-    scale = dcs_integral * len(cf_df) / (np.mean(mixing_weights) * len(mixing_weights))
-
-    mixing_weights *= scale
+    mixing_weights = _mixing_weights(cf_df, dcs_df, r_d, params, q_p)
 
     _time_plot(params, cf_df, dcs_df, mixing_weights, r_d)
 
