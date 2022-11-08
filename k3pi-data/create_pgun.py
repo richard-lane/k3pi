@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from lib_data import definitions
 from lib_data import cuts
+from lib_data import training_vars
 from lib_data import util
 
 
@@ -27,15 +28,27 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
 
     """
     dataframe = pd.DataFrame()
-
     keep = cuts.pgun_keep(data_tree, hlt_tree)
 
     # Read momenta into the dataframe
     util.add_momenta(dataframe, data_tree, keep)
+    # for reasons that make no sense to me, the particle gun definitions
+    # for two of the pions are swapped
+    # Deal with that here
+    pi1_cols = definitions.MOMENTUM_COLUMNS[8:12]
+    pi2_cols = definitions.MOMENTUM_COLUMNS[12:16]
+    dataframe.rename(
+        columns=dict(zip(pi1_cols, pi2_cols), **dict(zip(pi2_cols, pi1_cols))),
+        inplace=True,
+    )
+    cols = dataframe.columns.tolist()
+    cols = [*cols[0:4], *cols[8:12], *cols[4:8], *cols[12:]]
+    dataframe = dataframe[cols]
 
     util.add_refit_times(dataframe, data_tree, keep)
 
     # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
+    training_vars.add_vars(dataframe, data_tree, keep)
     util.add_k_id(dataframe, data_tree, keep)
     util.add_masses(dataframe, data_tree, keep)
 
@@ -74,7 +87,6 @@ def main(sign: str, n_files: int) -> None:
         # Otherwise read the right trees
         data_path = folder / "pGun_TRACK.root"
         hlt_path = folder / "Hlt1TrackMVA.root"
-
         try:
             with uproot.open(data_path) as data_f, uproot.open(hlt_path) as hlt_f:
                 data_tree = data_f["Dstp2D0pi/DecayTree"]

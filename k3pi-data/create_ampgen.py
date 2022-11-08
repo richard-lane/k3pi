@@ -34,6 +34,8 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
     df["time"] = (
         tree[t_branch].array(library="np") * 1000 / 0.41
     )  # Convert to d lifetimes
+    # TODO should use a constant somewhere to encode
+    # the actual AmpGen lifetime
 
     # Expect to have K+3pi AmpGen
     # This is why we have K~ (K+) and two pi# (pi-)

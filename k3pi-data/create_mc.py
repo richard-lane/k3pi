@@ -33,16 +33,13 @@ def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
 
     # Read momenta into the dataframe
     util.add_momenta(dataframe, tree, keep)
+    util.add_refit_times(dataframe, tree, keep)
 
     # Read training variables used for the classifier
     training_vars.add_vars(dataframe, tree, keep)
 
-    # Read times into dataframe
-    util.add_refit_times(dataframe, tree, keep)
-
     # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
     util.add_k_id(dataframe, tree, keep)
-
     util.add_masses(dataframe, tree, keep)
 
     # track/SPD for event multiplicity reweighting

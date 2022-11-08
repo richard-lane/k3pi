@@ -82,27 +82,29 @@ def main():
     # rs_data = _parameterise(
     #     util.flip_momenta(pd.concat(get.data(year, "cf", magnetisation)))
     # )
-    # ws_data = _parameterise(
-    #     util.flip_momenta(pd.concat(get.data(year, "dcs", magnetisation)))
+    ws_data = _parameterise(
+        util.flip_momenta(pd.concat(get.data(year, "dcs", magnetisation)))
+    )
+
+    # rs_pgun = _parameterise(
+    #     util.flip_momenta(get.particle_gun("cf", show_progress=True))
     # )
+    # ws_pgun = _parameterise(
+    #     util.flip_momenta(get.particle_gun("dcs", show_progress=True))
+    # )
+    rs_pgun = _parameterise(get.particle_gun("cf", show_progress=True))
+    ws_pgun = _parameterise(get.particle_gun("dcs", show_progress=True))
 
-    rs_pgun = _parameterise(
-        util.flip_momenta(get.particle_gun("cf", show_progress=True))
-    )
-    ws_pgun = _parameterise(
-        util.flip_momenta(get.particle_gun("dcs", show_progress=True))
-    )
-
-    false_df = get.false_sign(show_progress=True)
-    false_sign = _parameterise(
-        util.flip_momenta(false_df)
-    )  # Might want to flip momentum the other way
+    # false_df = get.false_sign(show_progress=True)
+    # false_sign = _parameterise(
+    #     util.flip_momenta(false_df)
+    # )  # Might want to flip momentum the other way
 
     # rs_mc = _parameterise(util.flip_momenta(get.mc(year, "cf", magnetisation)))
-    # ws_mc = _parameterise(util.flip_momenta(get.mc(year, "dcs", magnetisation)))
+    ws_mc = _parameterise(util.flip_momenta(get.mc(year, "dcs", magnetisation)))
 
     # rs_ampgen = _parameterise(get.ampgen("cf"))
-    # ws_ampgen = _parameterise(get.ampgen("dcs"))
+    ws_ampgen = _parameterise(get.ampgen("dcs"))
 
     _plot(
         [
@@ -110,22 +112,22 @@ def main():
             # rs_mc,
             rs_pgun,
             # rs_ampgen,
-            false_sign,
-            # ws_data,
-            # ws_mc,
+            # false_sign,
+            ws_data,
+            ws_mc,
             ws_pgun,
-            # ws_ampgen,
+            ws_ampgen,
         ],
         [
             # "CF data",
             # "CF MC",
             "CF pgun",
             # "CF AmpGen",
-            "False sign pgun",
-            # "DCS data",
-            # "DCS MC",
+            # "False sign pgun",
+            "DCS data",
+            "DCS MC",
             "DCS pgun",
-            # "DCS AmpGen",
+            "DCS AmpGen",
         ],
     )
 

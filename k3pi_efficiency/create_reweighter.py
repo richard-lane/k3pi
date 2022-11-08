@@ -8,64 +8,113 @@ import pickle
 import pathlib
 import argparse
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
 from lib_efficiency import efficiency_definitions, efficiency_util, plotting
 from lib_efficiency.reweighter import EfficiencyWeighter
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_signal_cuts"))
 
-from lib_data import util
+from lib_data import util, training_vars
+from lib_cuts.get import classifier as get_clf
 
 
-def main(year: str, sign: str, magnetisation: str, k_sign: str, fit: bool):
+def _bdt_cut_keep(
+    dataframe: pd.DataFrame, year: str, magnetisation: str, sign: str
+) -> np.ndarray:
+    """
+    Events to keep following the BDT cut
+
+    """
+    # Open reweighter
+    clf = get_clf(year, sign, magnetisation)
+
+    # Evaluate bkg probabilities
+    labels = list(training_vars.training_var_names())
+    # Don't want to keep evts below threshhold
+    threshhold = 0.185
+    predictions = clf.predict_proba(dataframe[labels])[:, 1] > threshhold
+    return predictions == 1
+
+
+def _points(
+    dataframe: pd.DataFrame,
+    *,
+    cut: bool,
+    year: str = None,
+    magnetisation: str = None,
+    sign: str = None,
+) -> np.ndarray:
+    """
+    Phsp points used in parameterisation
+
+    """
+    # Get the right arrays
+    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+
+    # Momentum order
+    pi1, pi2 = util.momentum_order(k, pi1, pi2)
+
+    # Parameterise points
+    points = np.column_stack((helicity_param(k, pi1, pi2, pi3), dataframe["time"]))
+
+    # we might want to do BDT cuts too
+    if cut:
+        keep = _bdt_cut_keep(dataframe, year, magnetisation, sign)
+        print(f"BDT cut: keeping {np.sum(keep)} of {len(keep)}")
+        points = points[keep]
+
+    return points
+
+
+def main(args: argparse.Namespace):
     """
     Read the right data, use it to create a reweighter, pickle the reweighter
 
     """
+    reweighter_path = efficiency_definitions.reweighter_path(
+        args.year, args.sign, args.magnetisation, args.k_sign, args.fit
+    )
+    if os.path.exists(reweighter_path):
+        raise FileExistsError(reweighter_path)
+
     if not efficiency_definitions.REWEIGHTER_DIR.is_dir():
         os.mkdir(efficiency_definitions.REWEIGHTER_DIR)
 
-    # Read the right stuff
-    ag_df = efficiency_util.ampgen_df(sign, k_sign, train=True)
-    pgun_df = efficiency_util.pgun_df(sign, k_sign, train=True)
-
-    # Get the right arrays
-    ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ag_df)
-    mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
-
-    # Momentum order
-    ag_pi1, ag_pi2 = util.momentum_order(ag_k, ag_pi1, ag_pi2)
-    mc_pi1, mc_pi2 = util.momentum_order(mc_k, mc_pi1, mc_pi2)
-
-    # Parameterise points
-    ag = np.column_stack((helicity_param(ag_k, ag_pi1, ag_pi2, ag_pi3), ag_df["time"]))
-    mc = np.column_stack(
-        (helicity_param(mc_k, mc_pi1, mc_pi2, mc_pi3), pgun_df["time"])
+    ag_pts = _points(
+        efficiency_util.ampgen_df(args.sign, args.k_sign, train=True), cut=False
+    )
+    mc_pts = _points(
+        efficiency_util.pgun_df(args.sign, args.k_sign, train=True),
+        cut=args.cut,
+        year=args.year,
+        magnetisation=args.magnetisation,
+        sign=args.sign,
     )
 
     # Just to check stuff let's plot some projections
-    plotting.projections(mc, ag)
-    fit_suffix = "_fit" if fit else ""
-    plt.savefig(f"training_proj_{year}_{sign}_{magnetisation}_{k_sign}{fit_suffix}.png")
+    plotting.projections(mc_pts, ag_pts)
+    suffix = f"{'_fit' if args.fit else ''}{'_cut' if args.cut else ''}"
+    plt.savefig(
+        f"training_proj_{args.year}_{args.sign}_{args.magnetisation}_{args.k_sign}{suffix}.png"
+    )
     print("saved fig")
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 5,
+        "n_estimators": 1,
         "max_depth": 5,
         "learning_rate": 0.7,
         "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(
-        ag, mc, fit, efficiency_definitions.MIN_TIME, **train_kwargs
+        ag_pts, mc_pts, args.fit, efficiency_definitions.MIN_TIME, **train_kwargs
     )
 
     # Dump it
-    with open(
-        efficiency_definitions.reweighter_path(year, sign, magnetisation, k_sign, fit),
-        "wb",
-    ) as f:
+    with open(reweighter_path, "wb") as f:
         pickle.dump(reweighter, f)
 
 
@@ -80,8 +129,14 @@ if __name__ == "__main__":
         choices={"k_plus", "k_minus", "both"},
         help="Whether to create a reweighter for K+ or K- type evts",
     )
-    parser.add_argument("--fit", action="store_true")
+    parser.add_argument(
+        "--fit",
+        action="store_true",
+        help="""Whether to perform a fit to decay times;
+                otherwise finds decay time efficiency with a histogram division""",
+    )
+    parser.add_argument(
+        "--cut", action="store_true", help="Whether to perform BDT cut to data"
+    )
 
-    args = parser.parse_args()
-
-    main(args.year, args.sign, args.magnetisation, args.k_sign, args.fit)
+    main(parser.parse_args())

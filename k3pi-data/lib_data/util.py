@@ -41,7 +41,7 @@ def flip_momenta(dataframe: pd.DataFrame, to_flip=None) -> pd.DataFrame:
                     where df["K_ID"] < 0
 
     """
-
+    # Flip the k3pi 3-momenta
     flip_columns = [
         *definitions.MOMENTUM_COLUMNS[0:3],
         *definitions.MOMENTUM_COLUMNS[4:7],
@@ -53,7 +53,7 @@ def flip_momenta(dataframe: pd.DataFrame, to_flip=None) -> pd.DataFrame:
 
     df_copy = dataframe.copy()
     for col in flip_columns:
-        df_copy[col][to_flip] = -1 * dataframe[col][to_flip]
+        df_copy.loc[to_flip, col] *= -1
 
     return df_copy
 
@@ -154,9 +154,14 @@ def total_luminosity(files: List[str]) -> float:
 def add_momenta(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
     """
     Add K3pi, slow pi momenta into the dataframe from a
-    MC/particle gun/ real datatree in place
+    MC/particle gun/real data tree in place
 
     """
+    # This should be the right order to give us K+pi-pi-pi+ in real data and MC
+    # It will not! give the right order for
+    # particle gun, but that gets dealt with in
+    # the create_pgun.py script.
+    # TODO something nicer lol
     suffices = "PX", "PY", "PZ", "PE"
     branches = (
         *(f"Dst_ReFit_D0_Kplus_{s}" for s in suffices),
