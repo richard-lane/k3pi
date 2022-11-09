@@ -28,6 +28,7 @@ def weights(
     sign: str,
     magnetisation: str,
     fit: bool,
+    cut: bool,
     verbose=False,
 ) -> np.ndarray:
     """
@@ -50,13 +51,14 @@ def weights(
     :param magnetisation: either "MagUp" or "MagDown"
     :param fit: whether to use the reweighter trained using a fit to decay times (fit=True) or a
                 histogram division (fit=False)
+    :param cut: whether to use a reweighter trained on data after the BDT cut was applied
     :param verbose: whether to print a small amount of extra information
 
     :returns: length-N array of weights
 
     """
     assert efficiency_definitions.reweighter_exists(
-        year, sign, magnetisation, k_sign, fit
+        year, sign, magnetisation, k_sign, fit, cut
     )
 
     if verbose:
@@ -76,6 +78,7 @@ def weights(
         magnetisation,
         k_sign,
         fit,
+        cut,
     )
 
     # Open the reweighter

@@ -11,38 +11,18 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
-from lib_efficiency import efficiency_definitions, efficiency_util, plotting
+from lib_efficiency import efficiency_definitions, efficiency_util, plotting, cut
 from lib_efficiency.reweighter import EfficiencyWeighter
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_signal_cuts"))
 
-from lib_data import util, training_vars
-from lib_cuts.get import classifier as get_clf
-
-
-def _bdt_cut_keep(
-    dataframe: pd.DataFrame, year: str, magnetisation: str, sign: str
-) -> np.ndarray:
-    """
-    Events to keep following the BDT cut
-
-    """
-    # Open reweighter
-    clf = get_clf(year, sign, magnetisation)
-
-    # Evaluate bkg probabilities
-    labels = list(training_vars.training_var_names())
-    # Don't want to keep evts below threshhold
-    threshhold = 0.185
-    predictions = clf.predict_proba(dataframe[labels])[:, 1] > threshhold
-    return predictions == 1
+from lib_data import util
 
 
 def _points(
     dataframe: pd.DataFrame,
     *,
-    cut: bool,
+    bdt_cut: bool,
     year: str = None,
     magnetisation: str = None,
     sign: str = None,
@@ -61,8 +41,8 @@ def _points(
     points = np.column_stack((helicity_param(k, pi1, pi2, pi3), dataframe["time"]))
 
     # we might want to do BDT cuts too
-    if cut:
-        keep = _bdt_cut_keep(dataframe, year, magnetisation, sign)
+    if bdt_cut:
+        keep = cut.mask(dataframe, year, magnetisation, sign)
         print(f"BDT cut: keeping {np.sum(keep)} of {len(keep)}")
         points = points[keep]
 
@@ -75,7 +55,7 @@ def main(args: argparse.Namespace):
 
     """
     reweighter_path = efficiency_definitions.reweighter_path(
-        args.year, args.sign, args.magnetisation, args.k_sign, args.fit
+        args.year, args.sign, args.magnetisation, args.k_sign, args.fit, args.cut
     )
     if os.path.exists(reweighter_path):
         raise FileExistsError(reweighter_path)
@@ -84,11 +64,11 @@ def main(args: argparse.Namespace):
         os.mkdir(efficiency_definitions.REWEIGHTER_DIR)
 
     ag_pts = _points(
-        efficiency_util.ampgen_df(args.sign, args.k_sign, train=True), cut=False
+        efficiency_util.ampgen_df(args.sign, args.k_sign, train=True), bdt_cut=False
     )
     mc_pts = _points(
         efficiency_util.pgun_df(args.sign, args.k_sign, train=True),
-        cut=args.cut,
+        bdt_cut=args.cut,
         year=args.year,
         magnetisation=args.magnetisation,
         sign=args.sign,
@@ -104,7 +84,7 @@ def main(args: argparse.Namespace):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 1,
+        "n_estimators": 50,
         "max_depth": 5,
         "learning_rate": 0.7,
         "min_samples_leaf": 1800,

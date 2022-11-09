@@ -53,6 +53,7 @@ def main(args: argparse.Namespace):
         args.weighter_type,
         args.magnetisation,
         args.fit,
+        args.cut,
         verbose=True,
     )
 

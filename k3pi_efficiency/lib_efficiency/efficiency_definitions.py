@@ -16,7 +16,8 @@ def reweighter_path(
     sign: str,
     magnetisation: str,
     k_sign: str,
-    time_fit: bool = False,
+    time_fit: bool,
+    cut: bool,
 ) -> pathlib.Path:
     """
     Where the efficiency correction reweighter lives
@@ -27,16 +28,17 @@ def reweighter_path(
     assert magnetisation in {"magdown"}
     assert k_sign in {"k_plus", "k_minus", "both"}
 
-    time_suffix = "_time_fit" if time_fit else ""
+    suffix = "_time_fit" if time_fit else ""
+    suffix = f"{'_time_fit' if time_fit else ''}{'bdt_cut' if cut else ''}"
 
-    return REWEIGHTER_DIR / f"{year}_{sign}_{magnetisation}_{k_sign}{time_suffix}.pkl"
+    return REWEIGHTER_DIR / f"{year}_{sign}_{magnetisation}_{k_sign}{suffix}.pkl"
 
 
 def reweighter_exists(
-    year: str, sign: str, magnetisation: str, k_sign: str, time_fit: bool = False
+    year: str, sign: str, magnetisation: str, k_sign: str, time_fit: bool, cut: bool
 ) -> bool:
     """
     Whether the reweighter has been created yet
 
     """
-    return reweighter_path(year, sign, magnetisation, k_sign, time_fit).is_file()
+    return reweighter_path(year, sign, magnetisation, k_sign, time_fit, cut).is_file()

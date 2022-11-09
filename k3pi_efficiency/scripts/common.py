@@ -52,7 +52,14 @@ def parser(description: str) -> argparse.ArgumentParser:
         help="whether to open the reweighter trained on D0->K+ or K- 3pi",
     )
     retval.add_argument(
-        "--fit", action="store_true", help="So we know which reweighter to open"
+        "--fit",
+        action="store_true",
+        help="So we know which reweighter to open; time fit or hist division",
+    )
+    retval.add_argument(
+        "--cut",
+        action="store_true",
+        help="So we know which reweighter to open; BDT cut or not",
     )
 
     return retval

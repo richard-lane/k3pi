@@ -31,6 +31,7 @@ def _times_and_weights(
     data_sign: str,
     weighter_sign: str,
     fit: bool,
+    cut: bool,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Get testing times and weights
@@ -60,6 +61,7 @@ def _times_and_weights(
         "cf" if sign == "false" else sign,
         magnetisation,
         fit,
+        cut,
         verbose=True,
     )
 
@@ -102,6 +104,7 @@ def main(args: argparse.Namespace):
         args.data_k_charge,
         args.weighter_k_charge,
         args.fit,
+        args.cut,
     )
     ws_ag_t, ws_mc_t, ws_wt = _times_and_weights(
         args.year,
@@ -110,6 +113,7 @@ def main(args: argparse.Namespace):
         args.data_k_charge,
         args.weighter_k_charge,
         args.fit,
+        args.cut,
     )
 
     # Keep only times in the allowed range

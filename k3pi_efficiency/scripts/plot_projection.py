@@ -19,6 +19,7 @@ from lib_efficiency import (
     plotting,
     efficiency_model,
     efficiency_definitions,
+    cut,
 )
 
 
@@ -31,6 +32,12 @@ def main(args):
     ampgen_df = efficiency_util.ampgen_df(
         args.decay_type, args.data_k_charge, train=False
     )
+
+    # We might want to do BDT cut
+    if args.cut:
+        mask = cut.mask(pgun_df, args.year, args.magnetisation, args.decay_type)
+        print(f"BDT cut: cutting {np.sum(mask)} of {len(mask)}")
+        pgun_df = pgun_df[mask]
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
@@ -49,6 +56,7 @@ def main(args):
         args.weighter_type,
         args.magnetisation,
         args.fit,
+        args.cut,
         verbose=True,
     )
 
