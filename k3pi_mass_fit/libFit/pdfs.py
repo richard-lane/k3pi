@@ -291,6 +291,69 @@ class BinnedChi2:
         )
 
 
+class SimultaneousBinnedChi2:
+    """
+    Cost function for binned mass fit,
+    simultaneous RS and WS fit
+
+    """
+
+    errordef = Minuit.LEAST_SQUARES
+
+    def __init__(
+        self,
+        rs_masses: np.ndarray,
+        ws_masses: np.ndarray,
+        bins: np.ndarray,
+        rs_weights: np.ndarray = None,
+        ws_weights: np.ndarray = None,
+    ):
+        """
+        Set things we need for the fit
+
+        """
+        # We need to tell Minuit what our function signature is explicitly
+        self.func_code = make_func_code(
+            [
+                "rs_signal_fraction",
+                "ws_signal_fraction",
+                "centre",
+                "width_l",
+                "width_r",
+                "alpha_l",
+                "alpha_r",
+                "beta",
+                "a",
+                "b",
+            ]
+        )
+        self.rs_chi2 = BinnedChi2(rs_masses, bins, rs_weights)
+        self.ws_chi2 = BinnedChi2(ws_masses, bins, ws_weights)
+
+    def __call__(
+        self,
+        rs_signal_fraction: float,
+        ws_signal_fraction: float,
+        centre: float,
+        width_l: float,
+        width_r: float,
+        alpha_l: float,
+        alpha_r: float,
+        beta: float,
+        a: float,
+        b: float,
+    ) -> float:
+        """
+        Objective function
+
+        """
+        return self.rs_chi2(
+            rs_signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+        ) + self.ws_chi2(
+            ws_signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+        )
+
+
 def default_centre() -> float:
     """Initial guess for the centre of the signal peak"""
     return 146.0

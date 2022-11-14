@@ -3,7 +3,7 @@ import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 
 from libFit import pdfs
 
