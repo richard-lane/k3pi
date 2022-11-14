@@ -33,33 +33,13 @@ def main():
         centres, sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
     )
 
-    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
 
-    ax[0, 0].plot(centres, sig)
-    ax[0, 0].plot(centres, bkg)
+    ax[0].plot(centres, sig)
+    ax[0].plot(centres, bkg)
 
-    ax[0, 1].plot(centres, pdf)
-    ax[0, 1].set_title(f"Signal fraction = {sig_frac}")
-
-    sig_cum = pdfs.signal_cdf(
-        centres,
-        centre,
-        width_l,
-        width_r,
-        alpha_l,
-        alpha_r,
-        beta,
-    )
-    bkg_cum = pdfs.bkg_cdf(centres, a, b)
-    cdf = pdfs.cdf(
-        centres, sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
-    )
-
-    ax[1, 0].plot(centres, sig_cum)
-    ax[1, 0].plot(centres, bkg_cum)
-
-    ax[1, 1].plot(centres, cdf)
-
+    ax[1].plot(centres, pdf)
+    ax[1].set_title(f"Signal fraction = {sig_frac}")
     plt.show()
 
 
