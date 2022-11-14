@@ -137,7 +137,7 @@ def main():
     # This would be required if we wanted to make the mixing realistic
     k3pi = efficiency_util.k_3pi(dcs_df)
     print("." * len(times))
-    with Pool(processes=8) as pool:
+    with Pool(processes=2) as pool:
         weights = pool.starmap(
             _weights,
             zip((k3pi for _ in times), (time * np.ones(len(dcs_df)) for time in times)),
