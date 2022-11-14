@@ -1,14 +1,22 @@
-import numpy as np
+"""
+PDFs, CDF, integrals etc. for mass fit signal and background shapes
+
+"""
+import sys
+import pathlib
 from typing import Tuple
+import numpy as np
 from scipy.integrate import quad
+from iminuit import Minuit
+from iminuit.util import make_func_code
 
-
-def low_mass_threshhold() -> float:
-    return 139.57
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
+from lib_efficiency.metrics import _counts
 
 
 def domain() -> Tuple[float, float]:
-    return low_mass_threshhold(), 152.0
+    """Edges of the delta M range"""
+    return 139.57, 152.0
 
 
 def background(x: np.ndarray, a: float, b: float) -> np.ndarray:
@@ -21,36 +29,34 @@ def background(x: np.ndarray, a: float, b: float) -> np.ndarray:
     :returns: PDF at x evaluated with the given parameters
 
     """
-    tmp = np.sqrt(x - low_mass_threshhold())
+    tmp = np.sqrt(x - domain()[0])
     return tmp + a * tmp**3 + b * tmp**5
 
 
 def _bkg_integral_dispatcher(x: float, a: float, b: float) -> float:
-    tmp = np.sqrt(x - low_mass_threshhold())
+    """Integral of the bkg pdf up to x"""
+    tmp = np.sqrt(x - domain()[0])
     return 2 / 3 * tmp**3 + 2 * a / 5 * tmp**5 + 2 * b / 7 * tmp**7
 
 
-def _bkg_integral(a: float, b: float) -> float:
-    """
-    Integral of background PDF across the domain
-
-    """
-    _, high = domain()
-    # The integral at x=low is 0, so we just return the integral evaluated at the upper limit
-    return _bkg_integral_dispatcher(high, a, b)
+def _bkg_integral(low: float, high: float, a: float, b: float) -> float:
+    """Normalised integral"""
+    return (
+        _bkg_integral_dispatcher(high, a, b) - _bkg_integral_dispatcher(low, a, b)
+    ) / _bkg_integral_dispatcher(domain()[1], a, b)
 
 
 def normalised_bkg(x: np.ndarray, a: float, b: float) -> np.ndarray:
-    return background(x, a, b) / _bkg_integral(a, b)
+    """Normalised bkg PDF"""
+    # The integral across the whole domain is equal to the integral evaluated at the
+    # high limit
+    return background(x, a, b) / _bkg_integral_dispatcher(domain()[1], a, b)
 
 
 def signal_base(
     x: np.ndarray, centre: float, width: float, alpha: float, beta: float
 ) -> np.ndarray:
-    """
-    Signal model for delta M distribution
-
-    """
+    """Signal model for delta M distribution"""
     diff_sq = (x - centre) ** 2
 
     numerator = diff_sq * (1 + beta * diff_sq)
@@ -59,13 +65,27 @@ def signal_base(
     return np.exp(-numerator / denominator)
 
 
+def _signal_base_integral(x_domain: Tuple[float, float], args: Tuple) -> float:
+    """Non-normalised integral of the signal model"""
+    return quad(signal_base, *x_domain, args=args)[0]
+
+
 def normalised_sig_base(
     x: np.ndarray, centre: float, width: float, alpha: float, beta: float
 ) -> np.ndarray:
+    """
+    Signal shape, normalised
+
+    """
     args = (centre, width, alpha, beta)
-    area = quad(signal_base, *domain(), args=args)[0]
+    area = _signal_base_integral(domain(), args)
 
     return signal_base(x, *args) / area
+
+
+def _norm_sig_base_integral(x_domain: Tuple[float, float], args: Tuple) -> float:
+    """Normalised integral of the signal model"""
+    return quad(normalised_sig_base, *x_domain, args=args)[0]
 
 
 def signal(
@@ -92,6 +112,34 @@ def signal(
     return retval
 
 
+def _signal_integral(
+    x_domain: Tuple[float, float],
+    centre: float,
+    width_l: float,
+    width_r: float,
+    alpha_l: float,
+    alpha_r: float,
+    beta: float,
+) -> float:
+    """Integral of the normalised signal PDF between two points"""
+    assert x_domain[0] <= x_domain[1]
+    left_args = (centre, width_l, alpha_l, beta)
+    right_args = (centre, width_r, alpha_r, beta)
+
+    # Entire range above the centre
+    if x_domain[0] > centre:
+        return _norm_sig_base_integral(x_domain, args=right_args)
+
+    # Entire range below the centre
+    if x_domain[1] < centre:
+        return _norm_sig_base_integral(x_domain, args=left_args)
+
+    # Range crosses the centre
+    return _norm_sig_base_integral(
+        (x_domain[0], centre), args=left_args
+    ) + _norm_sig_base_integral((centre, x_domain[1]), args=left_args)
+
+
 def normalised_signal(
     x: np.ndarray,
     centre: float,
@@ -101,6 +149,7 @@ def normalised_signal(
     alpha_r: float,
     beta: float,
 ):
+    """Normalised signal PDF"""
     left_args = (centre, width_l, alpha_l, beta)
     right_args = (centre, width_r, alpha_r, beta)
     low, high = domain()
@@ -162,7 +211,88 @@ def pdf(
     )
 
 
+class BinnedChi2:
+    """
+    Cost function for binned mass fit
+
+    """
+
+    errordef = Minuit.LEAST_SQUARES
+
+    def __init__(
+        self, masses: np.ndarray, bins: np.ndarray, weights: np.ndarray = None
+    ):
+        """
+        Set things we need for the fit
+
+        """
+        # We need to tell Minuit what our function signature is explicitly
+        self.func_code = make_func_code(
+            [
+                "signal_fraction",
+                "centre",
+                "width_l",
+                "width_r",
+                "alpha_l",
+                "alpha_r",
+                "beta",
+                "a",
+                "b",
+            ]
+        )
+
+        if weights is None:
+            weights = np.ones_like(masses)
+
+        self.counts, self.error = _counts(masses, weights, bins)
+        self.total = np.sum(self.counts)
+
+        self.centres = (bins[1:] + bins[:-1]) / 2
+        self.widths = (bins[1:] - bins[:-1]) / 2
+
+    def __call__(
+        self,
+        signal_fraction: float,
+        centre: float,
+        width_l: float,
+        width_r: float,
+        alpha_l: float,
+        alpha_r: float,
+        beta: float,
+        a: float,
+        b: float,
+    ) -> float:
+        """
+        Objective function
+
+        """
+        return np.sum(
+            (
+                self.counts
+                - (
+                    self.total
+                    * self.widths
+                    * fractional_pdf(
+                        self.centres,
+                        signal_fraction,
+                        centre,
+                        width_l,
+                        width_r,
+                        alpha_l,
+                        alpha_r,
+                        beta,
+                        a,
+                        b,
+                    )
+                )
+            )
+            ** 2
+            / self.error**2
+        )
+
+
 def default_centre() -> float:
+    """Initial guess for the centre of the signal peak"""
     return 146.0
 
 
