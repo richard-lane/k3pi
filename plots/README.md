@@ -32,7 +32,7 @@ Mass Fit Toy
 ----
 With some toy $\Delta M$ values (generated from the fitting PDF), we can do a mass fit:
 
-![mass fit](/../example_plots/toy_mass_fit.png)
+![mass fit](/../example_plots/toy_simul_fit.png)
 
 Time Fitter Toys
 ----

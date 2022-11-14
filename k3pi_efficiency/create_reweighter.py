@@ -42,7 +42,8 @@ def _points(
 
     # we might want to do BDT cuts too
     if bdt_cut:
-        keep = cut.mask(dataframe, year, magnetisation, sign)
+        # Always use the DCS BDT for doing cuts
+        keep = cut.mask(dataframe, year, magnetisation, "dcs")
         print(f"BDT cut: keeping {np.sum(keep)} of {len(keep)}")
         points = points[keep]
 
