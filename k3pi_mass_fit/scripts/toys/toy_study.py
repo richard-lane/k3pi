@@ -158,7 +158,7 @@ def _do_pull_study():
     )
 
 
-def main(args: argparse.Namespace):
+def main():
     """
     do a pull study
 
