@@ -6,16 +6,19 @@ do the mass fit,
 plot it
 
 """
+import os
 import sys
 import pathlib
 from typing import Tuple
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts.get import classifier as get_clf
@@ -24,6 +27,14 @@ from libFit import fit, pdfs
 from lib_efficiency import efficiency_model
 from lib_efficiency.efficiency_util import k_3pi
 from lib_efficiency.metrics import _counts
+from lib_efficiency.efficiency_definitions import MIN_TIME
+from lib_time_fit.definitions import TIME_BINS
+
+
+def _time_bin_indices(times: np.ndarray) -> np.ndarray:
+    """Time bin indices"""
+    bins = (MIN_TIME, *TIME_BINS[2:])
+    return np.digitize(times, bins)
 
 
 def _plot(dataframe: pd.DataFrame, path: str):
@@ -133,6 +144,7 @@ def _plot_hists(
     fig.tight_layout()
 
     fig.savefig(path)
+    plt.close(fig)
 
 
 def _plot_fit(
@@ -225,6 +237,63 @@ def _plot_fit(
     axes["D"].set_yticklabels([])
 
     fig.savefig(path)
+    plt.close(fig)
+
+
+def _make_plots(
+    dcs_df: pd.DataFrame,
+    cf_df: pd.DataFrame,
+    dcs_bdt_cut: pd.DataFrame,
+    cf_bdt_cut: pd.DataFrame,
+    prefix: str,
+    dcs_weights: np.ndarray,
+    cf_weights: np.ndarray,
+):
+    """
+    Plot histograms of the masses,
+    then fit to them and plot these also
+
+    """
+    # Plot histograms of the masses
+    bins = np.linspace(*pdfs.domain(), 500)
+    _plot_hists(dcs_df, dcs_bdt_cut, dcs_weights, bins, f"{prefix}dcs_mass_hists.png")
+    _plot_hists(cf_df, cf_bdt_cut, cf_weights, bins, f"{prefix}cf_mass_hists.png")
+
+    # Also plot the mass fits
+    dcs_delta_m = dcs_df["D* mass"] - dcs_df["D0 mass"]
+    cf_delta_m = cf_df["D* mass"] - cf_df["D0 mass"]
+
+    _plot_fit(
+        dcs_delta_m,
+        cf_delta_m,
+        fit.binned_simultaneous_fit(cf_delta_m, dcs_delta_m, bins, 5).values,
+        f"{prefix}before_cut.png",
+        None,
+        None,
+    )
+
+    dcs_delta_m = dcs_bdt_cut["D* mass"] - dcs_bdt_cut["D0 mass"]
+    cf_delta_m = cf_bdt_cut["D* mass"] - cf_bdt_cut["D0 mass"]
+    _plot_fit(
+        dcs_delta_m,
+        cf_delta_m,
+        fit.binned_simultaneous_fit(cf_delta_m, dcs_delta_m, bins, 5).values,
+        f"{prefix}after_cut.png",
+        None,
+        None,
+    )
+
+    # After efficiency correction
+    _plot_fit(
+        dcs_delta_m,
+        cf_delta_m,
+        fit.binned_simultaneous_fit(
+            cf_delta_m, dcs_delta_m, bins, 5, rs_weights=None, ws_weights=dcs_weights
+        ).values,
+        f"{prefix}after_correction.png",
+        dcs_wt=dcs_weights,
+        cf_wt=cf_weights,
+    )
 
 
 def main():
@@ -237,15 +306,22 @@ def main():
     dcs_df = pd.concat(get.data(year, "dcs", magnetisation))
     cf_df = pd.concat(get.data(year, "cf", magnetisation))
 
-    dcs_df = dcs_df[: len(dcs_df) // 2]
-    cf_df = cf_df[: len(cf_df) // 2]
+    dcs_df = dcs_df[: len(dcs_df) // 4]
+    cf_df = cf_df[: len(cf_df) // 4]
+
+    # Find time bin indices
+    dcs_indices = _time_bin_indices(dcs_df["time"])
+    cf_indices = _time_bin_indices(cf_df["time"])
 
     # Do BDT cut with the right threshhold
     print("Doing BDT cut")
     dcs_bdt_cut = _bdt_cut(dcs_df, year, magnetisation)
     cf_bdt_cut = _bdt_cut(cf_df, year, magnetisation)
+    dcs_cut_indices = _time_bin_indices(dcs_bdt_cut["time"])
+    cf_cut_indices = _time_bin_indices(cf_bdt_cut["time"])
 
     # Plot training vars
+    # TODO make this useful or get rid of it
     _plot(dcs_df, "dcs_data_vars_all.png")
     _plot(cf_df, "cf_data_vars_all.png")
     _plot(dcs_bdt_cut, "dcs_data_vars_cut.png")
@@ -256,45 +332,22 @@ def main():
     cf_weights = _efficiency_wts(cf_bdt_cut, year, "cf", magnetisation)
 
     # Plot stuff
-    bins = np.linspace(*pdfs.domain(), 500)
-    _plot_hists(dcs_df, dcs_bdt_cut, dcs_weights, bins, "dcs_mass_hists.png")
-    _plot_hists(cf_df, cf_bdt_cut, cf_weights, bins, "cf_mass_hists.png")
+    fit_dir = "fits/"
+    if not os.path.isdir(fit_dir):
+        os.mkdir(fit_dir)
 
-    # Should also probably plot the mass fit as well
-    dcs_delta_m = dcs_df["D* mass"] - dcs_df["D0 mass"]
-    cf_delta_m = cf_df["D* mass"] - cf_df["D0 mass"]
-
-    _plot_fit(
-        dcs_delta_m,
-        cf_delta_m,
-        fit.binned_simultaneous_fit(cf_delta_m, dcs_delta_m, bins, 5).values,
-        "before_cut.png",
-        None,
-        None,
-    )
-
-    dcs_delta_m = dcs_bdt_cut["D* mass"] - dcs_bdt_cut["D0 mass"]
-    cf_delta_m = cf_bdt_cut["D* mass"] - cf_bdt_cut["D0 mass"]
-    _plot_fit(
-        dcs_delta_m,
-        cf_delta_m,
-        fit.binned_simultaneous_fit(cf_delta_m, dcs_delta_m, bins, 5).values,
-        "after_cut.png",
-        None,
-        None,
-    )
-
-    # After efficiency correction
-    _plot_fit(
-        dcs_delta_m,
-        cf_delta_m,
-        fit.binned_simultaneous_fit(
-            cf_delta_m, dcs_delta_m, bins, 5, rs_weights=None, ws_weights=dcs_weights
-        ).values,
-        "after_correction.png",
-        dcs_wt=dcs_weights,
-        cf_wt=cf_weights,
-    )
+    # Don't care about the first and last bins
+    # (under/over flow)
+    for index in tqdm(np.unique(dcs_indices)[1:-1]):
+        _make_plots(
+            dcs_df[dcs_indices == index],
+            cf_df[cf_indices == index],
+            dcs_bdt_cut[dcs_cut_indices == index],
+            cf_bdt_cut[cf_cut_indices == index],
+            f"{fit_dir}bin{index}_",
+            dcs_weights[dcs_cut_indices == index],
+            cf_weights[cf_cut_indices == index],
+        )
 
 
 if __name__ == "__main__":

@@ -36,7 +36,7 @@ def _params():
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
-    times = np.linspace(0, 5, 64)
+    times = np.linspace(0, 2.5, 64)
 
     return params, q_p, times
 
@@ -101,14 +101,14 @@ def main():
 
     """
     # Read AmpGen dataframes
-    num = None
+    num = 50_000
     cf_df = efficiency_util.ampgen_df("cf", "k_plus", train=None)[:num]
     dcs_df = efficiency_util.ampgen_df("dcs", "k_plus", train=None)[:num]
 
     # Plot projection of inv mass at each time
     cf_mass = _invmass(cf_df)
     dcs_mass = _invmass(dcs_df)
-    fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB")
+    fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(15, 15))
 
     _plot(axes["A"], cf_mass, "CF", None)
     _plot(axes["A"], dcs_mass, "DCS", None)
@@ -126,9 +126,8 @@ def main():
             times=times_inv_mev, p=q_p[0], q=q_p[1], params=params
         )
     )
-    axes["B"].plot(times, d0_prob)
-    axes["B"].plot(times, dbar0_prob)
-    # axes["B"].set_yscale("log")
+    axes["B"].plot(times, dbar0_prob, label=r"p($\overline{D}^0)$")
+    axes["B"].plot(times, d0_prob, label=r"p($D^0$)")
 
     # Add mixing at various times
     # We don't really care about the overall scale, just how the
@@ -137,7 +136,7 @@ def main():
     # This would be required if we wanted to make the mixing realistic
     k3pi = efficiency_util.k_3pi(dcs_df)
     print("." * len(times))
-    with Pool(processes=2) as pool:
+    with Pool(processes=6) as pool:
         weights = pool.starmap(
             _weights,
             zip((k3pi for _ in times), (time * np.ones(len(dcs_df)) for time in times)),
@@ -145,11 +144,11 @@ def main():
         print()
 
     (line,) = axes["A"].plot([], [], "k-", lw=2)
-    (dcs_point,) = axes["B"].plot([], [], "ko", markersize=2, label=r"p($D^0$)")
-    (cf_point,) = axes["B"].plot(
-        [], [], "ko", markersize=2, label=r"p($\overline{D}^0$)"
-    )
+    (dcs_point,) = axes["B"].plot([], [], "ko", markersize=2)
+    (cf_point,) = axes["B"].plot([], [], "ko", markersize=2)
     axes["A"].legend()
+    axes["B"].legend()
+    fig.tight_layout()
 
     def init():
         line.set_data(*_counts(dcs_mass, weights[0]))
