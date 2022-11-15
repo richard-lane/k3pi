@@ -4,7 +4,8 @@ See if we can predict delta M from D0 pT and slow pi pT
 """
 import sys
 import pathlib
-from typing import Tuple
+from typing import Iterable, Tuple
+from itertools import islice
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -15,21 +16,22 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 from lib_data import get
 
 
-def _arrays(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+def _arrays(
+    dataframe: pd.DataFrame, column_names: Iterable[str]
+) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Returns array of (D0 pT, pi pT) and delta M bin indices
+    Returns array of training variables and delta M bin indices
 
     """
-    # Bin delta M
     delta_m = dataframe["D* mass"] - dataframe["D0 mass"]
 
     return (
-        np.column_stack((dataframe[r"D0 $p_T$"], dataframe[r"$\pi_s$ $p_T$"])),
+        np.column_stack([dataframe[name] for name in column_names]),
         delta_m,
     )
 
 
-def _classify(dataframe: pd.DataFrame, path: str) -> None:
+def _classify(dataframe: pd.DataFrame, column_names: Iterable[str], path: str) -> None:
     """
     Train a classifier to predict which delta M bin an event is in
 
@@ -39,7 +41,8 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
 
     """
     # Get the columns we want
-    p_t, delta_m = _arrays(dataframe)
+    print(column_names)
+    points, delta_m = _arrays(dataframe, column_names)
 
     # Bin delta M
     n_bins = 7
@@ -51,11 +54,11 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
     indices = np.digitize(delta_m, bins) - 1
 
     # Train some sort of classifier
-    train = np.random.random(len(p_t)) < 0.5
+    train = np.random.default_rng(seed=0).random(len(points)) < 0.5
     clf = Classifier(n_neighbors=150, weights="uniform", n_jobs=4)
-    clf.fit(p_t[train], indices[train])
+    clf.fit(points[train], indices[train])
 
-    predictions = clf.predict(p_t[~train])
+    predictions = clf.predict(points[~train])
     correct = predictions == indices[~train]
 
     centres = (bins[1:] + bins[:-1]) / 2
@@ -83,6 +86,7 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
     ax["A"].text(plt.gca().get_xlim()[0] + 0.3, 100 / n_bins + 0.1, "Random Chance")
     ax["A"].set_ylabel("% predictions correct")
     ax["B"].set_xlabel(r"$\Delta$M")
+    ax["A"].set_ylim(10, 35)
     fig.savefig(path)
 
     print(
@@ -90,33 +94,32 @@ def _classify(dataframe: pd.DataFrame, path: str) -> None:
     )
 
 
-def _predict_deltam(sign: str):
-    """
-    For MC, upper mass sideband and real data:
-        Train a classifier, find how good we are at predicting
-        deltaM from the pTs
-
-    """
-    print("mc:")
-    mc = get.mc("2018", sign, "magdown")
-    _classify(mc, f"mc_{sign}_predict_deltam.png")
-
-    print("upper mass:")
-    uppermass = pd.concat(get.uppermass("2018", sign, "magdown"))
-    _classify(uppermass, f"bkg_{sign}_predict_deltam.png")
-
-    print("data:")
-    data = pd.concat(get.data("2018", sign, "magdown"))
-    _classify(data, f"data_{sign}_predict_deltam.png")
-
-
 def main():
     """
-    See if we can predict the value of delta M from the D0 and slow pi pT
+    See if we can predict the value of delta M from some of the BDT training variables
 
     """
-    _predict_deltam("dcs")
-    _predict_deltam("cf")
+    data = pd.concat(islice(get.data("2018", "dcs", "magdown"), 0, 16))
+
+    _classify(data, (r"D0 $p_T$", r"$\pi_s$ $p_T$"), "predict_deltam_d0_pis_pT.png")
+    _classify(data, (r"$\pi_s$ $p_T$",), "predict_deltam_pis_pT.png")
+    _classify(data, (r"D0 $p_T$",), "predict_deltam_d0_pT.png")
+    _classify(
+        data,
+        (r"D0 $p_T$", r"$K3\pi$ max $p_T$", r"$K3\pi$ min $p_T$", r"$K3\pi$ sum $p_T$"),
+        "predict_deltam_pis_daughter_pT.png",
+    )
+    _classify(
+        data,
+        (
+            r"D0 $p_T$",
+            r"$\pi_s$ $p_T$",
+            r"$K3\pi$ max $p_T$",
+            r"$K3\pi$ min $p_T$",
+            r"$K3\pi$ sum $p_T$",
+        ),
+        "predict_deltam_d0_pis_daughter_pT.png",
+    )
 
 
 if __name__ == "__main__":
