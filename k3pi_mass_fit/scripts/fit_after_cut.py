@@ -148,12 +148,13 @@ def _plot_hists(
 
 
 def _plot_fit(
-    dcs_deltam: np.ndarray,
-    cf_deltam: np.ndarray,
+    dcs_count: np.ndarray,
+    cf_count: np.ndarray,
+    bins: np.ndarray,
     params: Tuple,
     path: str,
-    dcs_wt: np.ndarray,
-    cf_wt: np.ndarray,
+    dcs_err: np.ndarray,
+    cf_err: np.ndarray,
 ) -> None:
     """
     Plot the fit
@@ -174,28 +175,24 @@ def _plot_fit(
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(14, 7)
     )
-
-    bins = np.linspace(*pdfs.domain(), 250)
     centres = (bins[1:] + bins[:-1]) / 2
 
-    if cf_wt is None:
-        cf_wt = np.ones_like(cf_deltam)
-    if dcs_wt is None:
-        dcs_wt = np.ones_like(dcs_deltam)
-    cf_counts, cf_err = _counts(cf_deltam, cf_wt, bins)
-    dcs_counts, dcs_err = _counts(dcs_deltam, dcs_wt, bins)
+    if cf_err is None:
+        cf_err = np.sqrt(cf_count)
+    if dcs_err is None:
+        dcs_err = np.sqrt(dcs_count)
 
-    num_dcs = np.sum(dcs_wt)
-    num_cf = np.sum(cf_wt)
+    num_dcs = np.sum(dcs_count)
+    num_cf = np.sum(cf_count)
     dcs_scale_factor = num_dcs * (bins[1] - bins[0])
     cf_scale_factor = num_cf * (bins[1] - bins[0])
 
     cf_predicted = cf_scale_factor * fitted_pdf(centres, cf_params)
-    axes["A"].errorbar(centres, cf_counts, yerr=cf_err, fmt="k.")
+    axes["A"].errorbar(centres, cf_count, yerr=cf_err, fmt="k.")
     axes["A"].plot(centres, cf_predicted, "r-")
 
     dcs_predicted = dcs_scale_factor * fitted_pdf(centres, dcs_params)
-    axes["B"].errorbar(centres, dcs_counts, yerr=dcs_err, fmt="k.")
+    axes["B"].errorbar(centres, dcs_count, yerr=dcs_err, fmt="k.")
     axes["B"].plot(centres, dcs_predicted, "r-")
 
     axes["A"].plot(
@@ -225,8 +222,8 @@ def _plot_fit(
     )
     axes["A"].legend()
 
-    dcs_diffs = dcs_counts - dcs_predicted
-    cf_diffs = cf_counts - cf_predicted
+    dcs_diffs = dcs_count - dcs_predicted
+    cf_diffs = cf_count - cf_predicted
 
     axes["C"].plot(pdfs.domain(), [1, 1], "r-")
     axes["C"].errorbar(centres, dcs_diffs, yerr=dcs_err, fmt="k.")
@@ -248,6 +245,7 @@ def _make_plots(
     prefix: str,
     dcs_weights: np.ndarray,
     cf_weights: np.ndarray,
+    time_bin: int,
 ):
     """
     Plot histograms of the masses,
@@ -255,29 +253,35 @@ def _make_plots(
 
     """
     # Plot histograms of the masses
-    bins = np.linspace(*pdfs.domain(), 500)
+    bins = np.linspace(*pdfs.domain(), 200)
     _plot_hists(dcs_df, dcs_bdt_cut, dcs_weights, bins, f"{prefix}dcs_mass_hists.png")
     _plot_hists(cf_df, cf_bdt_cut, cf_weights, bins, f"{prefix}cf_mass_hists.png")
 
-    # Also plot the mass fits
+    # Mass fit before anything
     dcs_delta_m = dcs_df["D* mass"] - dcs_df["D0 mass"]
     cf_delta_m = cf_df["D* mass"] - cf_df["D0 mass"]
-
+    dcs_count, dcs_err = _counts(dcs_delta_m, np.ones_like(dcs_delta_m), bins)
+    cf_count, cf_err = _counts(cf_delta_m, np.ones_like(cf_delta_m), bins)
     _plot_fit(
-        dcs_delta_m,
-        cf_delta_m,
-        fit.binned_simultaneous_fit(cf_delta_m, dcs_delta_m, bins, 5).values,
+        dcs_count,
+        cf_count,
+        bins,
+        fit.binned_simultaneous_fit(cf_count, dcs_count, bins, time_bin).values,
         f"{prefix}before_cut.png",
         None,
         None,
     )
 
+    # Mass fit after BDT cut
     dcs_delta_m = dcs_bdt_cut["D* mass"] - dcs_bdt_cut["D0 mass"]
     cf_delta_m = cf_bdt_cut["D* mass"] - cf_bdt_cut["D0 mass"]
+    dcs_count, dcs_err = _counts(dcs_delta_m, dcs_weights, bins)
+    cf_count, cf_err = _counts(cf_delta_m, cf_weights, bins)
     _plot_fit(
-        dcs_delta_m,
-        cf_delta_m,
-        fit.binned_simultaneous_fit(cf_delta_m, dcs_delta_m, bins, 5).values,
+        dcs_count,
+        cf_count,
+        bins,
+        fit.binned_simultaneous_fit(cf_count, dcs_count, bins, time_bin).values,
         f"{prefix}after_cut.png",
         None,
         None,
@@ -285,14 +289,15 @@ def _make_plots(
 
     # After efficiency correction
     _plot_fit(
-        dcs_delta_m,
-        cf_delta_m,
+        dcs_count,
+        cf_count,
+        bins,
         fit.binned_simultaneous_fit(
-            cf_delta_m, dcs_delta_m, bins, 5, rs_weights=None, ws_weights=dcs_weights
+            cf_count, dcs_count, bins, time_bin, rs_errors=cf_err, ws_errors=dcs_err
         ).values,
         f"{prefix}after_correction.png",
-        dcs_wt=dcs_weights,
-        cf_wt=cf_weights,
+        dcs_err=dcs_err,
+        cf_err=cf_err,
     )
 
 
@@ -306,8 +311,8 @@ def main():
     dcs_df = pd.concat(get.data(year, "dcs", magnetisation))
     cf_df = pd.concat(get.data(year, "cf", magnetisation))
 
-    dcs_df = dcs_df[: len(dcs_df) // 4]
-    cf_df = cf_df[: len(cf_df) // 4]
+    dcs_df = dcs_df[: len(dcs_df) // 2]
+    cf_df = cf_df[: len(cf_df) // 2]
 
     # Find time bin indices
     dcs_indices = _time_bin_indices(dcs_df["time"])
@@ -347,6 +352,7 @@ def main():
             f"{fit_dir}bin{index}_",
             dcs_weights[dcs_cut_indices == index],
             cf_weights[cf_cut_indices == index],
+            index,
         )
 
 

@@ -11,8 +11,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi_efficiency"))
 
 from libFit import pdfs, fit, toy_utils
+from lib_efficiency.metrics import _counts
 
 
 def _plot(axis: plt.Axes, params: Tuple, fmt: str, label: str) -> None:
@@ -44,8 +46,10 @@ def _toy_fit():
     time_bin = 5
     bins = np.linspace(*pdfs.domain(), 250)
     unbinned_fitter = fit.simultaneous_fit(rs_masses, ws_masses, time_bin)
+    rs_counts, rs_errs = _counts(rs_masses, np.ones_like(rs_masses), bins)
+    ws_counts, ws_errs = _counts(ws_masses, np.ones_like(ws_masses), bins)
     binned_fitter = fit.binned_simultaneous_fit(
-        rs_masses, ws_masses, bins, time_bin, None, None
+        rs_counts, ws_counts, bins, time_bin, rs_errs, ws_errs
     )
     fig, axes = plt.subplots(1, 2)
     axes[0].hist(rs_masses, bins=250, density=True)

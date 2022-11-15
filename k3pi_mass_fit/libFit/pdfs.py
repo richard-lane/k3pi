@@ -2,16 +2,11 @@
 PDFs, CDF, integrals etc. for mass fit signal and background shapes
 
 """
-import sys
-import pathlib
 from typing import Tuple
 import numpy as np
 from scipy.integrate import quad
 from iminuit import Minuit
 from iminuit.util import make_func_code
-
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
-from lib_efficiency.metrics import _counts
 
 
 def domain() -> Tuple[float, float]:
@@ -220,10 +215,15 @@ class BinnedChi2:
     errordef = Minuit.LEAST_SQUARES
 
     def __init__(
-        self, masses: np.ndarray, bins: np.ndarray, weights: np.ndarray = None
+        self,
+        counts: np.ndarray,
+        bins: np.ndarray,
+        error: np.ndarray = None,
     ):
         """
         Set things we need for the fit
+
+        If error not provided, Poisson errors assumed
 
         """
         # We need to tell Minuit what our function signature is explicitly
@@ -241,10 +241,10 @@ class BinnedChi2:
             ]
         )
 
-        if weights is None:
-            weights = np.ones_like(masses)
+        if error is None:
+            error = np.sqrt(counts)
 
-        self.counts, self.error = _counts(masses, weights, bins)
+        self.counts, self.error = counts, error
         self.total = np.sum(self.counts)
 
         self.centres = (bins[1:] + bins[:-1]) / 2
@@ -302,11 +302,11 @@ class SimultaneousBinnedChi2:
 
     def __init__(
         self,
-        rs_masses: np.ndarray,
-        ws_masses: np.ndarray,
+        rs_counts: np.ndarray,
+        ws_counts: np.ndarray,
         bins: np.ndarray,
-        rs_weights: np.ndarray = None,
-        ws_weights: np.ndarray = None,
+        rs_error: np.ndarray = None,
+        ws_error: np.ndarray = None,
     ):
         """
         Set things we need for the fit
@@ -327,8 +327,8 @@ class SimultaneousBinnedChi2:
                 "b",
             ]
         )
-        self.rs_chi2 = BinnedChi2(rs_masses, bins, rs_weights)
-        self.ws_chi2 = BinnedChi2(ws_masses, bins, ws_weights)
+        self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
+        self.ws_chi2 = BinnedChi2(ws_counts, bins, ws_error)
 
     def __call__(
         self,

@@ -11,8 +11,10 @@ import matplotlib.pyplot as plt
 from iminuit import Minuit
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi_efficiency"))
 
 from libFit import pdfs, fit, toy_utils
+from lib_efficiency.metrics import _counts
 
 
 def _plot(axis: plt.Axes, fitter: Minuit, fmt: str, label: str) -> None:
@@ -43,9 +45,9 @@ def _toy_fit():
     # Perform fit
     sig_frac = true_params[0]
     unbinned_fitter = fit.fit(combined, sign, time_bin, sig_frac)
-    binned_fitter = fit.binned_fit(
-        combined, np.linspace(*pdfs.domain(), 500), sign, time_bin, sig_frac
-    )
+    bins = np.linspace(*pdfs.domain(), 500)
+    counts, errs = _counts(combined, np.ones_like(combined), bins)
+    binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
     fig, axis = plt.subplots()
     axis.hist(combined, bins=250, density=True)

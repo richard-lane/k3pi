@@ -101,14 +101,14 @@ def main():
 
     """
     # Read AmpGen dataframes
-    num = 50_000
+    num = None
     cf_df = efficiency_util.ampgen_df("cf", "k_plus", train=None)[:num]
     dcs_df = efficiency_util.ampgen_df("dcs", "k_plus", train=None)[:num]
 
     # Plot projection of inv mass at each time
     cf_mass = _invmass(cf_df)
     dcs_mass = _invmass(dcs_df)
-    fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(15, 15))
+    fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(8, 8))
 
     _plot(axes["A"], cf_mass, "CF", None)
     _plot(axes["A"], dcs_mass, "DCS", None)
@@ -136,7 +136,7 @@ def main():
     # This would be required if we wanted to make the mixing realistic
     k3pi = efficiency_util.k_3pi(dcs_df)
     print("." * len(times))
-    with Pool(processes=6) as pool:
+    with Pool(processes=3) as pool:
         weights = pool.starmap(
             _weights,
             zip((k3pi for _ in times), (time * np.ones(len(dcs_df)) for time in times)),

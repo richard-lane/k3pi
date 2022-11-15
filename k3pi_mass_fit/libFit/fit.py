@@ -70,37 +70,38 @@ def fit(
 
 
 def binned_fit(
-    delta_m: np.ndarray,
+    counts: np.ndarray,
     bins: np.ndarray,
     sign: str,
     time_bin: int,
     signal_frac_guess: float,
     *,
-    weights: np.ndarray = None,
+    errors: np.ndarray = None,
 ) -> Minuit:
     """
     Perform a binned fit, return the fitter
 
-    :param delta_m: array of D* - D0 mass differences
+    :param counts: array of D* - D0 mass differences
     :param bins: delta M binning used for the fit
     :param sign: either "RS" or "WS"
     :param time_bin: which time bin we're performing the fit in; this determines the value of beta
     :param signal_frac_guess: initial guess at the signal fraction
-    :param weights: optional event weights. Only works with a binned fit
+    :param errors: optional errors. If not provided Poisson errors assumed
 
     :returns: fitter after performing the fit
 
     """
     assert sign in {"RS", "WS"}
-    if (weights is not None) and (len(weights) != len(delta_m)):
-        raise ValueError(f"{len(weights)=}\t{len(delta_m)=}")
+    assert len(counts) == len(bins) - 1
+    if (errors is not None) and (len(errors) != len(counts)):
+        raise ValueError(f"{len(errors)=}\t{len(counts)=}")
 
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
     a, b = pdfs.background_defaults(sign)
 
-    chi2 = pdfs.BinnedChi2(delta_m, bins, weights)
+    chi2 = pdfs.BinnedChi2(counts, bins, errors)
 
     m = Minuit(
         chi2,
@@ -203,22 +204,22 @@ def simultaneous_fit(
 
 
 def binned_simultaneous_fit(
-    rs_delta_m: np.ndarray,
-    ws_delta_m: np.ndarray,
+    rs_counts: np.ndarray,
+    ws_counts: np.ndarray,
     bins: np.ndarray,
     time_bin: int,
-    rs_weights: np.ndarray = None,
-    ws_weights: np.ndarray = None,
+    rs_errors: np.ndarray = None,
+    ws_errors: np.ndarray = None,
 ) -> Minuit:
     """
     Perform the fit, return the fitter
 
-    :param rs_delta_m: array of D* - D0 mass differences
-    :param ws_delta_m: array of D* - D0 mass differences
+    :param rs_delta_m: D* - D0 mass difference counts in the bins
+    :param ws_delta_m: D* - D0 mass difference counts in the bins
     :param bins: delta M binning
     :param time_bin: which time bin we're performing the fit in; this determines the value of beta
-    :param rs_weights: event weighting
-    :param ws_weights: event weighting
+    :param rs_errors: optional bin errors. Poisson errors assumed otherwise
+    :param ws_errors: optional bin errors. Poisson errors assumed otherwise
 
     :returns: fitter after performing the fit
 
@@ -228,9 +229,7 @@ def binned_simultaneous_fit(
 
     a, b = pdfs.background_defaults("RS")
 
-    chi2 = pdfs.SimultaneousBinnedChi2(
-        rs_delta_m, ws_delta_m, bins, rs_weights, ws_weights
-    )
+    chi2 = pdfs.SimultaneousBinnedChi2(rs_counts, ws_counts, bins, rs_errors, ws_errors)
 
     m = Minuit(
         chi2,
