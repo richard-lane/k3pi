@@ -37,30 +37,6 @@ def _time_bin_indices(times: np.ndarray) -> np.ndarray:
     return np.digitize(times, bins)
 
 
-def _plot(dataframe: pd.DataFrame, path: str):
-    """
-    Plot histograms of every variable in the dataframe
-
-    """
-    fig, axes = plt.subplots(3, 5, figsize=(15, 9))
-
-    hist_kw = {"histtype": "step"}
-    for axis, label in zip(axes.ravel(), dataframe):
-        # Find histogram bins
-        low, high = np.quantile(dataframe[label], [0.05, 0.95])
-        bins = np.linspace(0.9 * low, 1.1 * high, 100)
-
-        # Plot
-        axis.hist(dataframe[label], label="data", bins=bins, **hist_kw)
-
-        axis.set_title(label)
-        axis.legend()
-
-    # fig.tight_layout()
-    plt.savefig(path)
-    plt.close(fig)
-
-
 def _bdt_cut(dataframe: pd.DataFrame, year: str, magnetisation: str) -> pd.DataFrame:
     """
     Perform the BDT cut on a dataframe and return a slice
@@ -167,10 +143,10 @@ def _plot_fit(
         return pdfs.fractional_pdf(pts, *fit_params)
 
     def fitted_sig(pts: np.ndarray, fit_params) -> np.ndarray:
-        return pdfs.normalised_signal(pts, *fit_params[1:-2])
+        return fit_params[0] * pdfs.normalised_signal(pts, *fit_params[1:-2])
 
     def fitted_bkg(pts: np.ndarray, fit_params) -> np.ndarray:
-        return pdfs.normalised_bkg(pts, *fit_params[-2:])
+        return (1 - fit_params[0]) * pdfs.normalised_bkg(pts, *fit_params[-2:])
 
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(14, 7)
@@ -196,26 +172,26 @@ def _plot_fit(
 
     axes["A"].plot(
         centres,
-        cf_scale_factor * cf_params[0] * fitted_sig(centres, cf_params),
+        cf_scale_factor * fitted_sig(centres, cf_params),
         color="orange",
         label="Signal",
     )
     axes["B"].plot(
         centres,
-        dcs_scale_factor * dcs_params[0] * fitted_sig(centres, dcs_params),
+        dcs_scale_factor * fitted_sig(centres, dcs_params),
         color="orange",
         label="Signal",
     )
 
     axes["A"].plot(
         centres,
-        dcs_scale_factor * (1 - dcs_params[0]) * fitted_bkg(centres, dcs_params),
+        cf_scale_factor * fitted_bkg(centres, cf_params),
         color="blue",
         label="Bkg",
     )
     axes["B"].plot(
         centres,
-        cf_scale_factor * (1 - cf_params[0]) * fitted_bkg(centres, cf_params),
+        dcs_scale_factor * fitted_bkg(centres, dcs_params),
         color="blue",
         label="Bkg",
     )
@@ -323,13 +299,6 @@ def main():
     cf_bdt_cut = _bdt_cut(cf_df, year, magnetisation)
     dcs_cut_indices = _time_bin_indices(dcs_bdt_cut["time"])
     cf_cut_indices = _time_bin_indices(cf_bdt_cut["time"])
-
-    # Plot training vars
-    # TODO make this useful or get rid of it
-    _plot(dcs_df, "dcs_data_vars_all.png")
-    _plot(cf_df, "cf_data_vars_all.png")
-    _plot(dcs_bdt_cut, "dcs_data_vars_cut.png")
-    _plot(cf_bdt_cut, "cf_data_vars_cut.png")
 
     # Do efficiency correction
     dcs_weights = _efficiency_wts(dcs_bdt_cut, year, "dcs", magnetisation)
