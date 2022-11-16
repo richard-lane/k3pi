@@ -157,20 +157,20 @@ def _plot_fit(
     cf_err: np.ndarray,
 ) -> None:
     """
-    Plot the fit
+    Plot the fit, assuming constant width bins
 
     """
     cf_params = (params[0], *params[2:])
-    dcs_params = params[1:]
+    dcs_params = tuple(params[1:])
 
-    def fitted_pdf(pts: np.ndarray, params: Tuple) -> np.ndarray:
-        return pdfs.fractional_pdf(pts, *params)
+    def fitted_pdf(pts: np.ndarray, fit_params: Tuple) -> np.ndarray:
+        return pdfs.fractional_pdf(pts, *fit_params)
 
-    def fitted_sig(pts: np.ndarray, params) -> np.ndarray:
-        return pdfs.normalised_signal(pts, *params[1:-2])
+    def fitted_sig(pts: np.ndarray, fit_params) -> np.ndarray:
+        return pdfs.normalised_signal(pts, *fit_params[1:-2])
 
-    def fitted_bkg(pts: np.ndarray, params) -> np.ndarray:
-        return pdfs.normalised_bkg(pts, *params[-2:])
+    def fitted_bkg(pts: np.ndarray, fit_params) -> np.ndarray:
+        return pdfs.normalised_bkg(pts, *fit_params[-2:])
 
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(14, 7)
@@ -182,10 +182,9 @@ def _plot_fit(
     if dcs_err is None:
         dcs_err = np.sqrt(dcs_count)
 
-    num_dcs = np.sum(dcs_count)
-    num_cf = np.sum(cf_count)
-    dcs_scale_factor = num_dcs * (bins[1] - bins[0])
-    cf_scale_factor = num_cf * (bins[1] - bins[0])
+    # Assumes constant width bins
+    dcs_scale_factor = np.sum(dcs_count) * (bins[1] - bins[0])
+    cf_scale_factor = np.sum(cf_count) * (bins[1] - bins[0])
 
     cf_predicted = cf_scale_factor * fitted_pdf(centres, cf_params)
     axes["A"].errorbar(centres, cf_count, yerr=cf_err, fmt="k.")

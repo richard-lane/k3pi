@@ -239,15 +239,15 @@ def _training_var_names_and_functions() -> Tuple:
                 (endvertex_chi2, r"D0 End Vtx $\chi^2$"),
                 (orivx_chi2, r"D0 Origin Vtx $\chi^2$"),
                 (slow_pi_prob_nn_pi, r"$\pi_s$ ProbNN$\pi$"),
-                (d0_pt, r"D0 $p_T$"),
+                # (d0_pt, r"D0 $p_T$"),
                 (slow_pi_pt, r"$\pi_s$ $p_T$"),
                 (slow_pi_ipchi2, r"$\pi_s$ IP$\chi^2$"),
-                (pions_max_pt, r"$3\pi$ max $p_T$"),
-                (pions_min_pt, r"$3\pi$ min $p_T$"),
-                (pions_sum_pt, r"$3\pi$ sum $p_T$"),
-                (daughters_max_pt, r"$K3\pi$ max $p_T$"),
-                (daughters_min_pt, r"$K3\pi$ min $p_T$"),
-                (daughters_sum_pt, r"$K3\pi$ sum $p_T$"),
+                # (pions_max_pt, r"$3\pi$ max $p_T$"),
+                # (pions_min_pt, r"$3\pi$ min $p_T$"),
+                # (pions_sum_pt, r"$3\pi$ sum $p_T$"),
+                # (daughters_max_pt, r"$K3\pi$ max $p_T$"),
+                # (daughters_min_pt, r"$K3\pi$ min $p_T$"),
+                # (daughters_sum_pt, r"$K3\pi$ sum $p_T$"),
             )
         )
     )
