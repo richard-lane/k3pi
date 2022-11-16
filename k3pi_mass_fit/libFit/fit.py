@@ -2,6 +2,7 @@
 Function for doing the mass fit
 
 """
+from typing import Tuple
 import numpy as np
 from iminuit import Minuit
 from iminuit.cost import ExtendedUnbinnedNLL
@@ -257,3 +258,37 @@ def binned_simultaneous_fit(
     m.migrad()
 
     return m
+
+
+def yields(
+    rs_counts: np.ndarray,
+    ws_counts: np.ndarray,
+    bins: np.ndarray,
+    time_bin: int,
+    rs_errors: np.ndarray = None,
+    ws_errors: np.ndarray = None,
+) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+    """
+    Get RS and WS yields and their errors from a binned simultaneous mass fit
+
+    returns ((RS yield, WS yield), (RS err, WS err))
+
+    """
+    fitter = binned_simultaneous_fit(
+        rs_counts,
+        ws_counts,
+        bins,
+        time_bin,
+        rs_errors,
+        ws_errors,
+    )
+
+    fit_fracs = fitter.values[:2]
+    fit_errs = fitter.errors[:2]
+
+    totals = tuple(np.sum(counts) for counts in (rs_counts, ws_counts))
+
+    fit_yields = (fit_frac * total for fit_frac, total in zip(fit_fracs, totals))
+    fit_errs = (fit_err * total for fit_err, total in zip(fit_errs, totals))
+
+    return fit_yields, fit_errs

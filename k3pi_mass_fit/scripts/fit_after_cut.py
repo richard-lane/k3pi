@@ -131,6 +131,7 @@ def _plot_fit(
     path: str,
     dcs_err: np.ndarray,
     cf_err: np.ndarray,
+    time_bin: int,
 ) -> None:
     """
     Plot the fit, assuming constant width bins
@@ -208,6 +209,15 @@ def _plot_fit(
     axes["D"].errorbar(centres, cf_diffs, yerr=cf_err, fmt="k.")
     axes["D"].set_yticklabels([])
 
+    # Set the title to the yields
+    # This is a little wasteful as it does the fit again, but maybe it's a good test
+    # that the yields function is consistent or something
+    (rs_yield, ws_yield), (rs_err, ws_err) = fit.yields(
+        cf_count, dcs_count, bins, time_bin, cf_err, dcs_err
+    )
+    axes["A"].set_title(rf"Yield: {rs_yield:.2f}$\pm${rs_err:.2f}")
+    axes["B"].set_title(rf"Yield: {ws_yield:.2f}$\pm${ws_err:.2f}")
+
     fig.savefig(path)
     plt.close(fig)
 
@@ -245,6 +255,7 @@ def _make_plots(
         f"{prefix}before_cut.png",
         None,
         None,
+        time_bin=time_bin,
     )
 
     # Mass fit after BDT cut
@@ -260,6 +271,7 @@ def _make_plots(
         f"{prefix}after_cut.png",
         None,
         None,
+        time_bin=time_bin,
     )
 
     # After efficiency correction
@@ -273,6 +285,7 @@ def _make_plots(
         f"{prefix}after_correction.png",
         dcs_err=dcs_err,
         cf_err=cf_err,
+        time_bin=time_bin,
     )
 
 
