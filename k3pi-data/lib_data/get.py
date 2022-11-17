@@ -2,13 +2,17 @@
 Functions for getting the dataframes once they've been dumped
 
 """
+import sys
 import glob
 import pickle
+import pathlib
 from typing import Generator
 import pandas as pd
 from tqdm import tqdm
 
-from . import definitions
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[1] / "k3pi_signal_cuts"))
+from lib_cuts.definitions import Classifier as CutClassifier
+from . import definitions, training_vars
 
 
 def ampgen(sign: str) -> pd.DataFrame:
@@ -77,7 +81,7 @@ def false_sign(show_progress: bool = False) -> pd.DataFrame:
 
         except FileNotFoundError as err:
             print("=" * 79)
-            print(f"create the false sign dumps by running `create_false_sign.py`")
+            print("create the false sign dumps by running `create_false_sign.py`")
             print("=" * 79)
 
             raise err
@@ -141,3 +145,22 @@ def data(
     for path in paths:
         with open(path, "rb") as df_f:
             yield pickle.load(df_f)
+
+
+def cut_data(year: str, sign: str, magnetisation: str, clf: CutClassifier):
+    """
+    Get the real data dataframes, applying the signal cut using the provided classifier
+    Dataframes might be quite big so this is a generator
+
+    :param year: data taking year
+    :param sign: "cf" or "dcs"
+    :param magnetisation: "magup" or "magdown"
+
+    """
+    training_labels = list(training_vars.training_var_names())
+    threshhold = 0.185
+    for dataframe in data(year, sign, magnetisation):
+        predicted_signal = (
+            clf.predict_proba(dataframe[training_labels])[:, 1] > threshhold
+        )
+        yield dataframe[predicted_signal]

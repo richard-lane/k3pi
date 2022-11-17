@@ -7,6 +7,7 @@ import pathlib
 from typing import Tuple
 import numpy as np
 import pandas as pd
+from fourbody.param import helicity_param
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
@@ -26,7 +27,26 @@ def k_3pi(
         definitions.MOMENTUM_COLUMNS[8:12],
         definitions.MOMENTUM_COLUMNS[12:16],
     ]
-    return tuple(np.row_stack([dataframe[x] for x in labels]) for labels in particles)
+    k, pi1, pi2, pi3 = (
+        np.row_stack([dataframe[x] for x in labels]) for labels in particles
+    )
+    pi1, pi2 = util.momentum_order(k, pi1, pi2)
+
+    return k, pi1, pi2, pi3
+
+
+def points(
+    k: np.ndarray, pi1: np.ndarray, pi2: np.ndarray, pi3: np.ndarray, t: np.ndarray
+) -> np.ndarray:
+    """
+    6d phsp + time points
+    """
+    return np.column_stack(
+        (
+            helicity_param(k, pi1, pi2, pi3),
+            t,
+        )
+    )
 
 
 def k_sign_cut(dataframe: pd.DataFrame, k_sign: str) -> pd.DataFrame:

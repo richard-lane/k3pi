@@ -2,6 +2,7 @@
 Measurements and things that we care about
 
 """
+import logging
 from typing import Tuple
 import numpy as np
 
@@ -18,6 +19,10 @@ def _counts(t: np.ndarray, wt: np.ndarray, bins: np.ndarray) -> Tuple:
     :return: errors on counts
 
     """
+    logging.warning(
+        "Use the counts fcn in lib_data.stats instead", exc_info=DeprecationWarning()
+    )
+
     indices = np.digitize(t, bins) - 1
 
     # Underflow
