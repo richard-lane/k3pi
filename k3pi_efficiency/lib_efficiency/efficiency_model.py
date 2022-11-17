@@ -5,6 +5,7 @@ User interface for the efficiency reweighting
 
 import sys
 import pathlib
+from typing import Iterator
 import numpy as np
 import pandas as pd
 
