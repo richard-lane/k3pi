@@ -57,7 +57,7 @@ def _pull(
     domain = (3, 10)
     bins = np.linspace(*domain, 30)
 
-    these_params = util.ConstraintParams(params.r_d, *xy_vals, params.b)
+    these_params = util.ConstraintParams(params.r_d, params.b, *xy_vals)
 
     rs_points = common.gen_rs(rng, n_rs, domain)
     ws_points = common.gen_ws(rng, n_rs, domain, models.abc(these_params), plot=False)
@@ -89,7 +89,7 @@ def _plot_pull(pulls):
     ax[1, 0].hist(pulls[2], bins=bins)
     ax[1, 1].hist(pulls[3], bins=bins)
 
-    params = r"$r_D$", "$x$", "$y$", "$b$"
+    params = r"$r_D$", "$b$", "$x$", "$y$"
 
     for pull, axis, label in zip(pulls, ax.ravel(), params):
         axis.set_title(f"{np.mean(pull):.4f}" + r"$\pm$" + f"{np.std(pull):.4f}")

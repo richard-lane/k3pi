@@ -203,20 +203,13 @@ class NoConstraints(BaseChi2):
 
         super().__init__(ratio, error, bins)
 
-    def _expected_ws_integral(self, a: float, b: float, c: float) -> np.ndarray:
-        """
-        Given our parameters, find the expected WS integral
-
-        """
-        return ws_integral(self.bins, a, b, c)
-
     def __call__(self, a: float, b: float, c: float):
         """
         Evaluate the chi2 given our parameters
 
         """
         return BaseChi2.chi2(
-            self, self._expected_ws_integral(a, b, c) / self.expected_rs_integral
+            self, ws_integral(self.bins, a, b, c) / self.expected_rs_integral
         )
 
 
@@ -236,12 +229,13 @@ class ConstrainedBase(BaseChi2):
         x_y_correlation: float,
     ):
         """
-        Precompute some terms used in the
+        Precompute some terms used in the chi2
 
         """
         # We can pre-compute two of the terms used for the Gaussian constraint
-        self._x_width, self._y_width = x_y_widths
         self._x_mean, self._y_mean = x_y_means
+        self._x_width, self._y_width = x_y_widths
+
         self._constraint_scale = 1 / (1 - x_y_correlation**2)
         self._constraint_cross_term = (
             2 * x_y_correlation / (self._x_width * self._y_width)
@@ -291,23 +285,23 @@ class Constraints(ConstrainedBase):
 
         """
         # We need to tell Minuit what our function signature is explicitly
-        self.func_code = make_func_code(["r_d", "x", "y", "b"])
+        self.func_code = make_func_code(["r_d", "b", "x", "y"])
         super().__init__(ratio, error, bins, x_y_means, x_y_widths, x_y_correlation)
 
-    def _expected_ws_integral(self, params: ScanParams) -> np.ndarray:
+    def _expected_ws_integral(self, params: ConstraintParams) -> np.ndarray:
         """
         Given our parameters, find the expected WS integral
 
         """
         return ws_integral(self.bins, *abc(params))
 
-    def __call__(self, r_d: float, x: float, y: float, b: float):
+    def __call__(self, r_d: float, b: float, x: float, y: float):
         """
         Evaluate the chi2 given our parameters
 
         """
         expected_ratio = (
-            self._expected_ws_integral(ConstraintParams(r_d, x, y, b))
+            self._expected_ws_integral(ConstraintParams(r_d=r_d, b=b, x=x, y=y))
             / self.expected_rs_integral
         )
         chi2 = BaseChi2.chi2(self, expected_ratio)
