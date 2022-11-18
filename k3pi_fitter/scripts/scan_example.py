@@ -56,6 +56,32 @@ def _ratio_err() -> Tuple[np.ndarray, np.ndarray]:
     return (*util.ratio_err(ws_count, rs_count, ws_err, rs_err), params, bins)
 
 
+def _unconstrained_fit(ratio, err, params, bins):
+    """
+    Do an unconstrained fit
+
+    """
+    true_params = models.abc_scan(params)
+    abc_fitter = fitter.no_constraints(ratio, err, bins, true_params)
+
+    centres = (bins[1:] + bins[:-1]) / 2
+    widths = (bins[1:] - bins[:-1]) / 2
+
+    fig, axis = plt.subplots()
+    axis.errorbar(centres, ratio, xerr=widths, yerr=err, fmt="k.")
+    plotting.no_constraints(axis, abc_fitter.values, fmt="r--", label="Fit")
+    plotting.no_constraints(axis, true_params, fmt="k--", label="True")
+
+    axis.set_xlabel(r"t/$\tau$")
+    axis.set_ylabel(r"$\frac{WS}{RS}$")
+    fig.suptitle("Toy data")
+
+    axis.legend()
+
+    fig.savefig("unconstrained_example.png")
+    plt.close(fig)
+
+
 def _cartesian_plot(
     ax: plt.Axes,
     allowed_rez: np.ndarray,
@@ -163,6 +189,9 @@ def main():
     """
     # ratio we'll fit to
     ratio, err, params, bins = _ratio_err()
+
+    # Do an unconstrained fit first - just to visualise it
+    _unconstrained_fit(ratio, err, params, bins)
 
     # Need x/y widths and correlations for the Gaussian constraint
     width = 0.005

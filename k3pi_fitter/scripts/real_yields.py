@@ -194,6 +194,14 @@ def _plot_ratio(
     widths = (time_bins[1:] - time_bins[:-1]) / 2
 
     axis.errorbar(centres, ratios, xerr=widths, yerr=errs, **plot_kw)
+    abc_fitter = fitter.no_constraints(
+        ratios, errs, time_bins, util.MixingParams(0.01, 0.0002, 0)
+    )
+    plotting.no_constraints(
+        axis, abc_fitter.values, fmt=plot_kw["fmt"][0] + "--", label=plot_kw["label"]
+    )
+    print(f"{plot_kw['label']}: {abc_fitter.valid=}")
+    print(abc_fitter.values)
 
     # return contours
     return _plot_scan(scan_ax, time_bins, ratios, errs)
