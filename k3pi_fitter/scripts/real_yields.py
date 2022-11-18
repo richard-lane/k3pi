@@ -195,13 +195,33 @@ def _plot_ratio(
 
     axis.errorbar(centres, ratios, xerr=widths, yerr=errs, **plot_kw)
     abc_fitter = fitter.no_constraints(
-        ratios, errs, time_bins, util.MixingParams(0.01, 0.0002, 0)
+        ratios, errs, time_bins, util.MixingParams(0.005, 0.0002, 0)
     )
-    plotting.no_constraints(
-        axis, abc_fitter.values, fmt=plot_kw["fmt"][0] + "--", label=plot_kw["label"]
-    )
-    print(f"{plot_kw['label']}: {abc_fitter.valid=}")
     print(abc_fitter.values)
+    print(f"{plot_kw['label']}: {abc_fitter.valid=}")
+    plotting.no_constraints(
+        axis,
+        abc_fitter.values,
+        fmt=plot_kw["fmt"][0] + "--",
+        label=plot_kw["label"] + " unconstrained",
+    )
+
+    constrained_fitter = fitter.constraints(
+        ratios,
+        errs,
+        time_bins,
+        util.ConstraintParams(0.0055, 0.0002, 0.0039183, 0.0065139),
+        (0.0011489, 0.00064945),
+        -0.301,
+    )
+    print(constrained_fitter.values)
+    print(f"{plot_kw['label']}: {constrained_fitter.valid=}")
+    plotting.constraints(
+        axis,
+        util.ConstraintParams(*constrained_fitter.values),
+        fmt=plot_kw["fmt"][0] + ":",
+        label=plot_kw["label"] + " constrained",
+    )
 
     # return contours
     return _plot_scan(scan_ax, time_bins, ratios, errs)
