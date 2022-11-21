@@ -14,10 +14,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_data import get
 from libFit import fit, pdfs, util
+from lib_cuts.get import cut_dfs, classifier as get_clf
 
 
 def fitted_pdf(pts: np.ndarray, fit_params: Tuple) -> np.ndarray:
@@ -113,8 +115,8 @@ def _simultaneous_fit(
     (rs_yield, ws_yield), (rs_err, ws_err) = fit.yields(
         cf_count, dcs_count, bins, time_bin
     )
-    axes["A"].set_title(rf"Yield: {rs_yield:.2f}$\pm${rs_err:.2f}")
-    axes["B"].set_title(rf"Yield: {ws_yield:.2f}$\pm${ws_err:.2f}")
+    axes["A"].set_title(rf"Yield: {rs_yield:,.2f}$\pm${rs_err:,.2f}")
+    axes["B"].set_title(rf"Yield: {ws_yield:,.2f}$\pm${ws_err:,.2f}")
 
     path = f"{fit_dir}all_simultaneous.png"
     print(f"saving {path}")
@@ -146,7 +148,7 @@ def _fit(count: np.ndarray, bins: np.ndarray, sign: str, path: str) -> None:
 
     # Set the title to the yields
     axes["A"].set_title(
-        rf"Yield: {params[0]* np.sum(count):.2f}$\pm${errors[0] * np.sum(count):.2f}"
+        rf"Yield: {params[0]* np.sum(count):,.2f}$\pm${errors[0] * np.sum(count):,.2f}"
     )
 
     print(f"saving {path}")
@@ -170,18 +172,38 @@ def _make_plots(
     _fit(dcs_count, bins, "WS", f"{fit_dir}dcs.png")
 
 
+def _counts(
+    year: str, magnetisation: str, bins: np.ndarray, *, bdt_cut: bool
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    DCS and CF counts
+
+    """
+    dcs_gen = get.data(year, "dcs", magnetisation)
+    cf_gen = get.data(year, "cf", magnetisation)
+
+    if bdt_cut:
+        clf = get_clf(year, "dcs", magnetisation)
+        dcs_gen = cut_dfs(dcs_gen, clf)
+        cf_gen = cut_dfs(cf_gen, clf)
+
+    dcs_count, _ = util.delta_m_counts(dcs_gen, bins)
+    cf_count, _ = util.delta_m_counts(cf_gen, bins)
+
+    return dcs_count, cf_count
+
+
 def main():
     """
     Plot a real data mass fit after all my manipulations
 
     """
+    bins = np.linspace(*pdfs.domain(), 200)
+
     # Get delta M values from generator of dataframes
     year, magnetisation = "2018", "magdown"
-    bins = np.linspace(*pdfs.domain(), 200)
-    dcs_count, _ = util.delta_m_counts(get.data(year, "dcs", magnetisation), bins)
-    cf_count, _ = util.delta_m_counts(get.data(year, "cf", magnetisation), bins)
-    # Get delta M values from generator of dataframes after BDT cut
 
+    # Get delta M values from generator of dataframes after BDT cut
     # Do BDT cut with the right threshhold
     # dcs_bdt_cut = _bdt_cut(dcs_df, year, magnetisation)
     # cf_bdt_cut = _bdt_cut(cf_df, year, magnetisation)
@@ -194,8 +216,17 @@ def main():
         os.mkdir(fit_dir)
 
     _make_plots(
-        dcs_count,
-        cf_count,
+        *_counts(year, magnetisation, bins, bdt_cut=False),
+        bins,
+        f"{fit_dir}",
+    )
+
+    fit_dir = "bdt_fits/"
+    if not os.path.isdir(fit_dir):
+        os.mkdir(fit_dir)
+
+    _make_plots(
+        *_counts(year, magnetisation, bins, bdt_cut=True),
         bins,
         f"{fit_dir}",
     )
