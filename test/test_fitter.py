@@ -8,7 +8,7 @@ import numpy as np
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_fitter"))
 
-from lib_time_fit import models, fitter
+from lib_time_fit import models, fitter, util
 
 
 def test_rs_integral():
@@ -53,3 +53,49 @@ def test_weighted_mean():
     mean, _ = fitter.weighted_mean(numbers, errors)
 
     assert mean == 3.3125
+
+
+def test_abc():
+    """
+    Test we get the right abc params from constraint params
+
+    """
+    constraint_params = util.ConstraintParams(r_d=0.1, b=0.2, x=0.5, y=10.0)
+
+    expected_abc = util.MixingParams(a=0.1, b=0.2, c=25.0625)
+    actual_abc = models.abc(constraint_params)
+
+    assert actual_abc.a == expected_abc.a
+    assert actual_abc.b == expected_abc.b
+    assert actual_abc.c == expected_abc.c
+
+
+def test_constraint_params():
+    """
+    Test we get the right constraint params from scan params
+
+    """
+    scan_params = util.ScanParams(r_d=0.1, x=0.2, y=0.3, re_z=2.0, im_z=10.0)
+
+    expected_constraint = util.ConstraintParams(r_d=0.1, b=2.6, x=0.2, y=0.3)
+    actual_constraint = models.scan2constraint(scan_params)
+
+    assert actual_constraint.r_d == expected_constraint.r_d
+    assert actual_constraint.b == expected_constraint.b
+    assert actual_constraint.x == expected_constraint.x
+    assert actual_constraint.y == expected_constraint.y
+
+
+def test_abc_scan():
+    """
+    Test we get the right abc params from scan params
+
+    """
+    scan_params = util.ScanParams(r_d=0.1, x=0.2, y=0.3, re_z=2.0, im_z=10.0)
+    expected_abc = util.MixingParams(a=0.1, b=2.6, c=0.0325)
+
+    actual_abc = models.abc_scan(scan_params)
+
+    assert actual_abc.a == expected_abc.a
+    assert actual_abc.b == expected_abc.b
+    assert actual_abc.c == expected_abc.c

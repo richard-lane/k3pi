@@ -74,6 +74,7 @@ def scan_fit(
     params: util.ScanParams,
     fmt: str = "r--",
     label: str = None,
+    plot_kw: dict = None,
 ) -> Tuple[plt.Figure, plt.Axes, QuadContourSet]:
     """
     Plot scan fit on an axis.
@@ -83,10 +84,14 @@ def scan_fit(
     :param params: parameters from the fit
     :param fmt: format string for the plot
     :param label: label to add to legend
+    :param plot_kw: additional keyword arguments for the plot
 
     """
-    pts = np.linspace(*axis.get_xlim())
-    axis.plot(pts, models.scan(pts, params), fmt, label=label)
+    lims = axis.get_xlim()
+    pts = np.linspace(*lims)
+
+    axis.plot(pts, models.scan(pts, params), fmt, label=label, **plot_kw)
+    axis.set_xlim(lims)
 
 
 def scan(

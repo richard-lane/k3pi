@@ -17,9 +17,9 @@ def abc(params: ConstraintParams) -> MixingParams:
 
     """
     return MixingParams(
-        params.r_d,
-        params.r_d * params.b,
-        0.25 * (params.x**2 + params.y**2),
+        a=params.r_d,
+        b=params.b,
+        c=0.25 * (params.x**2 + params.y**2),
     )
 
 
@@ -29,10 +29,10 @@ def scan2constraint(params: ScanParams) -> ConstraintParams:
 
     """
     return ConstraintParams(
-        params.r_d,
-        (params.x * params.im_z + params.y * params.re_z),
-        params.x,
-        params.y,
+        r_d=params.r_d,
+        b=(params.x * params.im_z + params.y * params.re_z),
+        x=params.x,
+        y=params.y,
     )
 
 
@@ -330,7 +330,7 @@ class Scan(ConstrainedBase):
         z: Tuple[float, float],
     ):
         """
-        Set parameters for doing a fit without constraints
+        Set parameters for doing a fit, fixing Z
 
         :param ratio: WS/RS ratio
         :param error: error in ratio

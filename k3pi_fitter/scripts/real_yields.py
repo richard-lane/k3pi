@@ -105,7 +105,7 @@ def _get_ratio(
     return ratio, err
 
 
-def _plot_scan(axis, time_bins, ratios, errs):
+def _plot_scan(axis, fit_axis, time_bins, ratios, errs):
     """
     Plot a scan on an axis
     """
@@ -127,13 +127,22 @@ def _plot_scan(axis, time_bins, ratios, errs):
                     -0.301,
                 )
 
+                vals = scan.values
+                fit_vals = util.ScanParams(
+                    r_d=vals[0], x=vals[1], y=vals[2], re_z=re_z, im_z=im_z
+                )
+                plotting.scan_fit(
+                    fit_axis, fit_vals, fmt="k--", label=None, plot_kw={"alpha": 0.01}
+                )
+
                 chi2s[j, i] = scan.fval
-                pbar.update(1)
+
+    # fit_axis.set_ylim(0, 0.009)
 
     chi2s -= np.nanmin(chi2s)
     chi2s = np.sqrt(chi2s)
 
-    n_contours = 7
+    n_contours = 4
     contours = plotting.scan(
         axis, allowed_rez, allowed_imz, chi2s, levels=np.arange(n_contours)
     )
@@ -197,7 +206,6 @@ def _plot_ratio(
     abc_fitter = fitter.no_constraints(
         ratios, errs, time_bins, util.MixingParams(0.005, 0.0002, 0)
     )
-    print(abc_fitter.values)
     print(f"{plot_kw['label']}: {abc_fitter.valid=}")
     plotting.no_constraints(
         axis,
@@ -214,7 +222,6 @@ def _plot_ratio(
         (0.0011489, 0.00064945),
         -0.301,
     )
-    print(constrained_fitter.values)
     print(f"{plot_kw['label']}: {constrained_fitter.valid=}")
     plotting.constraints(
         axis,
@@ -222,9 +229,10 @@ def _plot_ratio(
         fmt=plot_kw["fmt"][0] + ":",
         label=plot_kw["label"] + " constrained",
     )
+    print(constrained_fitter.values)
 
     # return contours
-    return _plot_scan(scan_ax, time_bins, ratios, errs)
+    return _plot_scan(scan_ax, axis, time_bins, ratios, errs)
 
 
 def _make_plots(
@@ -297,6 +305,8 @@ def _make_plots(
     cbar_ax = scan_fig.add_axes([0.85, 0.1, 0.05, 0.8])
     scan_fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
+    for axis, title in zip(scan_axes, ("Raw", "After BDT cut", "After Efficiency")):
+        axis.set_title(title)
     scan_fig.savefig("real_scan.png")
 
     plt.close(fig)
