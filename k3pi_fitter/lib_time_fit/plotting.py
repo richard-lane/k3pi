@@ -90,6 +90,9 @@ def scan_fit(
     lims = axis.get_xlim()
     pts = np.linspace(*lims)
 
+    if plot_kw is None:
+        plot_kw = {}
+
     axis.plot(pts, models.scan(pts, params), fmt, label=label, **plot_kw)
     axis.set_xlim(lims)
 
