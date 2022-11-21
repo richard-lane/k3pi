@@ -3,7 +3,7 @@ Statistical or related things
 
 """
 import itertools
-from typing import Tuple, Iterator
+from typing import Tuple, Iterable
 import numpy as np
 
 
@@ -88,7 +88,7 @@ def counts(
 
 
 def counts_generator(
-    values: Iterator[np.ndarray], bins: np.ndarray, weights: Iterator[np.ndarray] = None
+    values: Iterable[np.ndarray], bins: np.ndarray, weights: Iterable[np.ndarray] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Returns the counts in each bin and their errors,

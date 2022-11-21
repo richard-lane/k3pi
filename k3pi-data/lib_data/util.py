@@ -2,13 +2,13 @@
 Utility functions that may be useful
 
 """
-from typing import Tuple, List
+from typing import Tuple, List, Iterable
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import uproot
 
-from . import definitions
+from . import definitions, stats
 
 
 def convert_to_kplus(

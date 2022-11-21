@@ -2,15 +2,11 @@
 Utilities for doing a toy study
 
 """
-import sys
-import pathlib
 from typing import Callable, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
-
-from libFit import pdfs
+from . import pdfs
 
 
 def _gen(

@@ -10,7 +10,7 @@ from typing import Generator
 import pandas as pd
 from tqdm import tqdm
 
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[1] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 from lib_cuts.definitions import Classifier as CutClassifier
 from . import definitions, training_vars
 
