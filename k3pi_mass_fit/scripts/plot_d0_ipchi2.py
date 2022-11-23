@@ -26,10 +26,10 @@ def main():
     )
 
     # Get counts
-    bins = np.concatenate(([-20], np.linspace(-10, 5, 200), [20]))
+    bins = np.concatenate(([0], np.logspace(-10, 10, 100)))
     counts, errors = stats.time_binned_counts(
         (
-            np.log2(dataframe["D0 ipchi2"])
+            dataframe["D0 ipchi2"]
             for dataframe in get.data("2018", "dcs", "magdown")
         ),
         bins,
@@ -49,6 +49,7 @@ def main():
             fmt="-",
             label=f"time bin {i}",
         )
+    axis.set_xscale("log")
 
     axis.legend()
     plt.show()
