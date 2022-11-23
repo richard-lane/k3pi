@@ -3,7 +3,7 @@ Statistical or related things
 
 """
 import itertools
-from typing import Tuple, Iterable
+from typing import List, Tuple, Iterable
 import numpy as np
 
 
@@ -129,3 +129,71 @@ def counts_generator(
 
     # Take the square root of the errors
     return count, np.sqrt(sum_wt_sq)
+
+
+def bin_indices(values: Iterable[np.ndarray], bins: np.ndarray) -> Iterable[np.ndarray]:
+    """
+    Generator of bin indices from a generator of values
+
+    """
+    n_bins = len(bins) - 1
+
+    for array in values:
+        indices = _indices(array, bins)
+        _check_bins(indices, n_bins)
+
+        yield indices
+
+
+def time_binned_counts(
+    values: Iterable[np.ndarray],
+    bins: np.ndarray,
+    n_time_bins: int,
+    time_indices: Iterable[np.ndarray],
+    weights: Iterable[np.ndarray] = None,
+) -> List[Tuple[np.ndarray, np.ndarray]]:
+    """
+    Returns the counts in each bin and their errors,
+    given a time bin index for each value
+    given a generator of arrays of values and an optional
+    generator of weights
+
+    :param values: generator of values to count
+    :param bins: Binning scheme;
+                 left edge of each bin, plus the right edge of the highest bin
+    :param n_time_bins: number of time bins
+    :param time_indices: array of time bin indices, one for each value
+    :param weights: optional generator of weights for each value
+
+    :returns: list of arrays of counts in each bin
+    :returns: list of arrays of errors in each bin
+
+    """
+    # So we can zip arrays + weights even if weights
+    # is not provided
+    if weights is None:
+        weights = itertools.repeat(None)
+
+    # Init arrays
+    n_bins = len(bins) - 1
+    count = [np.zeros(n_bins) for _ in range(n_time_bins)]
+    sum_wt_sq = [np.zeros(n_bins) for _ in range(n_time_bins)]
+
+    for array, weight, time_indices_array in zip(values, weights, time_indices):
+        # Add sum of weights to a histogram
+        if weight is None:
+            weight = np.ones_like(array)
+
+        for i in range(n_time_bins):
+            this_time_bin = time_indices_array == i
+
+            indices = _indices(array[this_time_bin], bins)
+            _check_bins(indices, n_bins)
+
+            sum_wt, sum_wt_sq_ = _sum_wts(n_bins, indices, weight[this_time_bin])
+
+            count[i] += sum_wt
+            sum_wt_sq[i] += sum_wt_sq_
+
+    # Take the square root of the errors
+    return count, [np.sqrt(array) for array in sum_wt_sq]

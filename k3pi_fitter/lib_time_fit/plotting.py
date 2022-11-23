@@ -102,10 +102,14 @@ def scan(
     re_z: np.ndarray,
     im_z: np.ndarray,
     chi2: np.ndarray,
-    levels=None,
+    levels: np.ndarray = None,
+    plot_kw: dict = None,
 ) -> QuadContourSet:
     """
     Plot a scan- returns the contour set with the specified levels (default levels otherwise)
 
     """
-    return ax.contourf(*np.meshgrid(re_z, im_z), chi2, levels=levels)
+    if plot_kw is None:
+        plot_kw = {}
+
+    return ax.contourf(*np.meshgrid(re_z, im_z), chi2, levels=levels, **plot_kw)
