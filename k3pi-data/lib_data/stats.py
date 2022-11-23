@@ -151,7 +151,7 @@ def time_binned_counts(
     n_time_bins: int,
     time_indices: Iterable[np.ndarray],
     weights: Iterable[np.ndarray] = None,
-) -> List[Tuple[np.ndarray, np.ndarray]]:
+) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """
     Returns the counts in each bin and their errors,
     given a time bin index for each value
