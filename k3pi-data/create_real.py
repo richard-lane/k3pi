@@ -27,29 +27,32 @@ def _real_df(tree) -> pd.DataFrame:
     Populate a pandas dataframe with momenta, time and other arrays from the provided trees
 
     """
-    df = pd.DataFrame()
+    dataframe = pd.DataFrame()
 
     keep = cuts.data_keep(tree)
 
     # Read momenta into the dataframe
-    util.add_momenta(df, tree, keep)
+    util.add_momenta(dataframe, tree, keep)
 
-    util.add_refit_times(df, tree, keep)
+    util.add_refit_times(dataframe, tree, keep)
 
     # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    training_vars.add_vars(df, tree, keep)
-    util.add_k_id(df, tree, keep)
+    training_vars.add_vars(dataframe, tree, keep)
+    util.add_k_id(dataframe, tree, keep)
 
     # D, D* masses
-    util.add_masses(df, tree, keep)
+    util.add_masses(dataframe, tree, keep)
 
     # Slow pi ID
-    util.add_slowpi_id(df, tree, keep)
+    util.add_slowpi_id(dataframe, tree, keep)
+
+    # D0 IPCHI2 for secondary study
+    util.add_d0_ipchi2(dataframe, tree, keep)
 
     # track/SPD for event multiplicity reweighting
-    corrections.add_multiplicity_columns(tree, df, keep)
+    corrections.add_multiplicity_columns(tree, dataframe, keep)
 
-    return df
+    return dataframe
 
 
 def _create_dump(
