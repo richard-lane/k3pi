@@ -52,10 +52,10 @@ def _plot(delta_m: np.ndarray, params: tuple) -> None:
         return pdfs.fractional_pdf(x, *params)
 
     def fitted_sig(x: np.ndarray) -> np.ndarray:
-        return pdfs.normalised_signal(x, *params[1:-2])
+        return pdfs.normalised_signal(x, *params[1:-4])
 
     def fitted_bkg(x: np.ndarray) -> np.ndarray:
-        return pdfs.normalised_bkg(x, *params[-2:])
+        return pdfs.normalised_bkg(x, *params[-4:])
 
     fig, ax = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(9, 12))
 

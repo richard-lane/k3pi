@@ -12,8 +12,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
 from libFit import pdfs, fit, toy_utils
+from lib_data import stats
 
 
 def _pull(
@@ -29,7 +31,9 @@ def _pull(
 
     # Perform fit
     sig_frac = true_params[0]
-    fitter = fit.fit(combined, sign, time_bin, sig_frac)
+    bins = np.linspace(*pdfs.domain(), 100)
+    counts, _ = stats.counts(combined, bins)
+    fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
     fit_params = fitter.values
     fit_errs = fitter.errors
@@ -37,7 +41,7 @@ def _pull(
     pull = (true_params - fit_params) / fit_errs
 
     # Keeping this in in case I want to plot later for debug
-    if (np.abs(pull) > 10).any():
+    if False and (np.abs(pull) > 10).any():
 
         def fitted_pdf(x: np.ndarray) -> np.ndarray:
             return pdfs.fractional_pdf(x, *fit_params)
@@ -49,6 +53,7 @@ def _pull(
         fig.suptitle("toy data")
         fig.savefig("toy.png")
         plt.show()
+
     return pull
 
 
@@ -72,7 +77,7 @@ def _pull_study(
         np.random.default_rng()
     )  # seed=3 makes the fitter set some of the parameters to NaN
 
-    return_vals: tuple = tuple([] for _ in range(9))
+    return_vals = tuple([] for _ in range(11))
     for _ in tqdm(range(n_experiments)):
         for lst, val in zip(return_vals, _pull(rng, n_sig, n_bkg, sign, time_bin)):
             lst.append(val)
@@ -91,6 +96,8 @@ def _plot_pulls(
         np.ndarray,
         np.ndarray,
         np.ndarray,
+        np.ndarray,
+        np.ndarray,
     ],
     path: str,
 ) -> None:
@@ -98,7 +105,7 @@ def _plot_pulls(
     Plot pulls
 
     """
-    fig, ax = plt.subplots(3, 3, figsize=(12, 8))
+    fig, ax = plt.subplots(3, 4, figsize=(12, 8))
     labels = (
         "signal fraction",
         "centre",
@@ -109,6 +116,8 @@ def _plot_pulls(
         r"$\beta$",
         "a",
         "b",
+        "c",
+        "d",
     )
 
     for a, p, l in zip(ax.ravel(), pulls, labels):

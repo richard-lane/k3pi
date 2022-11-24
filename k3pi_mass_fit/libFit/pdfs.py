@@ -14,38 +14,49 @@ def domain() -> Tuple[float, float]:
     return 139.57, 152.0
 
 
-def background(x: np.ndarray, a: float, b: float) -> np.ndarray:
+def background(x: np.ndarray, a: float, b: float, c: float, d: float) -> np.ndarray:
     """
     PDF model for background distribution in delta M (D* - D0 mass)
 
     :param x: independent variable, mass difference
     :param a: shape parameter
     :param b: shape parameter
+    :param c: shape parameter
+    :param d: shape parameter
     :returns: PDF at x evaluated with the given parameters
 
     """
     tmp = np.sqrt(x - domain()[0])
-    return tmp + a * tmp**3 + b * tmp**5
+    return tmp + a * tmp**3 + b * tmp**5 + c * tmp**2 + d * tmp**4
 
 
-def _bkg_integral_dispatcher(x: float, a: float, b: float) -> float:
+def _bkg_integral_dispatcher(x: float, a: float, b: float, c: float, d: float) -> float:
     """Integral of the bkg pdf up to x"""
     tmp = np.sqrt(x - domain()[0])
-    return 2 / 3 * tmp**3 + 2 * a / 5 * tmp**5 + 2 * b / 7 * tmp**7
+    return (
+        2 / 3 * tmp**3
+        + 2 * a / 5 * tmp**5
+        + 2 * b / 7 * tmp**7
+        + c / 2 * tmp**4
+        + d / 3 * tmp**6
+    )
 
 
-def _bkg_integral(low: float, high: float, a: float, b: float) -> float:
+def _bkg_integral(
+    low: float, high: float, a: float, b: float, c: float, d: float
+) -> float:
     """Normalised integral"""
     return (
-        _bkg_integral_dispatcher(high, a, b) - _bkg_integral_dispatcher(low, a, b)
-    ) / _bkg_integral_dispatcher(domain()[1], a, b)
+        _bkg_integral_dispatcher(high, a, b, c, d)
+        - _bkg_integral_dispatcher(low, a, b, c, d)
+    ) / _bkg_integral_dispatcher(domain()[1], a, b, c, d)
 
 
-def normalised_bkg(x: np.ndarray, a: float, b: float) -> np.ndarray:
+def normalised_bkg(x: np.ndarray, a: float, b: float, c: float, d: float) -> np.ndarray:
     """Normalised bkg PDF"""
     # The integral across the whole domain is equal to the integral evaluated at the
     # high limit
-    return background(x, a, b) / _bkg_integral_dispatcher(domain()[1], a, b)
+    return background(x, a, b, c, d) / _bkg_integral_dispatcher(domain()[1], a, b, c, d)
 
 
 def signal_base(
@@ -168,6 +179,8 @@ def fractional_pdf(
     beta: float,
     a: float,
     b: float,
+    c: float,
+    d: float,
 ) -> np.ndarray:
     """
     returns n_evts, n_sig * normalised sig pdf + n_bkg * normalised bkg pdf
@@ -181,7 +194,7 @@ def fractional_pdf(
         alpha_l,
         alpha_r,
         beta,
-    ) + (1 - signal_fraction) * normalised_bkg(x, a, b)
+    ) + (1 - signal_fraction) * normalised_bkg(x, a, b, c, d)
 
 
 def pdf(
@@ -195,6 +208,8 @@ def pdf(
     beta: float,
     a: float,
     b: float,
+    c: float,
+    d: float,
 ) -> Tuple[int, np.ndarray]:
     """
     returns n_evts, n_sig * normalised sig pdf + n_bkg * normalised bkg pdf
@@ -202,7 +217,7 @@ def pdf(
     """
     n = len(x)
     return n, n * fractional_pdf(
-        x, signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+        x, signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
     )
 
 
@@ -238,6 +253,8 @@ class BinnedChi2:
                 "beta",
                 "a",
                 "b",
+                "c",
+                "d",
             ]
         )
 
@@ -261,6 +278,8 @@ class BinnedChi2:
         beta: float,
         a: float,
         b: float,
+        c: float,
+        d: float,
     ) -> float:
         """
         Objective function
@@ -283,6 +302,8 @@ class BinnedChi2:
                         beta,
                         a,
                         b,
+                        c,
+                        d,
                     )
                 )
             )
@@ -325,6 +346,8 @@ class SimultaneousBinnedChi2:
                 "beta",
                 "a",
                 "b",
+                "c",
+                "d",
             ]
         )
         self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
@@ -342,15 +365,37 @@ class SimultaneousBinnedChi2:
         beta: float,
         a: float,
         b: float,
+        c: float,
+        d: float,
     ) -> float:
         """
         Objective function
 
         """
         return self.rs_chi2(
-            rs_signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+            rs_signal_fraction,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a,
+            b,
+            c,
+            d,
         ) + self.ws_chi2(
-            ws_signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+            ws_signal_fraction,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a,
+            b,
+            c,
+            d,
         )
 
 
@@ -374,19 +419,19 @@ def background_defaults(sign: str) -> Tuple[float, float]:
     """
     assert sign in {"RS", "WS"}
     if sign == "WS":
-        return 0.06, -0.00645
+        return 0.06, -0.00645, 0.75, 0.2
 
-    return 0.004, -0.001
+    return 0.004, -0.001, 0.75, 0.2
 
 
 def defaults(
     sign: str, time_bin: int
-) -> Tuple[float, float, float, float, float, float]:
+) -> Tuple[float, float, float, float, float, float, float, float]:
     """
-    default centre, width, alpha, beta, a, b
+    default centre, width, alpha, beta, a, b, c, d
 
     """
     centre, width, alpha, beta = signal_defaults(time_bin)
-    a, b = background_defaults(sign)
+    a, b, c, d = background_defaults(sign)
 
-    return centre, width, alpha, beta, a, b
+    return centre, width, alpha, beta, a, b, c, d
