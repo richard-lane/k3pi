@@ -13,13 +13,61 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 
 from libFit import pdfs, fit, util as mass_util
 from lib_data import get, stats
 from lib_time_fit.definitions import TIME_BINS
+from lib_cuts.get import cut_dfs
+from lib_cuts.get import classifier as get_clf
 
 
 def _plot(
+    axes: Tuple[plt.Axes, plt.Axes],
+    counts: np.ndarray,
+    bins: np.ndarray,
+    fit_params: Tuple,
+) -> None:
+    """
+    Plot fit and pull on two axes
+
+    """
+    centres = (bins[1:] + bins[:-1]) / 2
+    scale = np.sum(counts) * (bins[1] - bins[0])
+
+    err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
+    axes[0].errorbar(
+        centres,
+        counts,
+        yerr=np.sqrt(counts),
+        **err_kw,
+    )
+
+    predicted = scale * pdfs.fractional_pdf(centres, *fit_params)
+    axes[0].plot(centres, predicted)
+    axes[0].plot(
+        centres,
+        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[1:-4]),
+        label="signal",
+    )
+    axes[0].plot(
+        centres,
+        scale * (1 - fit_params[0]) * pdfs.normalised_bkg(centres, *fit_params[-4:]),
+        label="bkg",
+    )
+
+    # Plot pull
+    diff = counts - predicted
+    axes[1].plot(pdfs.domain(), [1, 1], "r-")
+    axes[1].errorbar(
+        centres,
+        diff,
+        yerr=np.sqrt(counts),
+        **err_kw,
+    )
+
+
+def _fit(
     rs_count: np.ndarray,
     ws_count: np.ndarray,
     bin_number: int,
@@ -42,85 +90,19 @@ def _plot(
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(12, 8)
     )
-
-    centres = (bins[1:] + bins[:-1]) / 2
-    rs_scale = np.sum(rs_count) * (bins[1] - bins[0])
-    ws_scale = np.sum(ws_count) * (bins[1] - bins[0])
-
-    axes["A"].errorbar(
-        centres,
-        rs_count,
-        yerr=np.sqrt(rs_count),
-        fmt="k.",
-        elinewidth=0.5,
-        markersize=1.0,
-    )
-    axes["B"].errorbar(
-        centres,
-        ws_count,
-        yerr=np.sqrt(ws_count),
-        fmt="k.",
-        elinewidth=0.5,
-        markersize=1.0,
-    )
-
-    rs_predicted = rs_scale * pdfs.fractional_pdf(centres, *rs_params)
-    ws_predicted = ws_scale * pdfs.fractional_pdf(centres, *ws_params)
-
-    axes["A"].plot(centres, rs_predicted)
-    axes["B"].plot(centres, ws_predicted)
-
-    axes["A"].plot(
-        centres,
-        rs_scale * rs_params[0] * pdfs.normalised_signal(centres, *rs_params[1:-4]),
-        label="signal",
-    )
-    axes["B"].plot(
-        centres,
-        ws_scale * ws_params[0] * pdfs.normalised_signal(centres, *ws_params[1:-4]),
-        label="signal",
-    )
-
-    axes["A"].plot(
-        centres,
-        rs_scale * (1 - rs_params[0]) * pdfs.normalised_bkg(centres, *rs_params[-4:]),
-        label="bkg",
-    )
-    axes["B"].plot(
-        centres,
-        ws_scale * (1 - ws_params[0]) * pdfs.normalised_bkg(centres, *ws_params[-4:]),
-        label="bkg",
-    )
+    _plot((axes["A"], axes["C"]), rs_count, bins, rs_params)
+    _plot((axes["B"], axes["D"]), ws_count, bins, ws_params)
 
     axes["A"].legend()
 
-    rs_diff = rs_count - rs_predicted
-    ws_diff = ws_count - ws_predicted
-
     axes["C"].plot(pdfs.domain(), [1, 1], "r-")
     axes["D"].plot(pdfs.domain(), [1, 1], "r-")
-
-    axes["C"].errorbar(
-        centres,
-        rs_diff,
-        yerr=np.sqrt(rs_count),
-        fmt="k.",
-        elinewidth=0.5,
-        markersize=1.0,
-    )
-    axes["D"].errorbar(
-        centres,
-        ws_diff,
-        yerr=np.sqrt(ws_count),
-        fmt="k.",
-        elinewidth=0.5,
-        markersize=1.0,
-    )
 
     fig.suptitle(f"{fitter.valid=}")
 
     fig.tight_layout()
     fig.savefig(f"{fit_dir}fit_{bin_number}.png")
+    plt.close(fig)
 
 
 def _time_indices(
@@ -131,6 +113,24 @@ def _time_indices(
 
     """
     return stats.bin_indices((dataframe["time"] for dataframe in dataframes), time_bins)
+
+
+def _generators(
+    year: str, magnetisation: str, *, bdt_cut: bool
+) -> Tuple[Iterable[pd.DataFrame], Iterable[pd.DataFrame]]:
+    """
+    Generator of rs/ws dataframes, with/without BDT cut
+
+    """
+    generators = get.data(year, "cf", magnetisation), get.data(
+        year, "dcs", magnetisation
+    )
+    if bdt_cut:
+        # Get the classifier
+        clf = get_clf(year, "dcs", magnetisation)
+        return [cut_dfs(gen, clf) for gen in generators]
+
+    return generators
 
 
 def _counts(
@@ -146,15 +146,19 @@ def _counts(
 
     """
     # Get generators of time indices
-    dcs_indices = _time_indices(get.data(year, "dcs", magnetisation), time_bins)
-    cf_indices = _time_indices(get.data(year, "cf", magnetisation), time_bins)
+    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
 
+    dcs_indices = _time_indices(dcs_gen, time_bins)
+    cf_indices = _time_indices(cf_gen, time_bins)
+
+    # Need to get new generators now that we've used them up
+    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
     n_time_bins = len(time_bins) - 1
     dcs_counts, _ = mass_util.binned_delta_m_counts(
-        get.data(year, "dcs", magnetisation), bins, n_time_bins, dcs_indices
+        dcs_gen, bins, n_time_bins, dcs_indices
     )
     cf_counts, _ = mass_util.binned_delta_m_counts(
-        get.data(year, "cf", magnetisation), bins, n_time_bins, cf_indices
+        cf_gen, bins, n_time_bins, cf_indices
     )
 
     return dcs_counts, cf_counts
@@ -170,15 +174,23 @@ def main():
 
     # Get delta M values from a generator of dataframes
     year, magnetisation = "2018", "magdown"
-    dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=False)
+    dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=True)
 
-    fit_dir = "raw_fits/"
+    fit_dir = "bdt_fits/"
     if not os.path.isdir(fit_dir):
         os.mkdir(fit_dir)
 
     # Plot the fit in each bin
     for i, (dcs_count, cf_count) in enumerate(zip(dcs_counts[1:-1], cf_counts[1:-1])):
-        _plot(cf_count, dcs_count, i, bins, fit_dir)
+        _fit(cf_count, dcs_count, i, bins, fit_dir)
+
+    # Do the same without BDT cut
+    dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=False)
+    fit_dir = "raw_fits/"
+    if not os.path.isdir(fit_dir):
+        os.mkdir(fit_dir)
+    for i, (dcs_count, cf_count) in enumerate(zip(dcs_counts[1:-1], cf_counts[1:-1])):
+        _fit(cf_count, dcs_count, i, bins, fit_dir)
 
 
 if __name__ == "__main__":
