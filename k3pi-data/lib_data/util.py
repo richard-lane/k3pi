@@ -2,13 +2,13 @@
 Utility functions that may be useful
 
 """
-from typing import Tuple, List, Iterable
+from typing import Tuple, List
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import uproot
 
-from . import definitions, stats
+from . import definitions
 
 
 def convert_to_kplus(
@@ -220,6 +220,14 @@ def add_slowpi_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     dataframe["slow pi ID"] = tree["Dst_ReFit_piplus_ID"].array(library="ak")[:, 0][
         keep
     ]
+
+
+def add_d0_ipchi2(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
+    """
+    Add D0 IPCHI2
+
+    """
+    dataframe["D0 ipchi2"] = tree["D0_IPCHI2_OWNPV"].array(library="np")[keep]
 
 
 def eta(p_x: np.ndarray, p_y: np.ndarray, p_z: np.ndarray) -> np.ndarray:
