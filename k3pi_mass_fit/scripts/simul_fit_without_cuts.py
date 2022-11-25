@@ -67,6 +67,32 @@ def _plot(
     )
 
 
+def _separate_fit(
+    count: np.ndarray, bin_number: int, bins: np.ndarray, sign: str, plot_path: str
+):
+    """
+    Plot separate fits
+
+    """
+    fitter = fit.binned_fit(
+        count, bins, sign, bin_number, 0.9 if sign == "RS" else 0.05
+    )
+
+    fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(6, 8))
+    _plot((axes["A"], axes["B"]), count, bins, fitter.values)
+
+    axes["A"].legend()
+
+    axes["B"].plot(pdfs.domain(), [1, 1], "r-")
+
+    fig.suptitle(f"{fitter.valid=}")
+
+    fig.tight_layout()
+    print(f"Saving {plot_path}")
+    fig.savefig(plot_path)
+    plt.close(fig)
+
+
 def _fit(
     rs_count: np.ndarray,
     ws_count: np.ndarray,
@@ -101,7 +127,10 @@ def _fit(
     fig.suptitle(f"{fitter.valid=}")
 
     fig.tight_layout()
-    fig.savefig(f"{fit_dir}fit_{bin_number}.png")
+
+    plot_path = f"{fit_dir}fit_{bin_number}.png"
+    print(f"Saving {plot_path}")
+    fig.savefig(plot_path)
     plt.close(fig)
 
 
@@ -164,6 +193,18 @@ def _counts(
     return dcs_counts, cf_counts
 
 
+def _mkdirs(base: str) -> None:
+    """
+    Make plot dirs
+
+    """
+    rs_dir = os.path.join(base, "rs/")
+    ws_dir = os.path.join(base, "ws/")
+    for dir_ in base, rs_dir, ws_dir:
+        if not os.path.isdir(dir_):
+            os.mkdir(dir_)
+
+
 def main():
     """
     Do mass fits in each time bin without BDT cuts
@@ -176,21 +217,25 @@ def main():
     year, magnetisation = "2018", "magdown"
     dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=True)
 
-    fit_dir = "bdt_fits/"
-    if not os.path.isdir(fit_dir):
-        os.mkdir(fit_dir)
+    bdt_dir = "bdt_fits/"
+    _mkdirs(bdt_dir)
 
     # Plot the fit in each bin
     for i, (dcs_count, cf_count) in enumerate(zip(dcs_counts[1:-1], cf_counts[1:-1])):
-        _fit(cf_count, dcs_count, i, bins, fit_dir)
+        _fit(cf_count, dcs_count, i, bins, bdt_dir)
+        _separate_fit(cf_count, i, bins, "RS", f"{bdt_dir}rs/{i}.png")
+        _separate_fit(dcs_count, i, bins, "WS", f"{bdt_dir}ws/{i}.png")
 
     # Do the same without BDT cut
     dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=False)
-    fit_dir = "raw_fits/"
-    if not os.path.isdir(fit_dir):
-        os.mkdir(fit_dir)
+
+    raw_dir = "raw_fits/"
+    _mkdirs(raw_dir)
+
     for i, (dcs_count, cf_count) in enumerate(zip(dcs_counts[1:-1], cf_counts[1:-1])):
-        _fit(cf_count, dcs_count, i, bins, fit_dir)
+        _fit(cf_count, dcs_count, i, bins, raw_dir)
+        _separate_fit(cf_count, i, bins, "RS", f"{raw_dir}rs/{i}.png")
+        _separate_fit(dcs_count, i, bins, "WS", f"{raw_dir}ws/{i}.png")
 
 
 if __name__ == "__main__":
