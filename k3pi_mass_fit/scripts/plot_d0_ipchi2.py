@@ -26,10 +26,10 @@ def main():
     )
 
     # Get counts
-    bins = np.concatenate(([0], np.logspace(-10, 10, 100)))
+    bins = np.concatenate(([-15], np.linspace(-10, 10, 100)))
     counts, errors = stats.time_binned_counts(
         (
-            dataframe["D0 ipchi2"]
+            np.log(dataframe["D0 ipchi2"])
             for dataframe in get.data("2018", "dcs", "magdown")
         ),
         bins,
@@ -37,7 +37,11 @@ def main():
         time_indices,
     )
 
+    # Change colour cycle to have enough colours
     fig, axis = plt.subplots()
+    colours = list(plt.cm.tab10(np.arange(10))) + ["plum", "crimson"]
+    axis.set_prop_cycle("color", colours)
+
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
     for i, (count, error) in enumerate(zip(counts[1:-1], errors[1:-1])):
@@ -49,7 +53,8 @@ def main():
             fmt="-",
             label=f"time bin {i}",
         )
-    axis.set_xscale("log")
+    axis.set_xlim(-10, 10)
+    axis.set_xlabel(r"log$_\mathrm{e}(\mathrm{D}^0\ \mathrm{IP}\chi^2)$")
 
     axis.legend()
     plt.show()
