@@ -26,6 +26,7 @@ from lib_data import get, stats
 from libFit import fit, pdfs, util as mass_util
 from lib_time_fit import util, fitter, plotting
 from lib_time_fit.definitions import TIME_BINS
+from lib_cuts.get import cut_dfs, classifier as get_clf
 
 
 def _scan_kw(n_levels: int) -> dict:
@@ -59,17 +60,15 @@ def _plot_fits(
         elif chi2 < 3.0:
             colour = colours[2]
             alpha = 0.05
-        else:
-            colour = "k"
-            alpha = 0.005
 
-        plotting.scan_fit(
-            axis,
-            params,
-            fmt=f"--",
-            label=None,
-            plot_kw={"alpha": alpha, "color": colour},
-        )
+        if chi2 < 3.0:
+            plotting.scan_fit(
+                axis,
+                params,
+                fmt="--",
+                label=None,
+                plot_kw={"alpha": alpha, "color": colour},
+            )
 
 
 def _plot_scan(
@@ -92,13 +91,14 @@ def _plot_scan(
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
                 these_params = util.ScanParams(0.0055, 0.0039183, 0.0065139, re_z, im_z)
-                scan = fitter.scan_fit(
+                scan = fitter.combined_fit(
                     ratios,
                     errs,
                     time_bins,
                     these_params,
                     (0.0011489, 0.00064945),
                     -0.301,
+                    0,
                 )
 
                 vals = scan.values
@@ -159,9 +159,10 @@ def _make_plots(
     dcs_errs = []
     cf_errs = []
     # Do mass fits in each bin, save the yields and errors
-    # Don't want under/overflow bins
-    for time_bin, (dcs_count, cf_count) in enumerate(
-        zip(dcs_counts[1:-1], cf_counts[1:-1])
+    # Don't want the first or last bins since they're too
+    # sparsely populated
+    for time_bin, (dcs_count, cf_count) in tqdm(
+        enumerate(zip(dcs_counts[1:-1], cf_counts[1:-1]))
     ):
         ((rs_yield, ws_yield), (rs_err, ws_err)) = fit.yields(
             cf_count, dcs_count, mass_bins, time_bin
@@ -204,7 +205,10 @@ def _make_plots(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    fig.savefig(f"{output_dir}scan.png")
+    path = f"{output_dir}scan.png"
+    print(f"saving {path}")
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def _time_indices(
@@ -215,6 +219,24 @@ def _time_indices(
 
     """
     return stats.bin_indices((dataframe["time"] for dataframe in dataframes), time_bins)
+
+
+def _generators(
+    year: str, magnetisation: str, *, bdt_cut: bool
+) -> Tuple[Iterable[pd.DataFrame], Iterable[pd.DataFrame]]:
+    """
+    Generator of rs/ws dataframes, with/without BDT cut
+
+    """
+    generators = get.data(year, "cf", magnetisation), get.data(
+        year, "dcs", magnetisation
+    )
+    if bdt_cut:
+        # Get the classifier
+        clf = get_clf(year, "dcs", magnetisation)
+        return [cut_dfs(gen, clf) for gen in generators]
+
+    return generators
 
 
 def _counts(
@@ -230,15 +252,19 @@ def _counts(
 
     """
     # Get generators of time indices
-    dcs_indices = _time_indices(get.data(year, "dcs", magnetisation), time_bins)
-    cf_indices = _time_indices(get.data(year, "cf", magnetisation), time_bins)
+    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
 
+    dcs_indices = _time_indices(dcs_gen, time_bins)
+    cf_indices = _time_indices(cf_gen, time_bins)
+
+    # Need to get new generators now that we've used them up
+    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
     n_time_bins = len(time_bins) - 1
     dcs_counts, _ = mass_util.binned_delta_m_counts(
-        get.data(year, "dcs", magnetisation), bins, n_time_bins, dcs_indices
+        dcs_gen, bins, n_time_bins, dcs_indices
     )
     cf_counts, _ = mass_util.binned_delta_m_counts(
-        get.data(year, "cf", magnetisation), bins, n_time_bins, cf_indices
+        cf_gen, bins, n_time_bins, cf_indices
     )
 
     return dcs_counts, cf_counts
@@ -255,17 +281,18 @@ def main():
     # Get delta M values from generator of dataframes
     year, magnetisation = "2018", "magdown"
 
-    dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=False)
+    dcs_counts, cf_counts = _counts(year, magnetisation, bins, time_bins, bdt_cut=True)
 
     # Plot stuff
-    fit_dir = "raw_fits/"
+    fit_dir = "bdt_fits/"
     if not os.path.isdir(fit_dir):
         os.mkdir(fit_dir)
 
+    # Don't want over/under flow bins
     _make_plots(
-        dcs_counts,
-        cf_counts,
-        time_bins,
+        dcs_counts[1:-1],
+        cf_counts[1:-1],
+        time_bins[1:-1],
         bins,
         fit_dir,
     )
