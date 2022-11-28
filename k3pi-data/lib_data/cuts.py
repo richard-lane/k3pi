@@ -127,7 +127,7 @@ def _pid_keep(tree) -> np.ndarray:
 # ==== Combinations of cuts
 def _sanity_keep(tree) -> np.ndarray:
     """
-    Boolean mask of events to keep after sanity cuts (D/D* mass, ipchi2)
+    Boolean mask of events to keep after sanity cuts (just D/D* mass)
 
     """
     return np.logical_and.reduce(
@@ -136,7 +136,6 @@ def _sanity_keep(tree) -> np.ndarray:
             for fcn in (
                 _d0_mass_keep,
                 _delta_m_keep,
-                _ipchi2_keep,
             )
         ]
     )
@@ -150,32 +149,32 @@ def _trigger_keep(tree) -> np.ndarray:
     return np.logical_and(_l0_keep(tree), _hlt_keep(tree))
 
 
-def data_keep(tree) -> np.ndarray:
-    """
-    Which events to keep in real data
-
-    """
-    return _sanity_keep(tree) & _trigger_keep(tree) & _pid_keep(tree)
-
-
 def uppermass_keep(tree) -> np.ndarray:
     """
     Which events to keep for upper mass sideband
 
-    Same as data but without the cuts on D0 mass/delta M
+    """
+    return _trigger_keep(tree) & _pid_keep(tree)
+
+
+def data_keep(tree) -> np.ndarray:
+    """
+    Which events to keep in real data
+
+    Same as uppermass but with extra cuts on D0 mass and delta M
 
     """
-    return _ipchi2_keep(tree) & _trigger_keep(tree) & _pid_keep(tree)
+    return uppermass_keep(tree) & _sanity_keep(tree)
 
 
 def simulation_keep(tree) -> np.ndarray:
     """
     Which events to keep in simulated data
 
-    The same as data cuts, but with BKGCAT cut (truth matching)
+    The same as data cuts, but with BKGCAT cut (truth matching) and D0 ipchi2 cut
 
     """
-    return _sanity_keep(tree) & _trigger_keep(tree) & _bkgcat(tree)
+    return _ipchi2_keep(tree) & _sanity_keep(tree) & _trigger_keep(tree) & _bkgcat(tree)
 
 
 def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
@@ -187,4 +186,9 @@ def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
     so we just do HLT cuts instead of HLT and L0 trigger
 
     """
-    return _sanity_keep(data_tree) & _hlt_keep(hlt_tree) & _bkgcat(data_tree)
+    return (
+        _ipchi2_keep(data_tree)
+        & _sanity_keep(data_tree)
+        & _hlt_keep(hlt_tree)
+        & _bkgcat(data_tree)
+    )
