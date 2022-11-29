@@ -183,7 +183,7 @@ def fractional_pdf(
     d: float,
 ) -> np.ndarray:
     """
-    returns n_evts, n_sig * normalised sig pdf + n_bkg * normalised bkg pdf
+    returns f_sig * normalised sig pdf + f_bkg * normalised bkg pdf
 
     """
     return signal_fraction * normalised_signal(
