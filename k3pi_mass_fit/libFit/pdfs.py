@@ -419,9 +419,9 @@ def background_defaults(sign: str) -> Tuple[float, float]:
     """
     assert sign in {"RS", "WS"}
     if sign == "WS":
-        return 0.06, -0.00645, 0.6, 0.2
+        return 0.06, -0.00645, 0.0, 0.0
 
-    return 0.004, -0.001, 0.6, 0.2
+    return 0.004, -0.001, 0.0, 0.0
 
 
 def defaults(

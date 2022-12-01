@@ -131,7 +131,7 @@ def scan_fit(
     ratio: np.ndarray,
     errs: np.ndarray,
     bins: np.ndarray,
-    initial_guess: util.ConstraintParams,
+    initial_guess: util.ScanParams,
     x_y_widths: Tuple[float, float],
     x_y_correlation: float,
 ) -> Minuit:

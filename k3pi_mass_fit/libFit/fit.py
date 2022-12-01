@@ -4,10 +4,11 @@ Function for doing the mass fit
 """
 from typing import Tuple
 import numpy as np
+import matplotlib.pyplot as plt
 from iminuit import Minuit
 from iminuit.cost import ExtendedUnbinnedNLL
 
-from . import pdfs
+from . import pdfs, plotting
 
 
 def fit(
@@ -137,6 +138,10 @@ def binned_fit(
     )
 
     m.fixed["beta"] = True
+
+    # Let's fix the bkg params c and d
+    m.fixed["c"] = True
+    m.fixed["d"] = True
 
     m.migrad()
 
@@ -271,6 +276,10 @@ def binned_simultaneous_fit(
 
     m.fixed["beta"] = True
 
+    # Let's fix the bkg params c and d
+    m.fixed["c"] = True
+    m.fixed["d"] = True
+
     m.migrad()
 
     return m
@@ -283,11 +292,14 @@ def yields(
     time_bin: int,
     rs_errors: np.ndarray = None,
     ws_errors: np.ndarray = None,
+    path: str = None,
 ) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     """
     Get RS and WS yields and their errors from a binned simultaneous mass fit
 
     returns ((RS yield, WS yield), (RS err, WS err))
+
+    if path provided, also makes a plot
 
     """
     fitter = binned_simultaneous_fit(
@@ -306,5 +318,18 @@ def yields(
 
     fit_yields = (fit_frac * total for fit_frac, total in zip(fit_fracs, totals))
     fit_errs = (fit_err * total for fit_err, total in zip(fit_errs, totals))
+
+    if path:
+        if rs_errors is None:
+            rs_errors = np.sqrt(rs_counts)
+        if ws_errors is None:
+            ws_errors = np.sqrt(ws_counts)
+
+        fig, _ = plotting.simul_fits(
+            rs_counts, rs_errors, ws_counts, ws_errors, bins, fitter.values
+        )
+        print(f"Saving {path}")
+        plt.savefig(path)
+        plt.close(fig)
 
     return fit_yields, fit_errs
