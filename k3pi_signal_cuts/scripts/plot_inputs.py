@@ -45,8 +45,6 @@ def _plot(
     )
     axis.hist(bkg, bins=bins, **hist_kw, label="bkg", color="r")
 
-    axis.legend()
-
 
 def main():
     """
@@ -67,7 +65,7 @@ def main():
     )[0]
 
     # Plot
-    fig, ax = plt.subplots(4, 4, figsize=(15, 9))
+    fig, ax = plt.subplots(3, 3, figsize=(8, 8))
 
     columns = list(training_vars.training_var_names()) + ["D0 mass", "D* mass"]
     for col, axis in zip(columns, ax.ravel()):
@@ -84,6 +82,7 @@ def main():
         sig_wt,
     )
     ax.ravel()[-1].set_title(r"$\Delta$M*")
+    ax.ravel()[0].legend()
 
     fig.tight_layout()
 

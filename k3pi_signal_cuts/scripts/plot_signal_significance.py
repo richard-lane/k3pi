@@ -40,7 +40,7 @@ def main():
     bkg_df = bkg_df[~bkg_df["train"]]
 
     # Throw away data to get a realistic proportion of each
-    sig_frac = 0.0969  # Got this number from k3pi_signal_cuts/scripts/mass_fit.py
+    sig_frac = 0.0852  # Got this number from k3pi_signal_cuts/scripts/mass_fit.py
     keep_frac = util.weight(
         np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))), sig_frac
     )
@@ -75,7 +75,7 @@ def main():
     significances = [sig(threshhold) for threshhold in threshholds]
 
     # Find the max of values
-    max_index = np.argmax(significances)
+    max_index = np.nanargmax(significances)
     max_response = significances[max_index]
     max_threshhold = threshholds[max_index]
 
