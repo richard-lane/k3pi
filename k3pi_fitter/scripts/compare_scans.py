@@ -40,27 +40,76 @@ def _scan_kw(n_levels: int) -> dict:
     }
 
 
+def _plot_fits(
+    axis: plt.Axes, fit_vals: np.ndarray, chi2s: np.ndarray, n_levels: int
+) -> None:
+    """
+    Plot a scan of fits on an axis, colour-coded according to the chi2 of each
+
+    """
+    colours = _scan_kw(n_levels)["plot_kw"]["colors"]
+    for params, chi2 in zip(fit_vals.ravel(), chi2s.ravel()):
+        if chi2 < 1.0:
+            colour = colours[0]
+            alpha = 0.3
+        elif chi2 < 2.0:
+            colour = colours[1]
+            alpha = 0.2
+        elif chi2 < 3.0:
+            colour = colours[2]
+            alpha = 0.05
+
+        if chi2 < 3.0:
+            plotting.scan_fit(
+                axis,
+                params,
+                fmt="--",
+                label=None,
+                plot_kw={"alpha": alpha, "color": colour},
+            )
+
+
 def _plot_scan(
-    axis: plt.Axes,
+    year: str,
+    magnetisation: str,
     time_bins: np.ndarray,
-    ratios: np.ndarray,
-    errs: np.ndarray,
+    mass_bins: np.ndarray,
+    *,
+    bdt_cut: bool,
+    correct_efficiency: bool,
 ):
     """
     Plot a scan on an axis
+
+    Plot also the points and the fits to them
+
     """
+    time_bins, ratio, err = _ratio_err(
+        year,
+        magnetisation,
+        time_bins,
+        mass_bins,
+        bdt_cut=bdt_cut,
+        correct_efficiency=correct_efficiency,
+    )
+
+    # Set axis limits so that the fit plots are sensible
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].set_xlim(time_bins[0], 1.1 * time_bins[-1])
+
     n_re, n_im = 31, 30
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)
 
     chi2s = np.ones((n_im, n_re)) * np.inf
+    fit_params = np.ones((n_im, n_re), dtype=object) * np.inf
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
                 these_params = util.ScanParams(0.0055, 0.0039183, 0.0065139, re_z, im_z)
                 scan = fitter.scan_fit(
-                    ratios,
-                    errs,
+                    ratio,
+                    err,
                     time_bins,
                     these_params,
                     (0.0011489, 0.00064945),
@@ -68,21 +117,64 @@ def _plot_scan(
                 )
 
                 chi2s[j, i] = scan.fval
+
+                vals = scan.values
+                fit_params[j, i] = util.ScanParams(
+                    r_d=vals[0], x=vals[1], y=vals[2], re_z=re_z, im_z=im_z
+                )
+
                 pbar.update(1)
 
     chi2s -= np.nanmin(chi2s)
     chi2s = np.sqrt(chi2s)
 
+    # Plot the fits
     n_contours = 4
+    _plot_fits(axes[0], fit_params, chi2s, n_contours)
+
+    # Plot the ratios and their errors
+    centres = (time_bins[1:] + time_bins[:-1]) / 2
+    widths = (time_bins[1:] - time_bins[:-1]) / 2
+    axes[0].errorbar(centres, ratio, xerr=widths, yerr=err, fmt="k.", markersize=0.1)
+
     contours = plotting.scan(
-        axis, allowed_rez, allowed_imz, chi2s, **_scan_kw(n_contours)
+        axes[1], allowed_rez, allowed_imz, chi2s, **_scan_kw(n_contours)
     )
 
     # Plot the best fit value
     min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
-    axis.plot(allowed_rez[min_re], allowed_imz[min_im], "r*")
+    axes[1].plot(allowed_rez[min_re], allowed_imz[min_im], "r*")
 
-    return contours
+    fig.suptitle(f"LHCb Unofficial {year} {magnetisation}")
+    fig.tight_layout()
+
+    fig.subplots_adjust(right=0.85)
+    cbar_ax = fig.add_axes([0.88, 0.1, 0.06, 0.755])
+    fig.colorbar(contours, cax=cbar_ax)
+    cbar_ax.set_title(r"$\sigma$")
+
+    plt.show()
+    path = (
+        f"{_plot_dir(bdt_cut, correct_efficiency)}"
+        f"scan{'_bdt' if bdt_cut else ''}{'_eff' if correct_efficiency else ''}.png"
+    )
+    print(f"saving {path}")
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def _plot_dir(bdt_cut: bool, correct_efficiency: bool) -> str:
+    """Dir to store plots in; / terminated. Creates it if it doesnt exist"""
+    if bdt_cut and correct_efficiency:
+        plot_dir = "eff_fits/"
+    elif bdt_cut:
+        plot_dir = "bdt_fits/"
+    else:
+        plot_dir = "raw_fits/"
+    if not os.path.isdir(plot_dir):
+        os.mkdir(plot_dir)
+
+    return plot_dir
 
 
 def _ratio_err(
@@ -98,6 +190,8 @@ def _ratio_err(
     Plot histograms of the masses,
     then fit to them and plot these also
 
+    returns time bins, ratio, err
+
     """
     if correct_efficiency:
         assert bdt_cut, "Cannot have efficiency without BDT cut"
@@ -112,33 +206,26 @@ def _ratio_err(
         correct_efficiency=correct_efficiency,
     )
 
-    # Don't want the first or last bins since they're too
-    # sparsely populated
-    time_bins = time_bins[1:-1]
-    dcs_counts = dcs_counts[1:-1]
-    cf_counts = cf_counts[1:-1]
-    dcs_mass_errs = dcs_mass_errs[1:-1]
-    cf_mass_errs = cf_mass_errs[1:-1]
+    # Don't want the first or last bins since they're
+    # the overflows (down to -inf; up to + inf)
+    # Also don't want the very last bin since the stats there suck
+    time_bins = time_bins[1:-2]
+    dcs_counts = dcs_counts[1:-2]
+    cf_counts = cf_counts[1:-2]
+    dcs_mass_errs = dcs_mass_errs[1:-2]
+    cf_mass_errs = cf_mass_errs[1:-2]
 
     dcs_yields = []
     cf_yields = []
     dcs_errs = []
     cf_errs = []
 
-    if bdt_cut and correct_efficiency:
-        plot_dir = "eff_fits/"
-    elif bdt_cut:
-        plot_dir = "bdt_fits/"
-    else:
-        plot_dir = "raw_fits/"
-    if not os.path.isdir(plot_dir):
-        os.mkdir(plot_dir)
+    plot_dir = _plot_dir(bdt_cut, correct_efficiency)
 
     # Do mass fits in each bin, save the yields and errors
     for time_bin, (dcs_count, cf_count, dcs_mass_err, cf_mass_err) in tqdm(
         enumerate(zip(dcs_counts, cf_counts, dcs_mass_errs, cf_mass_errs))
     ):
-        # TODO deal with non-Poisson errors
         ((rs_yield, ws_yield), (rs_err, ws_err)) = fit.yields(
             cf_count,
             dcs_count,
@@ -158,7 +245,7 @@ def _ratio_err(
         np.array(dcs_yields), np.array(cf_yields), np.array(dcs_errs), np.array(cf_errs)
     )
 
-    return ratio, err
+    return time_bins, ratio, err
 
 
 def _time_indices(
@@ -234,7 +321,6 @@ def _counts(
     Returns a list of counts/errors in each time bin
 
     """
-    # TODO deal with efficiency as well probably
     # Get generators of time indices
     cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
 
@@ -266,16 +352,11 @@ def main():
     Plot raw scan, scan after BDT cut, scan after BDT cut + efficiency
 
     """
+    year, magnetisation = "2018", "magdown"
     mass_bins = np.linspace(*pdfs.domain(), 200)
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
 
-    # Get delta M values from generator of dataframes
-    year, magnetisation = "2018", "magdown"
-
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-
-    # Raw
-    ratio, err = _ratio_err(
+    _plot_scan(
         year,
         magnetisation,
         time_bins,
@@ -283,13 +364,8 @@ def main():
         bdt_cut=False,
         correct_efficiency=False,
     )
-    # Don't want the last time bin
-    # error on ratio keeps coming out NaN
-    # TODO make that not happen
-    contours = _plot_scan(axes[0], time_bins[1:-2], ratio[:-1], err[:-1])
 
-    # With BDT cut
-    ratio, err = _ratio_err(
+    _plot_scan(
         year,
         magnetisation,
         time_bins,
@@ -297,16 +373,8 @@ def main():
         bdt_cut=True,
         correct_efficiency=False,
     )
-    # TODO
-    _plot_scan(
-        axes[1],
-        time_bins[1:-2],
-        ratio[:-1],
-        err[:-1],
-    )
 
-    # With efficiency and BDT cut
-    ratio, err = _ratio_err(
+    _plot_scan(
         year,
         magnetisation,
         time_bins,
@@ -314,28 +382,6 @@ def main():
         bdt_cut=True,
         correct_efficiency=True,
     )
-    # TODO
-    _plot_scan(
-        axes[2],
-        time_bins[1:-2],
-        ratio[:-1],
-        err[:-1],
-    )
-
-    # Titles, etc.
-    fig.suptitle("LHCb 2018 MagDown")
-    fig.tight_layout()
-
-    fig.subplots_adjust(right=0.85)
-    cbar_ax = fig.add_axes([0.88, 0.1, 0.06, 0.755])
-    fig.colorbar(contours, cax=cbar_ax)
-    cbar_ax.set_title(r"$\sigma$")
-
-    plt.show()
-    path = "scans.png"
-    print(f"saving {path}")
-    fig.savefig(path)
-    plt.close(fig)
 
 
 if __name__ == "__main__":
