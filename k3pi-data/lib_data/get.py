@@ -2,6 +2,7 @@
 Functions for getting the dataframes once they've been dumped
 
 """
+import os
 import sys
 import glob
 import pickle
@@ -143,8 +144,9 @@ def data(
     """
     paths = glob.glob(str(definitions.data_dir(year, sign, magnetisation) / "*"))
     for path in paths:
-        with open(path, "rb") as df_f:
-            yield pickle.load(df_f)
+        if not os.path.isdir(path):
+            with open(path, "rb") as df_f:
+                yield pickle.load(df_f)
 
 
 def cut_data(year: str, sign: str, magnetisation: str, clf: CutClassifier):
