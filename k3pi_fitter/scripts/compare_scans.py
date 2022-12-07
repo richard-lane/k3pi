@@ -114,57 +114,104 @@ def _plot_scan(
     )
 
     # Set axis limits so that the fit plots are sensible
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    axes[0].set_xlim(time_bins[0], 1.1 * time_bins[-1])
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    axes[0, 0].set_xlim(time_bins[0], 1.1 * time_bins[-1])
+    axes[1, 0].set_xlim(time_bins[0], 1.1 * time_bins[-1])
+
+    for axis, label in zip(axes[:, 0], ("LHCb Only", "LHCb + CLEO/BES")):
+        axis.set_xlabel(r"t / $\tau$")
+        axis.set_ylabel(f"{label}\n" r"$\frac{WS}{RS}$")
+
+    for axis in axes[:, 1]:
+        axis.set_xlabel("Re(Z)")
+        axis.set_ylabel("Im(Z)")
 
     n_re, n_im = 31, 30
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)
 
-    chi2s = np.ones((n_im, n_re)) * np.inf
-    fit_params = np.ones((n_im, n_re), dtype=object) * np.inf
+    lhcb_chi2s = np.ones((n_im, n_re)) * np.inf
+    combined_chi2s = np.ones((n_im, n_re)) * np.inf
+    lhcb_params = np.ones((n_im, n_re), dtype=object) * np.inf
+    combined_params = np.ones((n_im, n_re), dtype=object) * np.inf
+    initial_rdxy = 0.0055, 0.0039183, 0.0065139
+    xy_err = (0.0011489, 0.00064945)
+    xy_corr = -0.301
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
-                these_params = util.ScanParams(0.0055, 0.0039183, 0.0065139, re_z, im_z)
-                scan = fitter.combined_fit(
+                these_params = util.ScanParams(*initial_rdxy, re_z, im_z)
+
+                # LHCb only fit
+                lhcb_fitter = fitter.scan_fit(
                     ratio,
                     err,
                     time_bins,
                     these_params,
-                    (0.0011489, 0.00064945),
-                    -0.301,
-                    phsp_bin,
+                    xy_err,
+                    xy_corr,
+                )
+                lhcb_chi2s[j, i] = lhcb_fitter.fval
+                lhcb_vals = lhcb_fitter.values
+                lhcb_params[j, i] = util.ScanParams(
+                    r_d=lhcb_vals[0],
+                    x=lhcb_vals[1],
+                    y=lhcb_vals[2],
+                    re_z=re_z,
+                    im_z=im_z,
                 )
 
-                chi2s[j, i] = scan.fval
-
-                vals = scan.values
-                fit_params[j, i] = util.ScanParams(
-                    r_d=vals[0], x=vals[1], y=vals[2], re_z=re_z, im_z=im_z
+                # Combined LHCb + CLEO/BES fit
+                combined_fitter = fitter.combined_fit(
+                    ratio,
+                    err,
+                    time_bins,
+                    these_params,
+                    xy_err,
+                    xy_corr,
+                    phsp_bin,
+                )
+                combined_chi2s[j, i] = combined_fitter.fval
+                combined_vals = combined_fitter.values
+                combined_params[j, i] = util.ScanParams(
+                    r_d=combined_vals[0],
+                    x=combined_vals[1],
+                    y=combined_vals[2],
+                    re_z=re_z,
+                    im_z=im_z,
                 )
 
                 pbar.update(1)
 
-    chi2s -= np.nanmin(chi2s)
-    chi2s = np.sqrt(chi2s)
+    lhcb_chi2s -= np.nanmin(lhcb_chi2s)
+    lhcb_chi2s = np.sqrt(lhcb_chi2s)
+
+    combined_chi2s -= np.nanmin(combined_chi2s)
+    combined_chi2s = np.sqrt(combined_chi2s)
 
     # Plot the fits
     n_contours = 4
-    _plot_fits(axes[0], fit_params, chi2s, n_contours)
+    _plot_fits(axes[0, 0], lhcb_params, lhcb_chi2s, n_contours)
+    _plot_fits(axes[1, 0], combined_params, combined_chi2s, n_contours)
 
     # Plot the ratios and their errors
     centres = (time_bins[1:] + time_bins[:-1]) / 2
     widths = (time_bins[1:] - time_bins[:-1]) / 2
-    axes[0].errorbar(centres, ratio, xerr=widths, yerr=err, fmt="k.", markersize=0.1)
+    for axis in axes[:, 0]:
+        axis.errorbar(centres, ratio, xerr=widths, yerr=err, fmt="k.", markersize=0.1)
 
     contours = plotting.scan(
-        axes[1], allowed_rez, allowed_imz, chi2s, **_scan_kw(n_contours)
+        axes[0, 1], allowed_rez, allowed_imz, lhcb_chi2s, **_scan_kw(n_contours)
+    )
+    plotting.scan(
+        axes[1, 1], allowed_rez, allowed_imz, combined_chi2s, **_scan_kw(n_contours)
     )
 
     # Plot the best fit value
-    min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
-    axes[1].plot(allowed_rez[min_re], allowed_imz[min_im], "r*")
+    for axis, chi2s in zip(axes[:, 1], (lhcb_chi2s, combined_chi2s)):
+        min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
+        axis.plot(allowed_rez[min_re], allowed_imz[min_im], "r*")
+        axis.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))
 
     fig.suptitle(f"LHCb Unofficial {year} {magnetisation}")
     fig.tight_layout()
