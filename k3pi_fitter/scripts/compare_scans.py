@@ -6,6 +6,7 @@ to scans with BDT cut and BDT+efficiency correction
 import os
 import sys
 import pathlib
+from multiprocessing import Process
 from typing import List, Tuple, Iterable
 import numpy as np
 import pandas as pd
@@ -69,6 +70,23 @@ def _plot_fits(
             )
 
 
+def _plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
+    """Dir to store plots in; / terminated. Creates it if it doesnt exist"""
+    if bdt_cut and correct_efficiency:
+        plot_dir = "eff_fits/"
+    elif bdt_cut:
+        plot_dir = "bdt_fits/"
+    else:
+        plot_dir = "raw_fits/"
+
+    plot_dir = os.path.join(plot_dir, f"bin_{phsp_bin}/")
+
+    if not os.path.isdir(plot_dir):
+        os.makedirs(plot_dir)
+
+    return plot_dir
+
+
 def _plot_scan(
     year: str,
     magnetisation: str,
@@ -77,6 +95,7 @@ def _plot_scan(
     *,
     bdt_cut: bool,
     correct_efficiency: bool,
+    phsp_bin: int,
 ):
     """
     Plot a scan on an axis
@@ -91,6 +110,7 @@ def _plot_scan(
         mass_bins,
         bdt_cut=bdt_cut,
         correct_efficiency=correct_efficiency,
+        phsp_bin=phsp_bin,
     )
 
     # Set axis limits so that the fit plots are sensible
@@ -107,13 +127,14 @@ def _plot_scan(
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
                 these_params = util.ScanParams(0.0055, 0.0039183, 0.0065139, re_z, im_z)
-                scan = fitter.scan_fit(
+                scan = fitter.combined_fit(
                     ratio,
                     err,
                     time_bins,
                     these_params,
                     (0.0011489, 0.00064945),
                     -0.301,
+                    phsp_bin,
                 )
 
                 chi2s[j, i] = scan.fval
@@ -153,28 +174,10 @@ def _plot_scan(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    plt.show()
-    path = (
-        f"{_plot_dir(bdt_cut, correct_efficiency)}"
-        f"scan{'_bdt' if bdt_cut else ''}{'_eff' if correct_efficiency else ''}.png"
-    )
+    path = f"{_plot_dir(bdt_cut, correct_efficiency, phsp_bin)}scan.png"
     print(f"saving {path}")
     fig.savefig(path)
     plt.close(fig)
-
-
-def _plot_dir(bdt_cut: bool, correct_efficiency: bool) -> str:
-    """Dir to store plots in; / terminated. Creates it if it doesnt exist"""
-    if bdt_cut and correct_efficiency:
-        plot_dir = "eff_fits/"
-    elif bdt_cut:
-        plot_dir = "bdt_fits/"
-    else:
-        plot_dir = "raw_fits/"
-    if not os.path.isdir(plot_dir):
-        os.mkdir(plot_dir)
-
-    return plot_dir
 
 
 def _ratio_err(
@@ -185,6 +188,7 @@ def _ratio_err(
     *,
     bdt_cut: bool,
     correct_efficiency: bool,
+    phsp_bin: int,
 ):
     """
     Plot histograms of the masses,
@@ -204,6 +208,7 @@ def _ratio_err(
         time_bins,
         bdt_cut=bdt_cut,
         correct_efficiency=correct_efficiency,
+        phsp_bin=phsp_bin,
     )
 
     # Don't want the first or last bins since they're
@@ -220,7 +225,7 @@ def _ratio_err(
     dcs_errs = []
     cf_errs = []
 
-    plot_dir = _plot_dir(bdt_cut, correct_efficiency)
+    plot_dir = _plot_dir(bdt_cut, correct_efficiency, phsp_bin)
 
     # Do mass fits in each bin, save the yields and errors
     for time_bin, (dcs_count, cf_count, dcs_mass_err, cf_mass_err) in tqdm(
@@ -259,15 +264,16 @@ def _time_indices(
 
 
 def _generators(
-    year: str, magnetisation: str, *, bdt_cut: bool
+    year: str, magnetisation: str, *, bdt_cut: bool, phsp_bin: int
 ) -> Tuple[Iterable[pd.DataFrame], Iterable[pd.DataFrame]]:
     """
     Generator of rs/ws dataframes, with/without BDT cut
 
     """
-    generators = get.data(year, "cf", magnetisation), get.data(
-        year, "dcs", magnetisation
-    )
+    generators = [
+        get.binned_generator(get.data(year, sign, magnetisation), phsp_bin)
+        for sign in ("cf", "dcs")
+    ]
 
     if bdt_cut:
         # Get the classifier
@@ -278,14 +284,14 @@ def _generators(
 
 
 def _efficiency_generators(
-    year: str, magnetisation: str
+    year: str, magnetisation: str, *, phsp_bin: int
 ) -> Tuple[Iterable[np.ndarray], Iterable[np.ndarray]]:
     """
     Generator of efficiency weights
 
     """
     # Do BDT cut
-    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=True)
+    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=True, phsp_bin=phsp_bin)
 
     # Open efficiency weighters
     dcs_weighter = get_reweighter(
@@ -316,23 +322,28 @@ def _counts(
     *,
     bdt_cut: bool,
     correct_efficiency: bool,
+    phsp_bin: int,
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
     """
     Returns a list of counts/errors in each time bin
 
     """
     # Get generators of time indices
-    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
+    cf_gen, dcs_gen = _generators(
+        year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
+    )
 
     dcs_indices = _time_indices(dcs_gen, time_bins)
     cf_indices = _time_indices(cf_gen, time_bins)
 
     # Need to get new generators now that we've used them up
-    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=bdt_cut)
+    cf_gen, dcs_gen = _generators(
+        year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
+    )
 
     # May need to get generators of efficiency weights too
     if correct_efficiency:
-        cf_wts, dcs_wts = _efficiency_generators(year, magnetisation)
+        cf_wts, dcs_wts = _efficiency_generators(year, magnetisation, phsp_bin=phsp_bin)
     else:
         cf_wts, dcs_wts = None, None
 
@@ -347,15 +358,17 @@ def _counts(
     return dcs_counts, cf_counts, dcs_errs, cf_errs
 
 
-def main():
+def _make_scans(
+    year: str,
+    magnetisation: str,
+    time_bins: np.ndarray,
+    mass_bins: np.ndarray,
+    phsp_bin: int,
+) -> None:
     """
-    Plot raw scan, scan after BDT cut, scan after BDT cut + efficiency
+    Plot all 3 kinds of scans in the right phase space bins
 
     """
-    year, magnetisation = "2018", "magdown"
-    mass_bins = np.linspace(*pdfs.domain(), 200)
-    time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
-
     _plot_scan(
         year,
         magnetisation,
@@ -363,6 +376,7 @@ def main():
         mass_bins,
         bdt_cut=False,
         correct_efficiency=False,
+        phsp_bin=phsp_bin,
     )
 
     _plot_scan(
@@ -372,6 +386,7 @@ def main():
         mass_bins,
         bdt_cut=True,
         correct_efficiency=False,
+        phsp_bin=phsp_bin,
     )
 
     _plot_scan(
@@ -381,7 +396,32 @@ def main():
         mass_bins,
         bdt_cut=True,
         correct_efficiency=True,
+        phsp_bin=phsp_bin,
     )
+
+
+def main():
+    """
+    Plot raw scan, scan after BDT cut, scan after BDT cut + efficiency
+
+    """
+    year, magnetisation = "2018", "magdown"
+    mass_bins = np.linspace(*pdfs.domain(), 200)
+    time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
+
+    procs = [
+        Process(
+            target=_make_scans,
+            args=(year, magnetisation, time_bins, mass_bins, phsp_bin),
+        )
+        for phsp_bin in range(4)
+    ]
+
+    for p in procs:
+        p.start()
+
+    for p in procs:
+        p.join()
 
 
 if __name__ == "__main__":

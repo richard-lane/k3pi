@@ -280,7 +280,12 @@ def binned_simultaneous_fit(
     m.fixed["c"] = True
     m.fixed["d"] = True
 
-    m.migrad()
+    m.migrad(ncall=5000)
+
+    if m.valid:
+        m.minos()
+    else:
+        print(m)
 
     return m
 
@@ -328,6 +333,9 @@ def yields(
         fig, _ = plotting.simul_fits(
             rs_counts, rs_errors, ws_counts, ws_errors, bins, fitter.values
         )
+        fig.suptitle(f"{fitter.valid=}")
+        fig.tight_layout()
+
         print(f"Saving {path}")
         plt.savefig(path)
         plt.close(fig)

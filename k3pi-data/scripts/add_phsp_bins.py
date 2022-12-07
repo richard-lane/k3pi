@@ -2,7 +2,9 @@
 Add phsp bin index column to existing dataframes
 
 """
+import os
 import sys
+import glob
 import pickle
 import pathlib
 import argparse
@@ -131,10 +133,7 @@ def main(args: argparse.Namespace) -> None:
     """Add phsp bin info to dataframes"""
     year, sign, magnetisation = args.year, args.sign, args.magnetisation
 
-    dump_paths = [
-        definitions.data_dump(path, year, sign, magnetisation)
-        for path in definitions.data_files(year, magnetisation)
-    ]
+    dump_paths = glob.glob(str(definitions.data_dir(year, sign, magnetisation) / "*"))
 
     phsp_bins = (-180.0, -39.0, 0.0, 43.0, 180.0)
 
@@ -146,6 +145,9 @@ def main(args: argparse.Namespace) -> None:
     col_header = "phsp bin"
 
     for path in tqdm(dump_paths):
+        if os.path.isdir(path):
+            continue
+
         # Open the dataframe
         with open(path, "rb") as f:
             dataframe = pickle.load(f)
