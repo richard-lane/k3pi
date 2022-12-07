@@ -67,7 +67,7 @@ def gen_points(
     Also returns true fit params (signal frac, centre, width, alpha, beta, a, b)
 
     """
-    centre, width, alpha, beta, a, b, c, d = pdfs.defaults(sign, time_bin)
+    centre, width, alpha, beta, a, b = pdfs.defaults(sign, time_bin)
 
     def signal_pdf(x: np.ndarray) -> np.ndarray:
         return pdfs.signal(x, centre, width, width, alpha, alpha, beta)
@@ -81,7 +81,7 @@ def gen_points(
     )
 
     def bkg_pdf(x: np.ndarray) -> np.ndarray:
-        return pdfs.background(x, a, b, c, d)
+        return pdfs.background(x, a, b)
 
     bkg = _gen(
         rng,
@@ -102,7 +102,5 @@ def gen_points(
             beta,
             a,
             b,
-            c,
-            d,
         )
     )

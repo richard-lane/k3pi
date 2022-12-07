@@ -41,12 +41,12 @@ def mass_fit(
     axes[0].plot(centres, predicted)
     axes[0].plot(
         centres,
-        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[1:-4]),
+        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[1:-2]),
         label="signal",
     )
     axes[0].plot(
         centres,
-        scale * (1 - fit_params[0]) * pdfs.normalised_bkg(centres, *fit_params[-4:]),
+        scale * (1 - fit_params[0]) * pdfs.normalised_bkg(centres, *fit_params[-2:]),
         label="bkg",
     )
 

@@ -32,7 +32,7 @@ def fit(
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
-    a, b, c, d = pdfs.background_defaults(sign)
+    a, b = pdfs.background_defaults(sign)
 
     nll = ExtendedUnbinnedNLL(
         delta_m,
@@ -51,8 +51,6 @@ def fit(
         beta=beta,
         a=a,
         b=b,
-        c=c,
-        d=d,
     )
     m.limits = (
         (0.0, 1.0),  # Signal fraction
@@ -64,8 +62,6 @@ def fit(
         (None, None),  # Beta (fixed below)
         (None, None),  # Background a
         (None, None),  # Background b
-        (None, None),  # Background c
-        (None, None),  # Background d
     )
 
     m.fixed["beta"] = True
@@ -105,7 +101,7 @@ def binned_fit(
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
-    a, b, c, d = pdfs.background_defaults(sign)
+    a, b = pdfs.background_defaults(sign)
 
     chi2 = pdfs.BinnedChi2(counts, bins, errors)
 
@@ -120,8 +116,6 @@ def binned_fit(
         beta=beta,
         a=a,
         b=b,
-        c=c,
-        d=d,
     )
     m.limits = (
         (0.0, 1.0),  # Signal fraction
@@ -133,15 +127,9 @@ def binned_fit(
         (None, None),  # Beta (fixed below)
         (None, None),  # Background a
         (None, None),  # Background b
-        (None, None),  # Background c
-        (None, None),  # Background d
     )
 
     m.fixed["beta"] = True
-
-    # Let's fix the bkg params c and d
-    m.fixed["c"] = True
-    m.fixed["d"] = True
 
     m.migrad()
 
@@ -166,20 +154,16 @@ def simultaneous_fit(
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
-    a, b, c, d = pdfs.background_defaults("RS")
+    a, b = pdfs.background_defaults("RS")
 
-    def rs_pdf(
-        x, rs_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
-    ):
+    def rs_pdf(x, rs_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b):
         return pdfs.pdf(
-            x, rs_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
+            x, rs_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
         )
 
-    def ws_pdf(
-        x, ws_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
-    ):
+    def ws_pdf(x, ws_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b):
         return pdfs.pdf(
-            x, ws_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
+            x, ws_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
         )
 
     rs_nll = ExtendedUnbinnedNLL(
@@ -205,8 +189,6 @@ def simultaneous_fit(
         beta=beta,
         a=a,
         b=b,
-        c=c,
-        d=d,
     )
     m.limits["rs_sig_frac"] = (0.0, 1.0)
     m.limits["ws_sig_frac"] = (0.0, 1.0)
@@ -247,7 +229,7 @@ def binned_simultaneous_fit(
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
-    a, b, c, d = pdfs.background_defaults("RS")
+    a, b = pdfs.background_defaults("RS")
 
     chi2 = pdfs.SimultaneousBinnedChi2(rs_counts, ws_counts, bins, rs_errors, ws_errors)
 
@@ -263,8 +245,6 @@ def binned_simultaneous_fit(
         beta=beta,
         a=a,
         b=b,
-        c=c,
-        d=d,
     )
     m.limits["rs_signal_fraction"] = (0.0, 1.0)
     m.limits["ws_signal_fraction"] = (0.0, 1.0)
@@ -275,10 +255,6 @@ def binned_simultaneous_fit(
     m.limits["alpha_r"] = (0.01, 1.0)
 
     m.fixed["beta"] = True
-
-    # Let's fix the bkg params c and d
-    m.fixed["c"] = True
-    m.fixed["d"] = True
 
     m.migrad(ncall=5000)
 
