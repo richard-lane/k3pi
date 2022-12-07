@@ -23,13 +23,18 @@ def abc(params: ConstraintParams) -> MixingParams:
     )
 
 
+def sgn(x: float) -> int:
+    """ Find the sign of a number; -1 or +1 """
+    return 2 * bool(x == abs(x)) - 1
+
+
 def scan2constraint(params: ScanParams) -> ConstraintParams:
     """
     Convert scan params to constraint params
 
     """
     return ConstraintParams(
-        r_d=params.r_d,
+        r_d=sgn(params.r_d) * params.r_d,
         b=(params.x * params.im_z + params.y * params.re_z),
         x=params.x,
         y=params.y,
