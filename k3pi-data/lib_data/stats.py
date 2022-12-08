@@ -112,7 +112,7 @@ def counts_generator(
     # Init arrays
     n_bins = len(bins) - 1
     count = np.zeros(n_bins)
-    sum_wt_sq = np.zeros(n_bins)
+    err_sq = np.zeros(n_bins)
 
     for array, weight in zip(values, weights):
         indices = _indices(array, bins)
@@ -125,10 +125,11 @@ def counts_generator(
         sum_wt, sum_wt_sq = _sum_wts(n_bins, indices, weight)
 
         count += sum_wt
-        sum_wt_sq += sum_wt_sq
+        err_sq += sum_wt_sq
+
 
     # Take the square root of the errors
-    return count, np.sqrt(sum_wt_sq)
+    return count, np.sqrt(err_sq)
 
 
 def bin_indices(values: Iterable[np.ndarray], bins: np.ndarray) -> Iterable[np.ndarray]:
