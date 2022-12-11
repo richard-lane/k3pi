@@ -4,11 +4,13 @@ by finding the invariant masses M(K3pi) and M(K3pi+pi_s)
 where the pi_s comes from a different event
 
 """
+import os
 import sys
 import pathlib
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_efficiency"))
@@ -21,6 +23,14 @@ from lib_data.stats import counts_generator
 from lib_data import get, definitions, util
 
 
+def _n_files(year: str, sign: str, magnetisation: str) -> int:
+    """Count how many pickle dumps there are"""
+    dir_ = definitions.data_dir(year, sign, magnetisation)
+    return len(
+        [name for name in os.listdir(dir_) if os.path.isfile(os.path.join(dir_, name))]
+    )
+
+
 def _invmass_gen(
     rng: np.random.Generator, year: str, sign: str, magnetisation: str, *, bdt_cut: bool
 ):
@@ -28,26 +38,33 @@ def _invmass_gen(
     Get a generator of (K3pi - K4pi) invariant masses
 
     """
+    # n iterations is the number of files * the number of repeats
+    n_repeats = 100
+    total = n_repeats * _n_files(year, sign, magnetisation)
+
     df_generator = get.data(year, sign, magnetisation)
     if bdt_cut:
         clf = get_clf(year, "dcs", magnetisation)
         df_generator = cut_dfs(df_generator, clf)
 
-    for dataframe in df_generator:
-        k3pi = k_3pi(dataframe)
-        slowpi = np.row_stack(
-            [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
-        )
+    with tqdm(total=total) as pbar:
+        for dataframe in df_generator:
+            k3pi = k_3pi(dataframe)
+            slowpi = np.row_stack(
+                [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
+            )
+            d_mass = util.inv_mass(*k3pi)
 
-        # Shift the slow pi
-        # Could use np.roll(slowpi, 1, axis=1) to just shift the array by 1
-        # Or randomise fully with shuffle
-        rng.shuffle(slowpi, axis=1)
+            for _ in range(n_repeats):
+                # Shift the slow pi
+                # Could use np.roll(slowpi, 1, axis=1) to just shift the array by 1
+                # Or randomise fully with shuffle
+                rng.shuffle(slowpi, axis=1)
 
-        d_mass = util.inv_mass(*k3pi)
-        dst_mass = util.inv_mass(*k3pi, slowpi)
+                dst_mass = util.inv_mass(*k3pi, slowpi)
 
-        yield dst_mass - d_mass
+                pbar.update(1)
+                yield dst_mass - d_mass
 
 
 def _scale(
@@ -135,13 +152,11 @@ def main():
     fig, axes = plt.subplots(1, 2)
     rng = np.random.default_rng(seed=18)
 
-    cf_counts, cf_errs, dcs_counts, dcs_errs = _count_err(
-        rng, year, magnetisation, bins, bdt_cut=False
-    )
-    _plot(axes[0], bins[:-1], dcs_counts, dcs_errs, label="WS")
-    _plot(axes[0], bins[:-1], cf_counts, cf_errs, label="RS")
-    axes[0].set_title("No BDT cut")
-    axes[0].legend()
+    # cf_counts, cf_errs, dcs_counts, dcs_errs = _count_err(rng, year, magnetisation, bins, bdt_cut=False)
+    # _plot(axes[0], bins[:-1], dcs_counts, dcs_errs, label="WS")
+    # _plot(axes[0], bins[:-1], cf_counts, cf_errs, label="RS")
+    # axes[0].set_title("No BDT cut")
+    # axes[0].legend()
 
     cf_counts, cf_errs, dcs_counts, dcs_errs = _count_err(
         rng, year, magnetisation, bins, bdt_cut=True
@@ -149,6 +164,7 @@ def main():
     _plot(axes[1], bins[:-1], dcs_counts, dcs_errs, label="WS")
     _plot(axes[1], bins[:-1], cf_counts, cf_errs, label="RS")
     axes[1].set_title("With BDT cut")
+    axes[1].legend()
 
     for axis in axes:
         axis.set_xlabel(r"M(K3$\pi\pi_s$) - M(K3$\pi$)")
