@@ -39,7 +39,7 @@ def _invmass_gen(
 
     """
     # n iterations is the number of files * the number of repeats
-    n_repeats = 100
+    n_repeats = 50
     total = n_repeats * _n_files(year, sign, magnetisation)
 
     df_generator = get.data(year, sign, magnetisation)
@@ -152,11 +152,13 @@ def main():
     fig, axes = plt.subplots(1, 2)
     rng = np.random.default_rng(seed=18)
 
-    # cf_counts, cf_errs, dcs_counts, dcs_errs = _count_err(rng, year, magnetisation, bins, bdt_cut=False)
-    # _plot(axes[0], bins[:-1], dcs_counts, dcs_errs, label="WS")
-    # _plot(axes[0], bins[:-1], cf_counts, cf_errs, label="RS")
-    # axes[0].set_title("No BDT cut")
-    # axes[0].legend()
+    cf_counts, cf_errs, dcs_counts, dcs_errs = _count_err(
+        rng, year, magnetisation, bins, bdt_cut=False
+    )
+    _plot(axes[0], bins[:-1], dcs_counts, dcs_errs, label="WS")
+    _plot(axes[0], bins[:-1], cf_counts, cf_errs, label="RS")
+    axes[0].set_title("No BDT cut")
+    axes[0].legend()
 
     cf_counts, cf_errs, dcs_counts, dcs_errs = _count_err(
         rng, year, magnetisation, bins, bdt_cut=True
