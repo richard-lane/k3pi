@@ -454,6 +454,7 @@ def main():
     """
     year, magnetisation = "2018", "magdown"
     mass_bins = np.linspace(*pdfs.domain(), 200)
+    print(mass_bins[0])
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
 
     procs = [

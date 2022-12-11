@@ -55,11 +55,12 @@ def _invmass_gen(
             )
             d_mass = util.inv_mass(*k3pi)
 
-            for _ in range(n_repeats):
+            for i in range(n_repeats):
                 # Shift the slow pi
                 # Could use np.roll(slowpi, 1, axis=1) to just shift the array by 1
                 # Or randomise fully with shuffle
-                rng.shuffle(slowpi, axis=1)
+                slowpi = np.roll(slowpi, 1, axis=1)
+                # rng.shuffle(slowpi, axis=1)
 
                 dst_mass = util.inv_mass(*k3pi, slowpi)
 
