@@ -35,7 +35,7 @@ def _sum_wts(
     return count, err
 
 
-def _check_bins(indices: np.ndarray, n_bins: int) -> None:
+def _check_bins(indices: np.ndarray, n_bins: int, values: np.ndarray) -> None:
     """
     Check for under/overflow in bins given an array
     of indices as returned by np.digitize and the number
@@ -44,17 +44,18 @@ def _check_bins(indices: np.ndarray, n_bins: int) -> None:
 
     :param indices: array of bin indices
     :param n_bins: number of bins
+    :param values: binned values; used to make the err output more useful
 
     :raises ValueError: in the case of under/overflow
 
     """
     # Underflow
     if -1 in indices:
-        raise ValueError("Underflow")
+        raise ValueError(f"Underflow: {values[indices == -1]}")
 
     # Overflow
     if n_bins in indices:
-        raise ValueError("Overflow")
+        raise ValueError(f"Overflow: {values[indices == n_bins]}")
 
 
 def counts(
@@ -80,7 +81,7 @@ def counts(
     indices = _indices(values, bins)
     n_bins = len(bins) - 1
 
-    _check_bins(indices, n_bins)
+    _check_bins(indices, n_bins, values)
 
     sum_wt, sum_wt_sq = _sum_wts(n_bins, indices, weights)
 
@@ -116,7 +117,7 @@ def counts_generator(
 
     for array, weight in zip(values, weights):
         indices = _indices(array, bins)
-        _check_bins(indices, n_bins)
+        _check_bins(indices, n_bins, array)
 
         # Add sum of weights to a histogram
         if weight is None:
@@ -126,7 +127,6 @@ def counts_generator(
 
         count += sum_wt
         err_sq += sum_wt_sq
-
 
     # Take the square root of the errors
     return count, np.sqrt(err_sq)
@@ -141,7 +141,7 @@ def bin_indices(values: Iterable[np.ndarray], bins: np.ndarray) -> Iterable[np.n
 
     for array in values:
         indices = _indices(array, bins)
-        _check_bins(indices, n_bins)
+        _check_bins(indices, n_bins, array)
 
         yield indices
 
@@ -189,7 +189,7 @@ def time_binned_counts(
             this_time_bin = time_indices_array == i
 
             indices = _indices(array[this_time_bin], bins)
-            _check_bins(indices, n_bins)
+            _check_bins(indices, n_bins, array[this_time_bin])
 
             sum_wt, sum_wt_sq_ = _sum_wts(n_bins, indices, weight[this_time_bin])
 

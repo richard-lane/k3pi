@@ -26,6 +26,7 @@ from lib_time_fit.definitions import TIME_BINS
 from lib_cuts.get import cut_dfs, classifier as get_clf
 from lib_efficiency.get import reweighter_dump as get_reweighter
 from lib_efficiency.efficiency_util import k_3pi, points
+from lib_efficiency.efficiency_definitions import RS_EFF, RS_ERR, WS_EFF, WS_ERR
 
 
 def _scan_kw(n_levels: int) -> dict:
@@ -258,6 +259,17 @@ def _ratio_err(
         phsp_bin=phsp_bin,
     )
 
+    # If we're correcting for the efficiency, might want to adjust the
+    # DCS counts (and their errors) to account for the absolute
+    # efficiency
+    eff_ratio = WS_EFF / RS_EFF
+    eff_ratio_err = eff_ratio * np.sqrt((RS_ERR / RS_EFF) ** 2 + (WS_ERR / WS_EFF) ** 2)
+
+    dcs_counts *= eff_ratio
+    dcs_mass_errs = dcs_counts * np.sqrt(
+        (dcs_mass_errs / dcs_counts) ** 2 + (eff_ratio_err / eff_ratio) ** 2
+    )
+
     # Don't want the first or last bins since they're
     # the overflows (down to -inf; up to + inf)
     # Also don't want the very last bin since the stats there suck
@@ -416,25 +428,25 @@ def _make_scans(
     Plot all 3 kinds of scans in the right phase space bins
 
     """
-    _plot_scan(
-        year,
-        magnetisation,
-        time_bins,
-        mass_bins,
-        bdt_cut=False,
-        correct_efficiency=False,
-        phsp_bin=phsp_bin,
-    )
+    # _plot_scan(
+    #     year,
+    #     magnetisation,
+    #     time_bins,
+    #     mass_bins,
+    #     bdt_cut=False,
+    #     correct_efficiency=False,
+    #     phsp_bin=phsp_bin,
+    # )
 
-    _plot_scan(
-        year,
-        magnetisation,
-        time_bins,
-        mass_bins,
-        bdt_cut=True,
-        correct_efficiency=False,
-        phsp_bin=phsp_bin,
-    )
+    # _plot_scan(
+    #     year,
+    #     magnetisation,
+    #     time_bins,
+    #     mass_bins,
+    #     bdt_cut=True,
+    #     correct_efficiency=False,
+    #     phsp_bin=phsp_bin,
+    # )
 
     _plot_scan(
         year,
