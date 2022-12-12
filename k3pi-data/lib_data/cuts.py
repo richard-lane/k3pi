@@ -124,6 +124,18 @@ def _pid_keep(tree) -> np.ndarray:
     return np.logical_and.reduce(keep)
 
 
+def _cands_keep(tree) -> np.ndarray:
+    """
+    Keep only events with nCandidate == 0 because it's easier than
+    choosing them randomly
+
+    """
+    arr = tree["nCandidate"].array(library="np") == 0
+    print(np.sum(arr), len(arr), sep="/")
+
+    return arr
+
+
 # ==== Combinations of cuts
 def _sanity_keep(tree) -> np.ndarray:
     """
@@ -153,8 +165,10 @@ def uppermass_keep(tree) -> np.ndarray:
     """
     Which events to keep for upper mass sideband
 
+    PID, trigger and cuts for rejecting multiple candidates
+
     """
-    return _trigger_keep(tree) & _pid_keep(tree)
+    return _trigger_keep(tree) & _pid_keep(tree) & _cands_keep(tree)
 
 
 def data_keep(tree) -> np.ndarray:
