@@ -69,7 +69,13 @@ def _fit(
     print(f"{params[-1]} +- {fitter.errors[-1]}")
 
     fig, _ = plotting.simul_fits(
-        rs_count, np.sqrt(rs_count), ws_count, np.sqrt(ws_count), bins, params
+        rs_count,
+        np.sqrt(rs_count),
+        ws_count,
+        np.sqrt(ws_count),
+        bins,
+        params,
+        binned=True,
     )
 
     fig.suptitle(f"{fitter.valid=}")

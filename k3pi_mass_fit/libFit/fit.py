@@ -43,6 +43,7 @@ def fit(
     m = Minuit(
         nll,
         signal_fraction=signal_frac_guess,
+        bkg_fraction=(1 - signal_frac_guess),
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -54,6 +55,7 @@ def fit(
     )
     m.limits = (
         (0.0, 1.0),  # Signal fraction
+        (0.0, 1.0),  # bkg fraction
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
@@ -108,6 +110,7 @@ def binned_fit(
     m = Minuit(
         chi2,
         signal_fraction=signal_frac_guess,
+        bkg_fraction=(1 - signal_frac_guess),
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -119,6 +122,7 @@ def binned_fit(
     )
     m.limits = (
         (0.0, 1.0),  # Signal fraction
+        (0.0, 1.0),  # Bkg fraction
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
@@ -156,14 +160,58 @@ def simultaneous_fit(
 
     a, b = pdfs.background_defaults("RS")
 
-    def rs_pdf(x, rs_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b):
+    def rs_pdf(
+        x,
+        rs_sig_frac,
+        rs_bkg_frac,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        a,
+        b,
+    ):
         return pdfs.pdf(
-            x, rs_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+            x,
+            rs_sig_frac,
+            rs_bkg_frac,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a,
+            b,
         )
 
-    def ws_pdf(x, ws_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b):
+    def ws_pdf(
+        x,
+        ws_sig_frac,
+        ws_bkg_frac,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        a,
+        b,
+    ):
         return pdfs.pdf(
-            x, ws_sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+            x,
+            ws_sig_frac,
+            ws_bkg_frac,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a,
+            b,
         )
 
     rs_nll = ExtendedUnbinnedNLL(
@@ -180,7 +228,7 @@ def simultaneous_fit(
     m = Minuit(
         rs_nll + ws_nll,
         rs_sig_frac=0.5,
-        ws_sig_frac=0.05,
+        rs_bkg_frac=0.5,
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -189,14 +237,18 @@ def simultaneous_fit(
         beta=beta,
         a=a,
         b=b,
+        ws_sig_frac=0.05,
+        ws_bkg_frac=0.95,
     )
     m.limits["rs_sig_frac"] = (0.0, 1.0)
-    m.limits["ws_sig_frac"] = (0.0, 1.0)
+    m.limits["rs_bkg_frac"] = (0.0, 1.0)
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
     m.limits["alpha_l"] = (0.01, 1.0)
     m.limits["alpha_r"] = (0.01, 1.0)
+    m.limits["ws_sig_frac"] = (0.0, 1.0)
+    m.limits["ws_bkg_frac"] = (0.0, 1.0)
 
     m.fixed["beta"] = True
 
@@ -236,7 +288,9 @@ def binned_simultaneous_fit(
     m = Minuit(
         chi2,
         rs_signal_fraction=0.5,
+        rs_bkg_fraction=0.5,
         ws_signal_fraction=0.05,
+        ws_bkg_fraction=0.95,
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -247,7 +301,9 @@ def binned_simultaneous_fit(
         b=b,
     )
     m.limits["rs_signal_fraction"] = (0.0, 1.0)
+    m.limits["rs_bkg_fraction"] = (0.0, 1.0)
     m.limits["ws_signal_fraction"] = (0.0, 1.0)
+    m.limits["ws_bkg_fraction"] = (0.0, 1.0)
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
@@ -307,7 +363,7 @@ def yields(
             ws_errors = np.sqrt(ws_counts)
 
         fig, _ = plotting.simul_fits(
-            rs_counts, rs_errors, ws_counts, ws_errors, bins, fitter.values
+            rs_counts, rs_errors, ws_counts, ws_errors, bins, fitter.values, binned=True
         )
         fig.suptitle(f"{fitter.valid=}")
         fig.tight_layout()

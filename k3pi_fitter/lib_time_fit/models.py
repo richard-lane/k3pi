@@ -24,7 +24,7 @@ def abc(params: ConstraintParams) -> MixingParams:
 
 
 def sgn(x: float) -> int:
-    """ Find the sign of a number; -1 or +1 """
+    """Find the sign of a number; -1 or +1"""
     return 2 * bool(x == abs(x)) - 1
 
 

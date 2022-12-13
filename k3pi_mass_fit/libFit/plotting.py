@@ -5,7 +5,7 @@ Plot mass fits
 from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
-from . import pdfs
+from . import pdfs, util
 
 
 def mass_fit(
@@ -22,7 +22,7 @@ def mass_fit(
     :param counts: counts in each bin
     :param errs: errors on the counts in each bin
     :param bins: mass bins
-    :param fit_params: fit parameters; (sig frac, other params)
+    :param fit_params: fit parameters; (sig frac, bkg frac, other params)
 
     """
     centres = (bins[1:] + bins[:-1]) / 2
@@ -41,12 +41,12 @@ def mass_fit(
     axes[0].plot(centres, predicted)
     axes[0].plot(
         centres,
-        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[1:-2]),
+        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[2:-2]),
         label="signal",
     )
     axes[0].plot(
         centres,
-        scale * (1 - fit_params[0]) * pdfs.normalised_bkg(centres, *fit_params[-2:]),
+        scale * fit_params[1] * pdfs.normalised_bkg(centres, *fit_params[-2:]),
         label="bkg",
     )
 
@@ -56,7 +56,7 @@ def mass_fit(
     axes[1].errorbar(
         centres,
         diff,
-        yerr=np.sqrt(counts),
+        yerr=errs,
         **err_kw,
     )
 
@@ -68,6 +68,8 @@ def simul_fits(
     ws_errs: np.ndarray,
     bins: np.ndarray,
     fit_params: Tuple,
+    *,
+    binned: bool,
 ) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
     """
     Plot a simultaneous RS and WS fit on four Axes - two histograms
@@ -84,8 +86,11 @@ def simul_fits(
     :returns: a dict of A/B/C/D and the plot axes
 
     """
-    rs_params = (fit_params[0], *fit_params[2:])
-    ws_params = tuple(fit_params[1:])
+    rs_params, ws_params = (
+        util.binned_rs_ws_params(fit_params)
+        if binned
+        else util.unbinned_rs_ws_params(fit_params)
+    )
 
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(12, 8)

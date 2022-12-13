@@ -91,9 +91,14 @@ def gen_points(
         plot=False,
     )
 
+    # Find signal and bkg fractions
+    sig_frac = len(sig) / (len(sig) + len(bkg))
+    bkg_frac = len(bkg) / (len(sig) + len(bkg))
+
     return np.concatenate((sig, bkg)), np.array(
         (
-            len(sig) / (len(sig) + len(bkg)),
+            sig_frac,
+            bkg_frac,
             centre,
             width,
             width,

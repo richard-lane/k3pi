@@ -160,6 +160,7 @@ def normalised_signal(
 def fractional_pdf(
     x: np.ndarray,
     signal_fraction: float,
+    bkg_fraction: float,
     centre: float,
     width_l: float,
     width_r: float,
@@ -171,22 +172,28 @@ def fractional_pdf(
 ) -> np.ndarray:
     """
     returns f_sig * normalised sig pdf + f_bkg * normalised bkg pdf
+    Scaled correctly to be an actual pdf (I think)
 
     """
-    return signal_fraction * normalised_signal(
-        x,
-        centre,
-        width_l,
-        width_r,
-        alpha_l,
-        alpha_r,
-        beta,
-    ) + (1 - signal_fraction) * normalised_bkg(x, a, b)
+    return (
+        signal_fraction
+        * normalised_signal(
+            x,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+        )
+        + bkg_fraction * normalised_bkg(x, a, b)
+    ) / (signal_fraction + bkg_fraction)
 
 
 def pdf(
     x: np.ndarray,
     signal_fraction: float,
+    bkg_fraction: float,
     centre: float,
     width_l: float,
     width_r: float,
@@ -202,7 +209,17 @@ def pdf(
     """
     n = len(x)
     return n, n * fractional_pdf(
-        x, signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+        x,
+        signal_fraction,
+        bkg_fraction,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        a,
+        b,
     )
 
 
@@ -230,6 +247,7 @@ class BinnedChi2:
         self.func_code = make_func_code(
             [
                 "signal_fraction",
+                "bkg_fraction",
                 "centre",
                 "width_l",
                 "width_r",
@@ -253,6 +271,7 @@ class BinnedChi2:
     def __call__(
         self,
         signal_fraction: float,
+        bkg_fraction: float,
         centre: float,
         width_l: float,
         width_r: float,
@@ -272,17 +291,20 @@ class BinnedChi2:
                 - (
                     self.total
                     * self.widths
-                    * fractional_pdf(
-                        self.centres,
-                        signal_fraction,
-                        centre,
-                        width_l,
-                        width_r,
-                        alpha_l,
-                        alpha_r,
-                        beta,
-                        a,
-                        b,
+                    * (
+                        fractional_pdf(
+                            self.centres,
+                            signal_fraction,
+                            bkg_fraction,
+                            centre,
+                            width_l,
+                            width_r,
+                            alpha_l,
+                            alpha_r,
+                            beta,
+                            a,
+                            b,
+                        )
                     )
                 )
             )
@@ -316,7 +338,9 @@ class SimultaneousBinnedChi2:
         self.func_code = make_func_code(
             [
                 "rs_signal_fraction",
+                "rs_bkg_fraction",
                 "ws_signal_fraction",
+                "ws_bkg_fraction",
                 "centre",
                 "width_l",
                 "width_r",
@@ -333,7 +357,9 @@ class SimultaneousBinnedChi2:
     def __call__(
         self,
         rs_signal_fraction: float,
+        rs_bkg_fraction: float,
         ws_signal_fraction: float,
+        ws_bkg_fraction: float,
         centre: float,
         width_l: float,
         width_r: float,
@@ -349,6 +375,7 @@ class SimultaneousBinnedChi2:
         """
         return self.rs_chi2(
             rs_signal_fraction,
+            rs_bkg_fraction,
             centre,
             width_l,
             width_r,
@@ -359,6 +386,7 @@ class SimultaneousBinnedChi2:
             b,
         ) + self.ws_chi2(
             ws_signal_fraction,
+            ws_bkg_fraction,
             centre,
             width_l,
             width_r,

@@ -29,8 +29,19 @@ def main():
     bkg = pdfs.normalised_bkg(centres, a, b)
 
     sig_frac = 0.2
+    bkg_frac = 1 - sig_frac
     pdf = pdfs.fractional_pdf(
-        centres, sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b
+        centres,
+        sig_frac,
+        bkg_frac,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        a,
+        b,
     )
 
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
