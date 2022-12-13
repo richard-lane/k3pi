@@ -62,11 +62,11 @@ def test_counts_underflow():
 
     """
     bins = [0, 1, 2, 3]
-    pts = [-0.5, 1.5, 2.5]
+    pts = np.array([-0.5, 1.5, 2.5])
 
     # Test with the err handling fcn
     with pytest.raises(ValueError):
-        stats._check_bins(np.digitize(pts, bins), len(bins) - 1)
+        stats._check_bins(np.digitize(pts, bins), len(bins) - 1, pts)
 
     # Also do an integration test with the actual fcn
     with pytest.raises(ValueError):
@@ -79,11 +79,11 @@ def test_counts_overflow():
 
     """
     bins = [0, 1, 2, 3]
-    pts = [0.5, 1.5, 2.5, 3.5]
+    pts = np.array([0.5, 1.5, 2.5, 3.5])
 
     # Test with the err handling fcn
     with pytest.raises(ValueError):
-        stats._check_bins(np.digitize(pts, bins), len(bins) - 1)
+        stats._check_bins(np.digitize(pts, bins), len(bins) - 1, pts)
 
     # Also do an integration test with the actual fcn
     with pytest.raises(ValueError):
