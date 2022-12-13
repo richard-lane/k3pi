@@ -37,9 +37,7 @@ def _toy_fit():
     binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nCCC")
-    plotting.mass_fit(
-        (axes["A"], axes["C"]), counts, errs, bins, binned_fitter.values
-    )
+    plotting.mass_fit((axes["A"], axes["C"]), counts, errs, bins, binned_fitter.values)
 
     axes["A"].set_title("Binned")
 
