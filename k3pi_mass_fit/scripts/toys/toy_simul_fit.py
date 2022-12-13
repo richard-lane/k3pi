@@ -31,7 +31,6 @@ def _toy_fit():
     # Perform fit
     time_bin = 5
     bins = np.linspace(*pdfs.domain(), 250)
-    unbinned_fitter = fit.simultaneous_fit(rs_masses, ws_masses, time_bin)
 
     rs_counts, rs_errs = _counts(rs_masses, np.ones_like(rs_masses), bins)
     ws_counts, ws_errs = _counts(ws_masses, np.ones_like(ws_masses), bins)
@@ -40,25 +39,11 @@ def _toy_fit():
     )
 
     fig, _ = plotting.simul_fits(
-        rs_counts,
-        rs_errs,
-        ws_counts,
-        ws_errs,
-        bins,
-        unbinned_fitter.values,
-        binned=False,
-    )
-
-    fig.suptitle("Unbinned")
-    fig.tight_layout()
-    fig.savefig("binned_toy_simul_fit.png")
-
-    fig, _ = plotting.simul_fits(
         rs_counts, rs_errs, ws_counts, ws_errs, bins, binned_fitter.values, binned=True
     )
     fig.suptitle("Binned")
     fig.tight_layout()
-    fig.savefig("unbinned_toy_simul_fit.png")
+    fig.savefig("binned_toy_simul_fit.png")
 
 
 def main():

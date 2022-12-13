@@ -52,10 +52,10 @@ jobs:
         # Checkout my plot storage branch, amend the commit on it to contain the lastest plots, push
         run: |
           cd other_repo
-          mv ../mixing.png ../log_mixing.png ../more_mixing.png ../binned_toy_simul_fit.png ../unbinned_toy_simul_fit.png ../scan.png ../coverage.png ../fit_examples.png ../xy_constraint.png .
+          mv ../mixing.png ../log_mixing.png ../more_mixing.png ../binned_toy_simul_fit.png ../scan.png ../coverage.png ../fit_examples.png ../xy_constraint.png .
           git config user.name "Automated Commit"
           git config user.email "none@none.com"
-          git add mixing.png log_mixing.png more_mixing.png binned_toy_simul_fit.png unbinned_toy_simul_fit.png scan.png coverage.png fit_examples.png xy_constraint.png
+          git add mixing.png log_mixing.png more_mixing.png binned_toy_simul_fit.png scan.png coverage.png fit_examples.png xy_constraint.png
 
           # Amend commit to prevent the repo from growing out of control
           git commit --amend -m "Plots cached on: `date` by GitHub Actions"

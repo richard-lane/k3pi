@@ -15,8 +15,10 @@ from tqdm import tqdm
 from pulls import common
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
 from lib_time_fit import util, models, fitter, plotting
+from lib_data import stats
 
 
 def _gen(
@@ -50,8 +52,8 @@ def _ratio_err() -> Tuple[np.ndarray, np.ndarray]:
 
     # Take their ratio in bins
     bins = np.linspace(*domain, 20)
-    rs_count, rs_err = util.bin_times(rs_t, bins=bins)
-    ws_count, ws_err = util.bin_times(ws_t, bins=bins)
+    rs_count, rs_err = stats.counts(values=rs_t, bins=bins)
+    ws_count, ws_err = stats.counts(values=ws_t, bins=bins)
 
     return (*util.ratio_err(ws_count, rs_count, ws_err, rs_err), params, bins)
 
@@ -197,7 +199,7 @@ def main():
     width = 0.005
     correlation = 0.5
 
-    n_re, n_im = 100, 101
+    n_re, n_im = 50, 51
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)
 

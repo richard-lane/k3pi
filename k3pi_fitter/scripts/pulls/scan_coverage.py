@@ -10,14 +10,14 @@ from typing import Tuple
 from multiprocessing import Manager, Process
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 from scipy.stats import norm
 import common
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 
 from lib_time_fit import util, models, fitter
+from lib_data import stats
 
 
 def _gen(
@@ -27,7 +27,7 @@ def _gen(
     Generate some RS and WS times
 
     """
-    n_rs = 5000000
+    n_rs = 5_000_000
     # TODO probably make the generator in outer scope
     gen = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
@@ -65,8 +65,8 @@ def _ratio_err(widths, correlation) -> Tuple[np.ndarray, np.ndarray]:
 
     # Take their ratio in bins
     bins = np.linspace(*domain, 10)
-    rs_count, rs_err = util.bin_times(rs_t, bins=bins)
-    ws_count, ws_err = util.bin_times(ws_t, bins=bins)
+    rs_count, rs_err = stats.counts(rs_t, bins=bins)
+    ws_count, ws_err = stats.counts(ws_t, bins=bins)
 
     return (*util.ratio_err(ws_count, rs_count, ws_err, rs_err), params, bins)
 
@@ -82,7 +82,8 @@ def _coverage(out_dict: dict):
     n_experiments = 10
 
     delta_chi2 = np.ones(n_experiments) * np.inf
-    for n in tqdm(range(n_experiments)):
+    for n in range(n_experiments):
+        print(n, end="", flush=True)
         # Generate some times
         ratio, err, params, bins = _ratio_err(widths, correlation)
 
