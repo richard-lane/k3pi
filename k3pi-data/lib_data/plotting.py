@@ -2,14 +2,11 @@
 Useful things for plotting
 
 """
-import sys
-import pathlib
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_efficiency"))
-from lib_efficiency.metrics import _counts
+from . import stats
 
 
 def _centres_widths(bins: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -28,7 +25,7 @@ def _norm_hist(
 
     """
     num = np.sum(weights)
-    count, err = _counts(points, weights, bins)
+    count, err = stats.counts(points, bins, weights)
 
     return count / num, err / num
 

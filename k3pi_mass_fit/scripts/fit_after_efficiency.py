@@ -22,11 +22,10 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars
+from lib_data import get, training_vars, stats
 from libFit import fit, pdfs
 from lib_efficiency import efficiency_model
 from lib_efficiency.efficiency_util import k_3pi
-from lib_efficiency.metrics import _counts
 from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_time_fit.definitions import TIME_BINS
 
@@ -245,8 +244,8 @@ def _make_plots(
     # Mass fit before anything
     dcs_delta_m = dcs_df["D* mass"] - dcs_df["D0 mass"]
     cf_delta_m = cf_df["D* mass"] - cf_df["D0 mass"]
-    dcs_count, dcs_err = _counts(dcs_delta_m, np.ones_like(dcs_delta_m), bins)
-    cf_count, cf_err = _counts(cf_delta_m, np.ones_like(cf_delta_m), bins)
+    dcs_count, dcs_err = stats.counts(dcs_delta_m, bins)
+    cf_count, cf_err = stats.counts(cf_delta_m, bins)
     _plot_fit(
         dcs_count,
         cf_count,
@@ -261,8 +260,8 @@ def _make_plots(
     # Mass fit after BDT cut
     dcs_delta_m = dcs_bdt_cut["D* mass"] - dcs_bdt_cut["D0 mass"]
     cf_delta_m = cf_bdt_cut["D* mass"] - cf_bdt_cut["D0 mass"]
-    dcs_count, dcs_err = _counts(dcs_delta_m, dcs_weights, bins)
-    cf_count, cf_err = _counts(cf_delta_m, cf_weights, bins)
+    dcs_count, dcs_err = stats.counts(dcs_delta_m, bins, dcs_weights)
+    cf_count, cf_err = stats.counts(cf_delta_m, bins, cf_weights)
     _plot_fit(
         dcs_count,
         cf_count,
