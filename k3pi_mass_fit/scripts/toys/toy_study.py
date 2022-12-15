@@ -31,6 +31,11 @@ def _pull(
 
     # Perform fit
     sig_frac = true_params[0]
+    n_sig = len(combined) * sig_frac
+    n_bkg = len(combined) * true_params[1]
+
+    true_params = np.array((n_sig, n_bkg, *true_params[2:]))
+
     bins = np.linspace(*pdfs.domain(), 100)
     counts, _ = stats.counts(combined, bins)
     fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
@@ -44,12 +49,14 @@ def _pull(
     if False and (np.abs(pull) > 10).any():
 
         def fitted_pdf(x: np.ndarray) -> np.ndarray:
-            return pdfs.fractional_pdf(x, *fit_params)
+            return pdfs.model(x, *fit_params)
 
         pts = np.linspace(*pdfs.domain(), 250)
+        centres = (pts[1:] + pts[:-1]) / 2
+
         fig, ax = plt.subplots()
-        ax.plot(pts, fitted_pdf(pts), "r--")
-        ax.hist(combined, bins=250, density=True)
+        ax.plot(centres, stats.areas(pts, fitted_pdf(pts)), "r--")
+        ax.hist(combined, bins=pts)
         fig.suptitle("toy data")
         fig.savefig("toy.png")
         plt.show()
@@ -73,11 +80,10 @@ def _pull_study(
     n_sig, n_bkg = n_evts
 
     # TODO maybe need to be more careful about seeding this, since we're multiprocessing...
-    rng = (
-        np.random.default_rng()
-    )  # seed=3 makes the fitter set some of the parameters to NaN
+    rng = np.random.default_rng()
 
-    return_vals = tuple([] for _ in range(11))
+    n_params = 10
+    return_vals = tuple([] for _ in range(n_params))
     for _ in tqdm(range(n_experiments)):
         for lst, val in zip(return_vals, _pull(rng, n_sig, n_bkg, sign, time_bin)):
             lst.append(val)
@@ -97,7 +103,6 @@ def _plot_pulls(
         np.ndarray,
         np.ndarray,
         np.ndarray,
-        np.ndarray,
     ],
     path: str,
 ) -> None:
@@ -105,9 +110,10 @@ def _plot_pulls(
     Plot pulls
 
     """
-    fig, ax = plt.subplots(3, 4, figsize=(12, 8))
+    fig, ax = plt.subplots(4, 3, figsize=(12, 9))
     labels = (
-        "signal fraction",
+        "n signal",
+        "n bkg",
         "centre",
         "width L",
         "width R",
@@ -116,8 +122,6 @@ def _plot_pulls(
         r"$\beta$",
         "a",
         "b",
-        "c",
-        "d",
     )
 
     for a, p, l in zip(ax.ravel(), pulls, labels):
@@ -139,12 +143,12 @@ def _do_pull_study():
 
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
-    n_sig, n_bkg = 160000, 80000
+    n_sig, n_bkg = 320000, 160000
 
     out_list = Manager().list()
 
-    n_procs = 6
-    n_experiments = 15
+    n_procs = 8
+    n_experiments = 50
     procs = [
         Process(
             target=_pull_study,

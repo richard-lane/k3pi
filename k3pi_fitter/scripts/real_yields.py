@@ -71,6 +71,23 @@ def _plot_fits(
             )
 
 
+def _plot_slice(
+    re_z: np.ndarray, im_z: np.ndarray, index: int, chi2s: np.ndarray
+) -> None:
+    """
+    Plot a slice of chi2s
+
+    """
+    fig, axis = plt.subplots()
+    axis.plot(re_z, chi2s[index])
+    fig.suptitle(f"ImZ = {im_z[index]}")
+
+    path = f"bdt_fits/slice_{index}.png"
+    print(path)
+    fig.savefig(path)
+    plt.close(fig)
+
+
 def _plot_scan(
     axis: plt.Axes,
     fit_axis: plt.Axes,
@@ -81,7 +98,7 @@ def _plot_scan(
     """
     Plot a scan on an axis
     """
-    n_re, n_im = 31, 30
+    n_re, n_im = 101, 101
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)
 
@@ -91,14 +108,14 @@ def _plot_scan(
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
                 these_params = util.ScanParams(0.0055, 0.0039183, 0.0065139, re_z, im_z)
-                scan = fitter.combined_fit(
+                scan = fitter.scan_fit(
                     ratios,
                     errs,
                     time_bins,
                     these_params,
                     (0.0011489, 0.00064945),
                     -0.301,
-                    0,
+                    # 0,
                 )
 
                 vals = scan.values
@@ -111,6 +128,9 @@ def _plot_scan(
 
     chi2s -= np.nanmin(chi2s)
     chi2s = np.sqrt(chi2s)
+
+    for i in range(n_im):
+        _plot_slice(allowed_rez, allowed_imz, i, chi2s)
 
     # Plot fits on the fit axis
     n_contours = 4

@@ -12,7 +12,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
 
 from lib_data import definitions
 from lib_data import stats
-from lib_data.util import flip_momenta
+from lib_data.util import flip_momenta, inv_mass
 
 
 def test_flip_momenta():
@@ -62,11 +62,11 @@ def test_counts_underflow():
 
     """
     bins = [0, 1, 2, 3]
-    pts = [-0.5, 1.5, 2.5]
+    pts = np.array([-0.5, 1.5, 2.5])
 
     # Test with the err handling fcn
     with pytest.raises(ValueError):
-        stats._check_bins(np.digitize(pts, bins), len(bins) - 1)
+        stats._check_bins(np.digitize(pts, bins), len(bins) - 1, pts)
 
     # Also do an integration test with the actual fcn
     with pytest.raises(ValueError):
@@ -79,11 +79,11 @@ def test_counts_overflow():
 
     """
     bins = [0, 1, 2, 3]
-    pts = [0.5, 1.5, 2.5, 3.5]
+    pts = np.array([0.5, 1.5, 2.5, 3.5])
 
     # Test with the err handling fcn
     with pytest.raises(ValueError):
-        stats._check_bins(np.digitize(pts, bins), len(bins) - 1)
+        stats._check_bins(np.digitize(pts, bins), len(bins) - 1, pts)
 
     # Also do an integration test with the actual fcn
     with pytest.raises(ValueError):
@@ -212,3 +212,72 @@ def test_counts_generator_weighted():
 
     assert np.all(expected_counts == counts)
     assert np.all(expected_errs == errs)
+
+
+def test_invmass():
+    """
+    Check we get the right invariant mass the sum of two particles
+
+    """
+    p_1 = np.array([[1], [2], [3], [10]])
+    p_2 = np.array([[0.1], [0.2], [0.3], [5]])
+
+    mass = np.sqrt(10403 / 50)
+
+    assert inv_mass(p_1, p_2) == mass
+
+
+def test_invmass_one_particle():
+    """
+    Check we get the right invariant mass of one particle
+
+    """
+    p_1 = np.array([[1], [2], [3], [10]])
+
+    mass = np.sqrt(86)
+
+    assert inv_mass(p_1) == mass
+
+
+def test_invmass_arrays():
+    """
+    Check we get the right invariant masses when adding two arrays of particles
+
+    """
+    p_1 = np.array([[1, 2], [2, 3], [3, 4], [10, 11]])
+    p_2 = np.array([[2, 4], [4, 6], [6, 8], [50, 51]])
+
+    masses = np.array([np.sqrt(3474), np.sqrt(3583)])
+
+    assert np.allclose(masses, inv_mass(p_1, p_2))
+
+
+def test_integral_const_width():
+    """
+    Check integral given constant bin widths
+
+    """
+    points = np.linspace(0, 1, 1000)
+
+    fcn = points**2
+
+    assert np.isclose(
+        stats.integral(points, fcn),
+        1 / 3 * points[-1] ** 3,
+    )
+
+
+def test_integral_varying_width():
+    """
+    Check integral given different bin widths
+
+    """
+    rng = np.random.default_rng(seed=0)
+    points = np.concatenate(([0], np.sort(rng.random(1000)), [1]))
+
+    fcn = points**2
+
+    assert np.isclose(
+        stats.integral(points, fcn),
+        1 / 3 * points[-1] ** 3,
+    )

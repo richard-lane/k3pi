@@ -4,8 +4,14 @@ Functions for performing straight cuts
 Each function returns a boolean mask of which events to keep
 
 """
+import sys
+import pathlib
 import numpy as np
 from uproot.exceptions import KeyInFileError
+
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
+
+from libFit import pdfs
 
 
 def d0_mass(tree) -> np.ndarray:
@@ -42,7 +48,7 @@ def _delta_m_keep(tree) -> np.ndarray:
     Keep events where the D* - D0 mass difference is near the nominal pi mass
 
     """
-    min_mass, max_mass = 139.3, 152.0
+    min_mass, max_mass = pdfs.domain()
 
     # Jagged array - take the first (best fit) value for the D* masses
     delta_m = dst_mass(tree) - d0_mass(tree)

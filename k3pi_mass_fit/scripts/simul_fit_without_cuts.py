@@ -15,56 +15,11 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 
-from libFit import pdfs, fit, util as mass_util
+from libFit import pdfs, fit, util as mass_util, plotting
 from lib_data import get, stats
 from lib_time_fit.definitions import TIME_BINS
 from lib_cuts.get import cut_dfs
 from lib_cuts.get import classifier as get_clf
-
-
-def _plot(
-    axes: Tuple[plt.Axes, plt.Axes],
-    counts: np.ndarray,
-    bins: np.ndarray,
-    fit_params: Tuple,
-) -> None:
-    """
-    Plot fit and pull on two axes
-
-    """
-    centres = (bins[1:] + bins[:-1]) / 2
-    scale = np.sum(counts) * (bins[1] - bins[0])
-
-    err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
-    axes[0].errorbar(
-        centres,
-        counts,
-        yerr=np.sqrt(counts),
-        **err_kw,
-    )
-
-    predicted = scale * pdfs.fractional_pdf(centres, *fit_params)
-    axes[0].plot(centres, predicted)
-    axes[0].plot(
-        centres,
-        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[1:-4]),
-        label="signal",
-    )
-    axes[0].plot(
-        centres,
-        scale * (1 - fit_params[0]) * pdfs.normalised_bkg(centres, *fit_params[-4:]),
-        label="bkg",
-    )
-
-    # Plot pull
-    diff = counts - predicted
-    axes[1].plot(pdfs.domain(), [1, 1], "r-")
-    axes[1].errorbar(
-        centres,
-        diff,
-        yerr=np.sqrt(counts),
-        **err_kw,
-    )
 
 
 def _separate_fit(
@@ -79,13 +34,16 @@ def _separate_fit(
     )
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(6, 8))
-    _plot((axes["A"], axes["B"]), count, bins, fitter.values)
+    plotting.mass_fit(
+        (axes["A"], axes["B"]), count, np.sqrt(count), bins, fitter.values
+    )
 
     axes["A"].legend()
 
     axes["B"].plot(pdfs.domain(), [1, 1], "r-")
 
     fig.suptitle(f"{fitter.valid=}")
+    fig.tight_layout()
 
     fig.tight_layout()
     print(f"Saving {plot_path}")
@@ -110,22 +68,16 @@ def _fit(
     print(f"{params[-2]} +- {fitter.errors[-2]}", end="\t")
     print(f"{params[-1]} +- {fitter.errors[-1]}")
 
-    rs_params = (params[0], *params[2:])
-    ws_params = tuple(params[1:])
-
-    fig, axes = plt.subplot_mosaic(
-        "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(12, 8)
+    fig, _ = plotting.simul_fits(
+        rs_count,
+        np.sqrt(rs_count),
+        ws_count,
+        np.sqrt(ws_count),
+        bins,
+        params,
     )
-    _plot((axes["A"], axes["C"]), rs_count, bins, rs_params)
-    _plot((axes["B"], axes["D"]), ws_count, bins, ws_params)
-
-    axes["A"].legend()
-
-    axes["C"].plot(pdfs.domain(), [1, 1], "r-")
-    axes["D"].plot(pdfs.domain(), [1, 1], "r-")
 
     fig.suptitle(f"{fitter.valid=}")
-
     fig.tight_layout()
 
     plot_path = f"{fit_dir}fit_{bin_number}.png"
@@ -211,7 +163,7 @@ def main():
 
     """
     bins = np.linspace(*pdfs.domain(), 400)
-    time_bins = np.array((-100, *TIME_BINS[1:], 100))
+    time_bins = np.array((-100, *TIME_BINS[1:], np.inf))
 
     # Get delta M values from a generator of dataframes
     year, magnetisation = "2018", "magdown"
@@ -240,4 +192,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

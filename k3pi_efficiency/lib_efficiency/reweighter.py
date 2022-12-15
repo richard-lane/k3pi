@@ -221,7 +221,7 @@ class EfficiencyWeighter:
 
     def weights(self, points):
         """
-        Normalised to have a mean of 1.0
+        Weights needed to take mc -> ampgen
+
         """
-        retval = self.phsp_weights(points) * self.time_weights(points[:, 5])
-        return retval / np.mean(retval)
+        return self.phsp_weights(points) * self.time_weights(points[:, 5])

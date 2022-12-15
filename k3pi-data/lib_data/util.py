@@ -236,3 +236,17 @@ def eta(p_x: np.ndarray, p_y: np.ndarray, p_z: np.ndarray) -> np.ndarray:
 
     """
     return np.arctanh(p_z / np.sqrt(p_x**2 + p_y**2 + p_z**2))
+
+
+def inv_mass(*particles: np.ndarray) -> np.ndarray:
+    """
+    Invariant mass of a collection of particles
+
+    Each should be a 4xN array of (px, py, pz, E)
+
+    """
+    combined = np.add.reduce(particles)
+
+    return np.sqrt(
+        combined[-1] ** 2 - combined[0] ** 2 - combined[1] ** 2 - combined[2] ** 2
+    )

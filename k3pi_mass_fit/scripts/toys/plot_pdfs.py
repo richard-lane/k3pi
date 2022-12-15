@@ -13,7 +13,7 @@ def main():
     mean, *sig_params = pdfs.signal_defaults(time_bin=5)
     _, *bkg_params = pdfs.background_defaults("RS")
 
-    centre, width_l, alpha_l, beta, a, b, c, d = pdfs.defaults("RS", 5)
+    centre, width_l, alpha_l, beta, a, b = pdfs.defaults("RS", 5)
     width_r = 1.5 * width_l
     alpha_r = 1.5 * alpha_l
 
@@ -26,11 +26,22 @@ def main():
         alpha_r,
         beta,
     )
-    bkg = pdfs.normalised_bkg(centres, a, b, c, d)
+    bkg = pdfs.normalised_bkg(centres, a, b)
 
-    sig_frac = 0.2
-    pdf = pdfs.fractional_pdf(
-        centres, sig_frac, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
+    n_sig = 0.2
+    n_bkg = 1 - n_sig
+    pdf = pdfs.model(
+        centres,
+        n_sig,
+        n_bkg,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        a,
+        b,
     )
 
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
@@ -39,7 +50,7 @@ def main():
     ax[0].plot(centres, bkg)
 
     ax[1].plot(centres, pdf)
-    ax[1].set_title(f"Signal fraction = {sig_frac}")
+    ax[1].set_title(f"Signal fraction = {n_sig}")
     plt.show()
 
 

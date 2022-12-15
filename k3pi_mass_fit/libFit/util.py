@@ -7,6 +7,7 @@ import pathlib
 from typing import List, Tuple, Iterable
 import numpy as np
 import pandas as pd
+from iminuit.util import ValueView
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
@@ -56,3 +57,14 @@ def binned_delta_m_counts(
     return stats.time_binned_counts(
         delta_m_generator(dataframes), mass_bins, n_time_bins, time_indices, weights
     )
+
+
+def rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
+    """
+    Find RS and WS params from binned simultaneous fitter params
+
+    """
+    rs_params = (*params[:2], *params[4:])
+    ws_params = tuple(params[2:])
+
+    return rs_params, ws_params

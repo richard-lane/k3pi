@@ -10,6 +10,14 @@ REWEIGHTER_DIR = pathlib.Path(__file__).resolve().parents[1] / "reweighter"
 # unstable
 MIN_TIME = 0.5
 
+# Absolute efficiencies from particle gun
+RS_EFF = 2.291
+RS_ERR = 0.003
+WS_EFF = 2.247
+WS_ERR = 0.003
+FALSE_EFF = 2.267
+FALSE_ERR = 0.007
+
 
 def reweighter_path(
     year: str,

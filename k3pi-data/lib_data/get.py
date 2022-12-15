@@ -2,6 +2,7 @@
 Functions for getting the dataframes once they've been dumped
 
 """
+import os
 import sys
 import glob
 import pickle
@@ -143,8 +144,9 @@ def data(
     """
     paths = glob.glob(str(definitions.data_dir(year, sign, magnetisation) / "*"))
     for path in paths:
-        with open(path, "rb") as df_f:
-            yield pickle.load(df_f)
+        if not os.path.isdir(path):
+            with open(path, "rb") as df_f:
+                yield pickle.load(df_f)
 
 
 def cut_data(year: str, sign: str, magnetisation: str, clf: CutClassifier):
@@ -164,3 +166,17 @@ def cut_data(year: str, sign: str, magnetisation: str, clf: CutClassifier):
             clf.predict_proba(dataframe[training_labels])[:, 1] > threshhold
         )
         yield dataframe[predicted_signal]
+
+
+def binned_generator(
+    generator: Generator[pd.DataFrame, None, None], phsp_bin: int
+) -> Generator[pd.DataFrame, None, None]:
+    """
+    Given a generator of dataframes, returns another generator of dataframes selecting
+    only events in the desired phase space bin
+
+    phsp bin column must exist in the dataframe
+
+    """
+    for dataframe in generator:
+        yield dataframe[dataframe["phsp bin"] == phsp_bin]

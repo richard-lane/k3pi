@@ -5,7 +5,7 @@ Useful definitions and things
 import pathlib
 from sklearn.ensemble import GradientBoostingClassifier as Classifier
 
-THRESHOLD = 0.185
+THRESHOLD = 0.198
 
 
 def classifier_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:

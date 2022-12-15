@@ -2,11 +2,16 @@
 PDFs, CDF, integrals etc. for mass fit signal and background shapes
 
 """
+import sys
+import pathlib
 from typing import Tuple
 import numpy as np
 from scipy.integrate import quad
 from iminuit import Minuit
 from iminuit.util import make_func_code
+
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
+from lib_data import stats
 
 
 def domain() -> Tuple[float, float]:
@@ -14,49 +19,38 @@ def domain() -> Tuple[float, float]:
     return 139.57, 152.0
 
 
-def background(x: np.ndarray, a: float, b: float, c: float, d: float) -> np.ndarray:
+def background(x: np.ndarray, a: float, b: float) -> np.ndarray:
     """
     PDF model for background distribution in delta M (D* - D0 mass)
 
     :param x: independent variable, mass difference
     :param a: shape parameter
     :param b: shape parameter
-    :param c: shape parameter
-    :param d: shape parameter
     :returns: PDF at x evaluated with the given parameters
 
     """
     tmp = np.sqrt(x - domain()[0])
-    return tmp + a * tmp**3 + b * tmp**5 + c * tmp**2 + d * tmp**4
+    return tmp + a * tmp**3 + b * tmp**5
 
 
-def _bkg_integral_dispatcher(x: float, a: float, b: float, c: float, d: float) -> float:
+def _bkg_integral_dispatcher(x: float, a: float, b: float) -> float:
     """Integral of the bkg pdf up to x"""
     tmp = np.sqrt(x - domain()[0])
-    return (
-        2 / 3 * tmp**3
-        + 2 * a / 5 * tmp**5
-        + 2 * b / 7 * tmp**7
-        + c / 2 * tmp**4
-        + d / 3 * tmp**6
-    )
+    return 2 / 3 * tmp**3 + 2 * a / 5 * tmp**5 + 2 * b / 7 * tmp**7
 
 
-def _bkg_integral(
-    low: float, high: float, a: float, b: float, c: float, d: float
-) -> float:
+def _bkg_integral(low: float, high: float, a: float, b: float) -> float:
     """Normalised integral"""
     return (
-        _bkg_integral_dispatcher(high, a, b, c, d)
-        - _bkg_integral_dispatcher(low, a, b, c, d)
-    ) / _bkg_integral_dispatcher(domain()[1], a, b, c, d)
+        _bkg_integral_dispatcher(high, a, b) - _bkg_integral_dispatcher(low, a, b)
+    ) / _bkg_integral_dispatcher(domain()[1], a, b)
 
 
-def normalised_bkg(x: np.ndarray, a: float, b: float, c: float, d: float) -> np.ndarray:
+def normalised_bkg(x: np.ndarray, a: float, b: float) -> np.ndarray:
     """Normalised bkg PDF"""
     # The integral across the whole domain is equal to the integral evaluated at the
     # high limit
-    return background(x, a, b, c, d) / _bkg_integral_dispatcher(domain()[1], a, b, c, d)
+    return background(x, a, b) / _bkg_integral_dispatcher(domain()[1], a, b)
 
 
 def signal_base(
@@ -168,9 +162,10 @@ def normalised_signal(
     return signal(x, centre, width_l, width_r, alpha_l, alpha_r, beta) / area
 
 
-def fractional_pdf(
+def model(
     x: np.ndarray,
-    signal_fraction: float,
+    n_sig: float,
+    n_bkg: float,
     centre: float,
     width_l: float,
     width_r: float,
@@ -179,14 +174,12 @@ def fractional_pdf(
     beta: float,
     a: float,
     b: float,
-    c: float,
-    d: float,
 ) -> np.ndarray:
     """
-    returns n_evts, n_sig * normalised sig pdf + n_bkg * normalised bkg pdf
+    Fit model including the right number of signal and background events
 
     """
-    return signal_fraction * normalised_signal(
+    return n_sig * normalised_signal(
         x,
         centre,
         width_l,
@@ -194,31 +187,7 @@ def fractional_pdf(
         alpha_l,
         alpha_r,
         beta,
-    ) + (1 - signal_fraction) * normalised_bkg(x, a, b, c, d)
-
-
-def pdf(
-    x: np.ndarray,
-    signal_fraction: float,
-    centre: float,
-    width_l: float,
-    width_r: float,
-    alpha_l: float,
-    alpha_r: float,
-    beta: float,
-    a: float,
-    b: float,
-    c: float,
-    d: float,
-) -> Tuple[int, np.ndarray]:
-    """
-    returns n_evts, n_sig * normalised sig pdf + n_bkg * normalised bkg pdf
-
-    """
-    n = len(x)
-    return n, n * fractional_pdf(
-        x, signal_fraction, centre, width_l, width_r, alpha_l, alpha_r, beta, a, b, c, d
-    )
+    ) + n_bkg * normalised_bkg(x, a, b)
 
 
 class BinnedChi2:
@@ -244,7 +213,8 @@ class BinnedChi2:
         # We need to tell Minuit what our function signature is explicitly
         self.func_code = make_func_code(
             [
-                "signal_fraction",
+                "n_sig",
+                "n_bkg",
                 "centre",
                 "width_l",
                 "width_r",
@@ -253,8 +223,6 @@ class BinnedChi2:
                 "beta",
                 "a",
                 "b",
-                "c",
-                "d",
             ]
         )
 
@@ -262,14 +230,12 @@ class BinnedChi2:
             error = np.sqrt(counts)
 
         self.counts, self.error = counts, error
-        self.total = np.sum(self.counts)
-
-        self.centres = (bins[1:] + bins[:-1]) / 2
-        self.widths = (bins[1:] - bins[:-1]) / 2
+        self.bins = bins
 
     def __call__(
         self,
-        signal_fraction: float,
+        n_sig: float,
+        n_bkg: float,
         centre: float,
         width_l: float,
         width_r: float,
@@ -278,38 +244,31 @@ class BinnedChi2:
         beta: float,
         a: float,
         b: float,
-        c: float,
-        d: float,
     ) -> float:
         """
         Objective function
 
         """
-        return np.sum(
-            (
-                self.counts
-                - (
-                    self.total
-                    * self.widths
-                    * fractional_pdf(
-                        self.centres,
-                        signal_fraction,
-                        centre,
-                        width_l,
-                        width_r,
-                        alpha_l,
-                        alpha_r,
-                        beta,
-                        a,
-                        b,
-                        c,
-                        d,
-                    )
-                )
-            )
-            ** 2
-            / self.error**2
+        # In each bin [a, b] the predicted number
+        # is int_a^b f(x) dx where f(x) is our model fcn
+        predicted = stats.areas(
+            self.bins,
+            model(
+                self.bins,
+                n_sig,
+                n_bkg,
+                centre,
+                width_l,
+                width_r,
+                alpha_l,
+                alpha_r,
+                beta,
+                a,
+                b,
+            ),
         )
+
+        return np.sum((self.counts - predicted) ** 2 / self.error**2)
 
 
 class SimultaneousBinnedChi2:
@@ -336,8 +295,10 @@ class SimultaneousBinnedChi2:
         # We need to tell Minuit what our function signature is explicitly
         self.func_code = make_func_code(
             [
-                "rs_signal_fraction",
-                "ws_signal_fraction",
+                "rs_n_sig",
+                "rs_n_bkg",
+                "ws_n_sig",
+                "ws_n_bkg",
                 "centre",
                 "width_l",
                 "width_r",
@@ -346,8 +307,6 @@ class SimultaneousBinnedChi2:
                 "beta",
                 "a",
                 "b",
-                "c",
-                "d",
             ]
         )
         self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
@@ -355,8 +314,10 @@ class SimultaneousBinnedChi2:
 
     def __call__(
         self,
-        rs_signal_fraction: float,
-        ws_signal_fraction: float,
+        rs_n_sig: float,
+        rs_n_bkg: float,
+        ws_n_sig: float,
+        ws_n_bkg: float,
         centre: float,
         width_l: float,
         width_r: float,
@@ -365,15 +326,14 @@ class SimultaneousBinnedChi2:
         beta: float,
         a: float,
         b: float,
-        c: float,
-        d: float,
     ) -> float:
         """
         Objective function
 
         """
         return self.rs_chi2(
-            rs_signal_fraction,
+            rs_n_sig,
+            rs_n_bkg,
             centre,
             width_l,
             width_r,
@@ -382,10 +342,9 @@ class SimultaneousBinnedChi2:
             beta,
             a,
             b,
-            c,
-            d,
         ) + self.ws_chi2(
-            ws_signal_fraction,
+            ws_n_sig,
+            ws_n_bkg,
             centre,
             width_l,
             width_r,
@@ -394,8 +353,6 @@ class SimultaneousBinnedChi2:
             beta,
             a,
             b,
-            c,
-            d,
         )
 
 
@@ -419,19 +376,19 @@ def background_defaults(sign: str) -> Tuple[float, float]:
     """
     assert sign in {"RS", "WS"}
     if sign == "WS":
-        return 0.06, -0.00645, 0.6, 0.2
+        return 0.06, -0.00645
 
-    return 0.004, -0.001, 0.6, 0.2
+    return 0.004, -0.001
 
 
 def defaults(
     sign: str, time_bin: int
 ) -> Tuple[float, float, float, float, float, float, float, float]:
     """
-    default centre, width, alpha, beta, a, b, c, d
+    default centre, width, alpha, beta, a, b
 
     """
     centre, width, alpha, beta = signal_defaults(time_bin)
-    a, b, c, d = background_defaults(sign)
+    a, b = background_defaults(sign)
 
-    return centre, width, alpha, beta, a, b, c, d
+    return centre, width, alpha, beta, a, b

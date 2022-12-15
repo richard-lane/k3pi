@@ -10,8 +10,10 @@ import matplotlib.pyplot as plt
 from pulls import common
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
 from lib_time_fit import util, models, fitter, plotting
+from lib_data import stats
 
 
 def _gen(
@@ -58,8 +60,8 @@ def main():
 
     # Take their ratio in bins
     bins = np.linspace(*domain, 30)
-    rs_count, rs_err = util.bin_times(rs_t, bins=bins)
-    ws_count, ws_err = util.bin_times(ws_t, bins=bins)
+    rs_count, rs_err = stats.counts(rs_t, bins=bins)
+    ws_count, ws_err = stats.counts(ws_t, bins=bins)
 
     ratio, err = util.ratio_err(ws_count, rs_count, ws_err, rs_err)
 
