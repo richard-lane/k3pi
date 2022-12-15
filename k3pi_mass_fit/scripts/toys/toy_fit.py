@@ -32,7 +32,7 @@ def _toy_fit():
 
     # Perform fit
     sig_frac = true_params[0]
-    bins = np.linspace(*pdfs.domain(), 500)
+    bins = np.linspace(*pdfs.domain(), 200)
     counts, errs = _counts(combined, np.ones_like(combined), bins)
     binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 

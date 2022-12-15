@@ -44,10 +44,11 @@ def binned_fit(
 
     chi2 = pdfs.BinnedChi2(counts, bins, errors)
 
+    n_tot = np.sum(counts)
     m = Minuit(
         chi2,
-        signal_fraction=signal_frac_guess,
-        bkg_fraction=(1 - signal_frac_guess),
+        n_sig=signal_frac_guess * n_tot,
+        n_bkg=(1 - signal_frac_guess) * n_tot,
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -58,8 +59,8 @@ def binned_fit(
         b=b,
     )
     m.limits = (
-        (0.0, 1.0),  # Signal fraction
-        (0.0, 1.0),  # Bkg fraction
+        (None, None),  # N sig
+        (None, None),  # N bkg
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
@@ -105,12 +106,15 @@ def binned_simultaneous_fit(
 
     chi2 = pdfs.SimultaneousBinnedChi2(rs_counts, ws_counts, bins, rs_errors, ws_errors)
 
+    n_rs = np.sum(rs_counts)
+    n_ws = np.sum(ws_counts)
+    rs_frac_guess, ws_frac_guess = 0.95, 0.05
     m = Minuit(
         chi2,
-        rs_signal_fraction=0.5,
-        rs_bkg_fraction=0.5,
-        ws_signal_fraction=0.05,
-        ws_bkg_fraction=0.95,
+        rs_n_sig=n_rs * rs_frac_guess,
+        rs_n_bkg=n_rs * (1 - rs_frac_guess),
+        ws_n_sig=n_ws * ws_frac_guess,
+        ws_n_bkg=n_ws * (1 - ws_frac_guess),
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -120,10 +124,6 @@ def binned_simultaneous_fit(
         a=a,
         b=b,
     )
-    m.limits["rs_signal_fraction"] = (0.0, 1.0)
-    m.limits["rs_bkg_fraction"] = (0.0, 1.0)
-    m.limits["ws_signal_fraction"] = (0.0, 1.0)
-    m.limits["ws_bkg_fraction"] = (0.0, 1.0)
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
@@ -168,13 +168,8 @@ def yields(
         ws_errors,
     )
 
-    fit_fracs = fitter.values[:2]
+    fit_yields = fitter.values[:2]
     fit_errs = fitter.errors[:2]
-
-    totals = tuple(np.sum(counts) for counts in (rs_counts, ws_counts))
-
-    fit_yields = (fit_frac * total for fit_frac, total in zip(fit_fracs, totals))
-    fit_errs = (fit_err * total for fit_err, total in zip(fit_errs, totals))
 
     if path:
         if rs_errors is None:
@@ -183,7 +178,7 @@ def yields(
             ws_errors = np.sqrt(ws_counts)
 
         fig, _ = plotting.simul_fits(
-            rs_counts, rs_errors, ws_counts, ws_errors, bins, fitter.values, binned=True
+            rs_counts, rs_errors, ws_counts, ws_errors, bins, fitter.values
         )
         fig.suptitle(f"{fitter.valid=}")
         fig.tight_layout()

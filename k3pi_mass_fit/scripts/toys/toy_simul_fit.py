@@ -23,7 +23,7 @@ def _toy_fit():
 
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
-    n_rs_sig, n_ws_sig, n_bkg = 400_000, 20_000, 300_000
+    n_rs_sig, n_ws_sig, n_bkg = 4_000_000, 50_000, 300_000
     rng = np.random.default_rng()
     rs_masses, _ = toy_utils.gen_points(rng, n_rs_sig, n_bkg, sign, time_bin)
     ws_masses, _ = toy_utils.gen_points(rng, n_ws_sig, n_bkg, sign, time_bin)
@@ -39,7 +39,12 @@ def _toy_fit():
     )
 
     fig, _ = plotting.simul_fits(
-        rs_counts, rs_errs, ws_counts, ws_errs, bins, binned_fitter.values, binned=True
+        rs_counts,
+        rs_errs,
+        ws_counts,
+        ws_errs,
+        bins,
+        binned_fitter.values,
     )
     fig.suptitle("Binned")
     fig.tight_layout()

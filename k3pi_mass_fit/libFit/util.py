@@ -59,23 +59,12 @@ def binned_delta_m_counts(
     )
 
 
-def binned_rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
+def rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
     """
     Find RS and WS params from binned simultaneous fitter params
 
     """
     rs_params = (*params[:2], *params[4:])
     ws_params = tuple(params[2:])
-
-    return rs_params, ws_params
-
-
-def unbinned_rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
-    """
-    Find RS and WS params from unbinned simultaneous fitter params
-
-    """
-    rs_params = tuple(params[:-2])
-    ws_params = (*params[-2:], *params[2:-2])
 
     return rs_params, ws_params

@@ -250,3 +250,34 @@ def test_invmass_arrays():
     masses = np.array([np.sqrt(3474), np.sqrt(3583)])
 
     assert np.allclose(masses, inv_mass(p_1, p_2))
+
+
+def test_integral_const_width():
+    """
+    Check integral given constant bin widths
+
+    """
+    points = np.linspace(0, 1, 1000)
+
+    fcn = points**2
+
+    assert np.isclose(
+        stats.integral(points, fcn),
+        1 / 3 * points[-1] ** 3,
+    )
+
+
+def test_integral_varying_width():
+    """
+    Check integral given different bin widths
+
+    """
+    rng = np.random.default_rng(seed=0)
+    points = np.concatenate(([0], np.sort(rng.random(1000)), [1]))
+
+    fcn = points**2
+
+    assert np.isclose(
+        stats.integral(points, fcn),
+        1 / 3 * points[-1] ** 3,
+    )

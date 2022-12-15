@@ -198,3 +198,35 @@ def time_binned_counts(
 
     # Take the square root of the errors
     return count, [np.sqrt(array) for array in sum_wt_sq]
+
+
+def areas(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """
+    Find the areas under the curve y(x) evaluated at an array
+    of x points
+
+    :param x: independent variable
+    :param y: dependent variable
+
+    :returns: areas in each bin
+
+    """
+    widths = x[1:] - x[:-1]
+
+    high = y[1:]
+    low = y[:-1]
+
+    return 0.5 * widths * (low + high)
+
+
+def integral(x: np.ndarray, y: np.ndarray) -> float:
+    """
+    Integral of a series of points
+
+    :param x: independent variable
+    :param y: dependent variable
+
+    :returns: the integral of the function from y^-1(points[0]) to y^-1(points[-1])
+
+    """
+    return np.sum(areas(x, y))

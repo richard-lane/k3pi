@@ -2,9 +2,14 @@
 Plot mass fits
 
 """
+import sys
+import pathlib
 from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
+
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
+from lib_data import stats
 from . import pdfs, util
 
 
@@ -18,6 +23,8 @@ def mass_fit(
     """
     Plot the mass fit and pulls on an axis
 
+    Assumes the bins have equal widths
+
     :param axes: tuple of (histogram axis, pull axis)
     :param counts: counts in each bin
     :param errs: errors on the counts in each bin
@@ -26,7 +33,7 @@ def mass_fit(
 
     """
     centres = (bins[1:] + bins[:-1]) / 2
-    scale = np.sum(counts) * (bins[1] - bins[0])
+    bin_widths = bins[1:] - bins[:-1]
 
     # Plot histogram
     err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
@@ -37,16 +44,24 @@ def mass_fit(
         **err_kw,
     )
 
-    predicted = scale * pdfs.fractional_pdf(centres, *fit_params)
+    predicted = stats.areas(bins, pdfs.model(bins, *fit_params))
+
+    predicted_signal = fit_params[0] * stats.areas(
+        bins, pdfs.normalised_signal(bins, *fit_params[2:-2])
+    )
+    predicted_bkg = fit_params[1] * stats.areas(
+        bins, pdfs.normalised_bkg(bins, *fit_params[-2:])
+    )
+
     axes[0].plot(centres, predicted)
     axes[0].plot(
         centres,
-        scale * fit_params[0] * pdfs.normalised_signal(centres, *fit_params[2:-2]),
+        predicted_signal,
         label="signal",
     )
     axes[0].plot(
         centres,
-        scale * fit_params[1] * pdfs.normalised_bkg(centres, *fit_params[-2:]),
+        predicted_bkg,
         label="bkg",
     )
 
@@ -68,8 +83,6 @@ def simul_fits(
     ws_errs: np.ndarray,
     bins: np.ndarray,
     fit_params: Tuple,
-    *,
-    binned: bool,
 ) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
     """
     Plot a simultaneous RS and WS fit on four Axes - two histograms
@@ -86,11 +99,7 @@ def simul_fits(
     :returns: a dict of A/B/C/D and the plot axes
 
     """
-    rs_params, ws_params = (
-        util.binned_rs_ws_params(fit_params)
-        if binned
-        else util.unbinned_rs_ws_params(fit_params)
-    )
+    rs_params, ws_params = util.rs_ws_params(fit_params)
 
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(12, 8)

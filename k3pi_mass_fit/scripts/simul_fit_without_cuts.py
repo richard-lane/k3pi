@@ -75,7 +75,6 @@ def _fit(
         np.sqrt(ws_count),
         bins,
         params,
-        binned=True,
     )
 
     fig.suptitle(f"{fitter.valid=}")
@@ -164,7 +163,7 @@ def main():
 
     """
     bins = np.linspace(*pdfs.domain(), 400)
-    time_bins = np.array((-100, *TIME_BINS[1:], 100))
+    time_bins = np.array((-100, *TIME_BINS[1:], np.inf))
 
     # Get delta M values from a generator of dataframes
     year, magnetisation = "2018", "magdown"

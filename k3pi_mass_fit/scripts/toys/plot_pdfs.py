@@ -28,12 +28,12 @@ def main():
     )
     bkg = pdfs.normalised_bkg(centres, a, b)
 
-    sig_frac = 0.2
-    bkg_frac = 1 - sig_frac
-    pdf = pdfs.fractional_pdf(
+    n_sig = 0.2
+    n_bkg = 1 - n_sig
+    pdf = pdfs.model(
         centres,
-        sig_frac,
-        bkg_frac,
+        n_sig,
+        n_bkg,
         centre,
         width_l,
         width_r,
@@ -50,7 +50,7 @@ def main():
     ax[0].plot(centres, bkg)
 
     ax[1].plot(centres, pdf)
-    ax[1].set_title(f"Signal fraction = {sig_frac}")
+    ax[1].set_title(f"Signal fraction = {n_sig}")
     plt.show()
 
 
