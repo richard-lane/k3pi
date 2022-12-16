@@ -10,8 +10,13 @@ import pandas as pd
 from iminuit.util import ValueView
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
 
-from lib_data import stats
+from lib_data import stats, get
+from lib_cuts.get import cut_dfs, classifier as get_clf
+from lib_efficiency.get import reweighter_dump as get_reweighter
+from lib_efficiency.efficiency_util import k_3pi, points
 
 
 def delta_m(dataframe: pd.DataFrame) -> pd.Series:
@@ -68,3 +73,125 @@ def rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
     ws_params = tuple(params[2:])
 
     return rs_params, ws_params
+
+
+def _generators(
+    year: str, magnetisation: str, *, bdt_cut: bool, phsp_bin: int
+) -> Tuple[Iterable[pd.DataFrame], Iterable[pd.DataFrame]]:
+    """
+    Generator of rs/ws dataframes, with/without BDT cut
+
+    """
+    generators = [
+        get.binned_generator(get.data(year, sign, magnetisation), phsp_bin)
+        for sign in ("cf", "dcs")
+    ]
+
+    if bdt_cut:
+        # Get the classifier
+        # always use DCS BDT for cut
+        clf = get_clf(year, "dcs", magnetisation)
+        return [cut_dfs(gen, clf) for gen in generators]
+
+    return generators
+
+
+def _time_indices(
+    dataframes: Iterable[pd.DataFrame], time_bins: np.ndarray
+) -> Iterable[np.ndarray]:
+    """
+    Generator of time bin indices from a generator of dataframes
+
+    """
+    return stats.bin_indices((dataframe["time"] for dataframe in dataframes), time_bins)
+
+
+def _efficiency_generators(
+    year: str, magnetisation: str, *, phsp_bin: int
+) -> Tuple[Iterable[np.ndarray], Iterable[np.ndarray]]:
+    """
+    Generator of efficiency weights
+
+    """
+    # Do BDT cut
+    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=True, phsp_bin=phsp_bin)
+
+    # Open efficiency weighters
+    dcs_weighter = get_reweighter(
+        year, "dcs", magnetisation, "both", fit=False, cut=True, verbose=True
+    )
+    cf_weighter = get_reweighter(
+        year, "cf", magnetisation, "both", fit=False, cut=True, verbose=True
+    )
+
+    # Generators to get weights
+    return (
+        (
+            cf_weighter.weights(points(*k_3pi(dataframe), dataframe["time"]))
+            for dataframe in cf_gen
+        ),
+        (
+            dcs_weighter.weights(points(*k_3pi(dataframe), dataframe["time"]))
+            for dataframe in dcs_gen
+        ),
+    )
+
+
+def mass_counts(
+    year: str,
+    magnetisation: str,
+    mass_bins: np.ndarray,
+    time_bins: np.ndarray,
+    *,
+    bdt_cut: bool,
+    correct_efficiency: bool,
+    phsp_bin: int
+) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
+    """
+    Find lists of arrays of counts and errors in each time bin
+
+    :param year: data taking year
+    :param magnetisation: magnetisation direction
+    :param mass_bins: mass fit bins
+    :param time_bins: time indexing bins
+    :param bdt_cut: whether to perform the BDT cut too
+    :param correct_efficiency: whether to apply efficiency correction weights
+    :param phsp_bin: which phsp bin number to use
+
+    :returns: list of arrays of WS counts in each time bin;
+              one list for each time bin
+    :returns: list of arrays of RS counts in each time bin;
+              one list for each time bin
+    :returns: list of arrays of WS errors in each time bin;
+              one list for each time bin
+    :returns: list of arrays of RS errors in each time bin;
+              one list for each time bin
+
+    """
+    # Get generators of time indices
+    cf_gen, dcs_gen = _generators(
+        year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
+    )
+    dcs_indices = _time_indices(dcs_gen, time_bins)
+    cf_indices = _time_indices(cf_gen, time_bins)
+
+    # Need to get new generators now that we've used them up
+    cf_gen, dcs_gen = _generators(
+        year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
+    )
+
+    # May need to get generators of efficiency weights too
+    if correct_efficiency:
+        cf_wts, dcs_wts = _efficiency_generators(year, magnetisation, phsp_bin=phsp_bin)
+    else:
+        cf_wts, dcs_wts = None, None
+
+    n_time_bins = len(time_bins) - 1
+    dcs_counts, dcs_errs = binned_delta_m_counts(
+        dcs_gen, mass_bins, n_time_bins, dcs_indices, dcs_wts
+    )
+    cf_counts, cf_errs = binned_delta_m_counts(
+        cf_gen, mass_bins, n_time_bins, cf_indices, cf_wts
+    )
+
+    return dcs_counts, cf_counts, dcs_errs, cf_errs
