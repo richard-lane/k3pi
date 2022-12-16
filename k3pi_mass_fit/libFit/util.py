@@ -107,7 +107,10 @@ def _time_indices(
 
 
 def _efficiency_generators(
-    year: str, magnetisation: str, *, phsp_bin: int
+    year: str,
+    magnetisation: str,
+    *,
+    phsp_bin: int,
 ) -> Tuple[Iterable[np.ndarray], Iterable[np.ndarray]]:
     """
     Generator of efficiency weights
@@ -145,7 +148,8 @@ def mass_counts(
     *,
     bdt_cut: bool,
     correct_efficiency: bool,
-    phsp_bin: int
+    phsp_bin: int,
+    verbose: bool = True,
 ) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
     """
     Find lists of arrays of counts and errors in each time bin
@@ -157,6 +161,7 @@ def mass_counts(
     :param bdt_cut: whether to perform the BDT cut too
     :param correct_efficiency: whether to apply efficiency correction weights
     :param phsp_bin: which phsp bin number to use
+    :param verbose: whether to print stuff
 
     :returns: list of arrays of WS counts in each time bin;
               one list for each time bin
@@ -169,6 +174,9 @@ def mass_counts(
 
     """
     # Get generators of time indices
+    if verbose:
+        print("getting generators of time bin indices")
+
     cf_gen, dcs_gen = _generators(
         year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
     )
@@ -182,14 +190,22 @@ def mass_counts(
 
     # May need to get generators of efficiency weights too
     if correct_efficiency:
+        if verbose:
+            print("getting generators of efficiency weights")
         cf_wts, dcs_wts = _efficiency_generators(year, magnetisation, phsp_bin=phsp_bin)
     else:
         cf_wts, dcs_wts = None, None
 
     n_time_bins = len(time_bins) - 1
+
+    if verbose:
+        print("getting DCS counts")
     dcs_counts, dcs_errs = binned_delta_m_counts(
         dcs_gen, mass_bins, n_time_bins, dcs_indices, dcs_wts
     )
+
+    if verbose:
+        print("getting CFcounts")
     cf_counts, cf_errs = binned_delta_m_counts(
         cf_gen, mass_bins, n_time_bins, cf_indices, cf_wts
     )

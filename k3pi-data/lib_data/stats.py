@@ -5,6 +5,7 @@ Statistical or related things
 import itertools
 from typing import List, Tuple, Iterable
 import numpy as np
+from tqdm import tqdm
 
 
 def _indices(values: np.ndarray, bins: np.ndarray) -> np.ndarray:
@@ -180,7 +181,7 @@ def time_binned_counts(
     count = [np.zeros(n_bins) for _ in range(n_time_bins)]
     sum_wt_sq = [np.zeros(n_bins) for _ in range(n_time_bins)]
 
-    for array, weight, time_indices_array in zip(values, weights, time_indices):
+    for array, weight, time_indices_array in tqdm(zip(values, weights, time_indices)):
         # Add sum of weights to a histogram
         if weight is None:
             weight = np.ones_like(array)
