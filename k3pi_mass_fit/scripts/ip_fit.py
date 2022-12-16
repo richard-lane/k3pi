@@ -144,11 +144,10 @@ def _weighted_ipchi2_counts(
 
     # Get params from these fitters
     params = (
-        [(fitter.values[0], *fitter.values[2:]) for fitter in fitters]
-        if sign == "cf"
-        else [tuple(fitter.values[1:]) for fitter in fitters]
+        [tuple(fitter.values[2:]) for fitter in fitters]
+        if sign == "dcs"
+        else [(*fitter.values[:2], fitter.values[4:]) for fitter in fitters]
     )
-
     # Get sWeights from these params
     # For now just use the sWeights from the first time bin
     # TODO properly - sWeighting in each time bin
@@ -174,7 +173,7 @@ def main():
     Do mass fits in each time bin without BDT cuts
 
     """
-    mass_bins = np.linspace(*pdfs.domain(), 400)
+    mass_bins = np.linspace(*pdfs.domain(), 200)
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
     ipchi2_bins = np.concatenate(([-20], np.linspace(-10, 10, 100), [20]))
 

@@ -13,17 +13,17 @@ from . import pdfs
 
 def sig(delta_m: np.ndarray, params: Tuple) -> np.ndarray:
     """signal pdf, given params"""
-    return pdfs.normalised_signal(delta_m, *params[1:-4])
+    return pdfs.normalised_signal(delta_m, *params[2:-2])
 
 
 def bkg(delta_m: np.ndarray, params: Tuple) -> np.ndarray:
     """bkg pdf, given params"""
-    return pdfs.normalised_bkg(delta_m, *params[-4:])
+    return pdfs.normalised_bkg(delta_m, *params[-2:])
 
 
 def overall(delta_m: np.ndarray, params: Tuple) -> np.ndarray:
     """overall pdf, given params"""
-    return pdfs.fractional_pdf(delta_m, *params)
+    return pdfs.model(delta_m, *params) / (params[0] + params[1])
 
 
 def w_matrix(params: Tuple) -> np.ndarray:
