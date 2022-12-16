@@ -7,25 +7,17 @@ import os
 import sys
 import pathlib
 from multiprocessing import Process
-from typing import List, Tuple, Iterable
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
-from lib_data import get, stats
 from libFit import fit, pdfs, util as mass_util
 from lib_time_fit import util, fitter, plotting
 from lib_time_fit.definitions import TIME_BINS
-from lib_cuts.get import cut_dfs, classifier as get_clf
-from lib_efficiency.get import reweighter_dump as get_reweighter
-from lib_efficiency.efficiency_util import k_3pi, points
 from lib_efficiency.efficiency_definitions import RS_EFF, RS_ERR, WS_EFF, WS_ERR
 
 
@@ -239,17 +231,14 @@ def _ratio_err(
     phsp_bin: int,
 ):
     """
-    Plot histograms of the masses,
-    then fit to them and plot these also
-
-    returns time bins, ratio, err
+    returns time bins, ratio, err from the mass fits
 
     """
     if correct_efficiency:
         assert bdt_cut, "Cannot have efficiency without BDT cut"
 
     # Bin delta M
-    dcs_counts, cf_counts, dcs_mass_errs, cf_mass_errs = _counts(
+    dcs_counts, cf_counts, dcs_mass_errs, cf_mass_errs = mass_util.mass_counts(
         year,
         magnetisation,
         mass_bins,
@@ -262,13 +251,13 @@ def _ratio_err(
     # If we're correcting for the efficiency, might want to adjust the
     # DCS counts (and their errors) to account for the absolute
     # efficiency
-    eff_ratio = WS_EFF / RS_EFF
-    eff_ratio_err = eff_ratio * np.sqrt((RS_ERR / RS_EFF) ** 2 + (WS_ERR / WS_EFF) ** 2)
+    # eff_ratio = WS_EFF / RS_EFF
+    # eff_ratio_err = eff_ratio * np.sqrt((RS_ERR / RS_EFF) ** 2 + (WS_ERR / WS_EFF) ** 2)
 
-    dcs_counts *= eff_ratio
-    dcs_mass_errs = dcs_counts * np.sqrt(
-        (dcs_mass_errs / dcs_counts) ** 2 + (eff_ratio_err / eff_ratio) ** 2
-    )
+    # dcs_counts *= eff_ratio
+    # dcs_mass_errs = dcs_counts * np.sqrt(
+    #     (dcs_mass_errs / dcs_counts) ** 2 + (eff_ratio_err / eff_ratio) ** 2
+    # )
 
     # Don't want the first or last bins since they're
     # the overflows (down to -inf; up to + inf)
@@ -284,8 +273,6 @@ def _ratio_err(
     dcs_errs = []
     cf_errs = []
 
-    plot_dir = _plot_dir(bdt_cut, correct_efficiency, phsp_bin)
-
     # Do mass fits in each bin, save the yields and errors
     for time_bin, (dcs_count, cf_count, dcs_mass_err, cf_mass_err) in tqdm(
         enumerate(zip(dcs_counts, cf_counts, dcs_mass_errs, cf_mass_errs))
@@ -297,7 +284,8 @@ def _ratio_err(
             time_bin,
             rs_errors=cf_mass_err,
             ws_errors=dcs_mass_err,
-            path=f"{plot_dir}fit_{time_bin}.png",
+            # Uncomment to also plot the mass fit - for e.g. debug
+            # path=f"{_plot_dir(bdt_cut, correct_efficiency, phsp_bin)}fit_{time_bin}.png",
         )
 
         cf_yields.append(rs_yield)
@@ -312,111 +300,6 @@ def _ratio_err(
     return time_bins, ratio, err
 
 
-def _time_indices(
-    dataframes: Iterable[pd.DataFrame], time_bins: np.ndarray
-) -> Iterable[np.ndarray]:
-    """
-    Generator of time bin indices from a generator of dataframes
-
-    """
-    return stats.bin_indices((dataframe["time"] for dataframe in dataframes), time_bins)
-
-
-def _generators(
-    year: str, magnetisation: str, *, bdt_cut: bool, phsp_bin: int
-) -> Tuple[Iterable[pd.DataFrame], Iterable[pd.DataFrame]]:
-    """
-    Generator of rs/ws dataframes, with/without BDT cut
-
-    """
-    generators = [
-        get.binned_generator(get.data(year, sign, magnetisation), phsp_bin)
-        for sign in ("cf", "dcs")
-    ]
-
-    if bdt_cut:
-        # Get the classifier
-        clf = get_clf(year, "dcs", magnetisation)
-        return [cut_dfs(gen, clf) for gen in generators]
-
-    return generators
-
-
-def _efficiency_generators(
-    year: str, magnetisation: str, *, phsp_bin: int
-) -> Tuple[Iterable[np.ndarray], Iterable[np.ndarray]]:
-    """
-    Generator of efficiency weights
-
-    """
-    # Do BDT cut
-    cf_gen, dcs_gen = _generators(year, magnetisation, bdt_cut=True, phsp_bin=phsp_bin)
-
-    # Open efficiency weighters
-    dcs_weighter = get_reweighter(
-        year, "dcs", magnetisation, "both", fit=False, cut=True, verbose=True
-    )
-    cf_weighter = get_reweighter(
-        year, "cf", magnetisation, "both", fit=False, cut=True, verbose=True
-    )
-
-    # Generators to get weights
-    return (
-        (
-            cf_weighter.weights(points(*k_3pi(dataframe), dataframe["time"]))
-            for dataframe in cf_gen
-        ),
-        (
-            dcs_weighter.weights(points(*k_3pi(dataframe), dataframe["time"]))
-            for dataframe in dcs_gen
-        ),
-    )
-
-
-def _counts(
-    year: str,
-    magnetisation: str,
-    bins: np.ndarray,
-    time_bins: np.ndarray,
-    *,
-    bdt_cut: bool,
-    correct_efficiency: bool,
-    phsp_bin: int,
-) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
-    """
-    Returns a list of counts/errors in each time bin
-
-    """
-    # Get generators of time indices
-    cf_gen, dcs_gen = _generators(
-        year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
-    )
-
-    dcs_indices = _time_indices(dcs_gen, time_bins)
-    cf_indices = _time_indices(cf_gen, time_bins)
-
-    # Need to get new generators now that we've used them up
-    cf_gen, dcs_gen = _generators(
-        year, magnetisation, bdt_cut=bdt_cut, phsp_bin=phsp_bin
-    )
-
-    # May need to get generators of efficiency weights too
-    if correct_efficiency:
-        cf_wts, dcs_wts = _efficiency_generators(year, magnetisation, phsp_bin=phsp_bin)
-    else:
-        cf_wts, dcs_wts = None, None
-
-    n_time_bins = len(time_bins) - 1
-    dcs_counts, dcs_errs = mass_util.binned_delta_m_counts(
-        dcs_gen, bins, n_time_bins, dcs_indices, dcs_wts
-    )
-    cf_counts, cf_errs = mass_util.binned_delta_m_counts(
-        cf_gen, bins, n_time_bins, cf_indices, cf_wts
-    )
-
-    return dcs_counts, cf_counts, dcs_errs, cf_errs
-
-
 def _make_scans(
     year: str,
     magnetisation: str,
@@ -428,25 +311,25 @@ def _make_scans(
     Plot all 3 kinds of scans in the right phase space bins
 
     """
-    # _plot_scan(
-    #     year,
-    #     magnetisation,
-    #     time_bins,
-    #     mass_bins,
-    #     bdt_cut=False,
-    #     correct_efficiency=False,
-    #     phsp_bin=phsp_bin,
-    # )
+    _plot_scan(
+        year,
+        magnetisation,
+        time_bins,
+        mass_bins,
+        bdt_cut=False,
+        correct_efficiency=False,
+        phsp_bin=phsp_bin,
+    )
 
-    # _plot_scan(
-    #     year,
-    #     magnetisation,
-    #     time_bins,
-    #     mass_bins,
-    #     bdt_cut=True,
-    #     correct_efficiency=False,
-    #     phsp_bin=phsp_bin,
-    # )
+    _plot_scan(
+        year,
+        magnetisation,
+        time_bins,
+        mass_bins,
+        bdt_cut=True,
+        correct_efficiency=False,
+        phsp_bin=phsp_bin,
+    )
 
     _plot_scan(
         year,
