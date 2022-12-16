@@ -3,7 +3,6 @@ Compare scans with no corrections
 to scans with BDT cut and BDT+efficiency correction
 
 """
-import os
 import sys
 import pathlib
 from multiprocessing import Process
@@ -61,23 +60,6 @@ def _plot_fits(
                 label=None,
                 plot_kw={"alpha": alpha, "color": colour},
             )
-
-
-def _plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
-    """Dir to store plots in; / terminated. Creates it if it doesnt exist"""
-    if bdt_cut and correct_efficiency:
-        plot_dir = "eff_fits/"
-    elif bdt_cut:
-        plot_dir = "bdt_fits/"
-    else:
-        plot_dir = "raw_fits/"
-
-    plot_dir = os.path.join(plot_dir, f"bin_{phsp_bin}/")
-
-    if not os.path.isdir(plot_dir):
-        os.makedirs(plot_dir)
-
-    return plot_dir
 
 
 def _plot_scan(
@@ -214,7 +196,7 @@ def _plot_scan(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    path = f"{_plot_dir(bdt_cut, correct_efficiency, phsp_bin)}scan.png"
+    path = f"{mass_util.plot_dir(bdt_cut, correct_efficiency, phsp_bin)}scan.png"
     print(f"saving {path}")
     fig.savefig(path)
     plt.close(fig)
@@ -285,7 +267,7 @@ def _ratio_err(
             rs_errors=cf_mass_err,
             ws_errors=dcs_mass_err,
             # Uncomment to also plot the mass fit - for e.g. debug
-            # path=f"{_plot_dir(bdt_cut, correct_efficiency, phsp_bin)}fit_{time_bin}.png",
+            # path=f"{mass_util.plot_dir(bdt_cut, correct_efficiency, phsp_bin)}fit_{time_bin}.png",
         )
 
         cf_yields.append(rs_yield)
@@ -311,15 +293,15 @@ def _make_scans(
     Plot all 3 kinds of scans in the right phase space bins
 
     """
-    _plot_scan(
-        year,
-        magnetisation,
-        time_bins,
-        mass_bins,
-        bdt_cut=False,
-        correct_efficiency=False,
-        phsp_bin=phsp_bin,
-    )
+    # _plot_scan(
+    #     year,
+    #     magnetisation,
+    #     time_bins,
+    #     mass_bins,
+    #     bdt_cut=False,
+    #     correct_efficiency=False,
+    #     phsp_bin=phsp_bin,
+    # )
 
     _plot_scan(
         year,
@@ -331,15 +313,15 @@ def _make_scans(
         phsp_bin=phsp_bin,
     )
 
-    _plot_scan(
-        year,
-        magnetisation,
-        time_bins,
-        mass_bins,
-        bdt_cut=True,
-        correct_efficiency=True,
-        phsp_bin=phsp_bin,
-    )
+    # _plot_scan(
+    #     year,
+    #     magnetisation,
+    #     time_bins,
+    #     mass_bins,
+    #     bdt_cut=True,
+    #     correct_efficiency=True,
+    #     phsp_bin=phsp_bin,
+    # )
 
 
 def main():

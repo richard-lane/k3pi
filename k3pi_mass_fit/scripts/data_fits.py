@@ -2,7 +2,6 @@
 Simultaneous and individual fits to RS and WS
 
 """
-import os
 import sys
 import pathlib
 import argparse
@@ -85,30 +84,6 @@ def _fit(
     plt.close(fig)
 
 
-def _mkdirs(base: str) -> None:
-    """
-    Make plot dirs
-
-    """
-    rs_dir = os.path.join(base, "rs/")
-    ws_dir = os.path.join(base, "ws/")
-    for dir_ in base, rs_dir, ws_dir:
-        if not os.path.isdir(dir_):
-            os.mkdir(dir_)
-
-
-def _dir_name(bdt_cut: bool, efficiency: bool) -> str:
-    """
-    Directory in which to store plots
-
-    """
-    if bdt_cut and efficiency:
-        return "eff_fits/"
-    if bdt_cut:
-        return "bdt_fits/"
-    return "raw_fits/"
-
-
 def main(args: argparse.Namespace):
     """
     Do mass fits in each time bin without BDT cuts
@@ -132,8 +107,8 @@ def main(args: argparse.Namespace):
         phsp_bin=args.phsp_bin,
     )
 
-    plot_dir = _dir_name(args.bdt_cut, args.efficiency)
-    _mkdirs(plot_dir)
+    plot_dir = mass_util.plot_dir(args.bdt_cut, args.efficiency, args.phsp_bin)
+    print(plot_dir)
 
     for i, (dcs_count, cf_count, dcs_err, cf_err) in enumerate(
         zip(dcs_counts[1:-1], cf_counts[1:-1], dcs_errs[1:-1], cf_errs[1:-1])

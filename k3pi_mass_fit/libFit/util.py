@@ -2,6 +2,7 @@
 Utilitility fractions
 
 """
+import os
 import sys
 import pathlib
 from typing import List, Tuple, Iterable
@@ -211,3 +212,33 @@ def mass_counts(
     )
 
     return dcs_counts, cf_counts, dcs_errs, cf_errs
+
+
+def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
+    """
+    Directory for storing plots
+
+    / terminated
+
+    Creates it if it doesnt exist
+
+    Also creates subdirs /ws/ and /rs/
+
+    """
+    if correct_efficiency:
+        assert bdt_cut
+
+    if bdt_cut and correct_efficiency:
+        retval = "eff_fits/"
+    elif bdt_cut:
+        retval = "bdt_fits/"
+    else:
+        retval = "raw_fits/"
+
+    retval = os.path.join(retval, f"bin_{phsp_bin}/")
+
+    for dir_ in (retval, f"{retval}ws/", f"{retval}rs/"):
+        if not os.path.isdir(dir_):
+            os.makedirs(dir_)
+
+    return retval
