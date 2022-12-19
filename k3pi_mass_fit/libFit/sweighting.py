@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.linalg import solve
 
-from . import pdfs
+from . import pdfs, definitions
 
 
 def sig(delta_m: np.ndarray, params: Tuple) -> np.ndarray:
@@ -35,7 +35,7 @@ def w_matrix(params: Tuple) -> np.ndarray:
 
     # Construct matrix + return
     retval = np.zeros((2, 2))
-    pts = np.linspace(*pdfs.domain(), 1000)
+    pts = definitions.mass_bins(1000)
 
     retval[0, 0] = np.trapz(sig(pts, params) ** 2 / overall(pts, params), x=pts)
 

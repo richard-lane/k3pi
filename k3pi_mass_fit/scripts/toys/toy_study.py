@@ -4,7 +4,7 @@ Toy study for mass fit
 """
 import sys
 import pathlib
-from typing import Callable, Tuple
+from typing import Tuple
 from multiprocessing import Process, Manager
 
 from tqdm import tqdm
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
-from libFit import pdfs, fit, toy_utils
+from libFit import pdfs, fit, toy_utils, definitions
 from lib_data import stats
 
 
@@ -36,7 +36,7 @@ def _pull(
 
     true_params = np.array((n_sig, n_bkg, *true_params[2:]))
 
-    bins = np.linspace(*pdfs.domain(), 100)
+    bins = definitions.mass_bins(250)
     counts, _ = stats.counts(combined, bins)
     fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
@@ -51,7 +51,7 @@ def _pull(
         def fitted_pdf(x: np.ndarray) -> np.ndarray:
             return pdfs.model(x, *fit_params)
 
-        pts = np.linspace(*pdfs.domain(), 250)
+        pts = definitions.mass_bins(500)
         centres = (pts[1:] + pts[:-1]) / 2
 
         fig, ax = plt.subplots()

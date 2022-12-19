@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
 
-from libFit import pdfs, fit, util as mass_util, plotting
+from libFit import pdfs, fit, util as mass_util, plotting, definitions
 from lib_time_fit.definitions import TIME_BINS
 
 
@@ -92,7 +92,7 @@ def main(args: argparse.Namespace):
     if args.efficiency:
         assert args.bdt_cut
 
-    bins = np.linspace(*pdfs.domain(), 100)
+    bins = definitions.mass_bins(200)
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
 
     year, magnetisation = args.year, args.magnetisation
@@ -108,7 +108,6 @@ def main(args: argparse.Namespace):
     )
 
     plot_dir = mass_util.plot_dir(args.bdt_cut, args.efficiency, args.phsp_bin)
-    print(plot_dir)
 
     for i, (dcs_count, cf_count, dcs_err, cf_err) in enumerate(
         zip(dcs_counts[1:-1], cf_counts[1:-1], dcs_errs[1:-1], cf_errs[1:-1])

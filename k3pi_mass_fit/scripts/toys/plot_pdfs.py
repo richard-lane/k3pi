@@ -1,17 +1,19 @@
+"""
+Plot the PDFs which we fit the mass distribution to
+
+"""
 import sys
 import pathlib
-import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 
-from libFit import pdfs
+from libFit import pdfs, definitions
 
 
 def main():
-    centres = np.linspace(*pdfs.domain(), 1000)
-    mean, *sig_params = pdfs.signal_defaults(time_bin=5)
-    _, *bkg_params = pdfs.background_defaults("RS")
+    """Make and show a plot"""
+    centres = definitions.mass_bins(1000)
 
     centre, width_l, alpha_l, beta, a, b = pdfs.defaults("RS", 5)
     width_r = 1.5 * width_l
@@ -44,7 +46,7 @@ def main():
         b,
     )
 
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    _, ax = plt.subplots(1, 2, figsize=(10, 5))
 
     ax[0].plot(centres, sig)
     ax[0].plot(centres, bkg)

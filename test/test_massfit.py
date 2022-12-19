@@ -9,7 +9,7 @@ from scipy.integrate import quad
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
-from libFit import pdfs
+from libFit import pdfs, definitions
 from lib_data import stats
 
 
@@ -32,7 +32,7 @@ def test_signal_normalised():
 
     """
     params = (146, 0.2, 0.2, 0.2, 0.2, 0.002)
-    points = np.linspace(*pdfs.domain(), 1000)
+    points = definitions.mass_bins(1000)
 
     integral = stats.integral(points, pdfs.normalised_signal(points, *params))
 
@@ -48,7 +48,7 @@ def test_model_normalised():
     n_bkg = 10000
 
     params = (146, 0.2, 0.2, 0.2, 0.2, 0.002, 0.004, -0.001)
-    points = np.linspace(*pdfs.domain(), 1000)
+    points = definitions.mass_bins(1000)
 
     integral = stats.integral(points, pdfs.model(points, n_sig, n_bkg, *params))
 

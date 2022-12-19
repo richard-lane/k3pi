@@ -19,7 +19,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 
-from libFit import pdfs, fit, util as mass_util, sweighting
+from libFit import pdfs, fit, util as mass_util, sweighting, definitions
 from lib_data import get, stats
 from lib_time_fit.definitions import TIME_BINS
 from lib_cuts.get import cut_dfs
@@ -173,7 +173,7 @@ def main():
     Do mass fits in each time bin without BDT cuts
 
     """
-    mass_bins = np.linspace(*pdfs.domain(), 200)
+    mass_bins = definitions.mass_bins(200)
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
     ipchi2_bins = np.concatenate(([-20], np.linspace(-10, 10, 100), [20]))
 

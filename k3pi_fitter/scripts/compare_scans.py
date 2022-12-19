@@ -14,7 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficie
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
-from libFit import fit, pdfs, util as mass_util
+from libFit import fit, pdfs, util as mass_util, definitions
 from lib_time_fit import util, fitter, plotting
 from lib_time_fit.definitions import TIME_BINS
 from lib_efficiency.efficiency_definitions import RS_EFF, RS_ERR, WS_EFF, WS_ERR
@@ -330,7 +330,7 @@ def main():
 
     """
     year, magnetisation = "2018", "magdown"
-    mass_bins = np.linspace(*pdfs.domain(), 200)
+    mass_bins = definitions.mass_bins(200)
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
 
     procs = [

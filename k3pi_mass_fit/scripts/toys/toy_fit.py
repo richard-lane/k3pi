@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
-from libFit import pdfs, fit, toy_utils, plotting
+from libFit import pdfs, fit, toy_utils, plotting, definitions
 from lib_data import stats
 
 
@@ -32,7 +32,7 @@ def _toy_fit():
 
     # Perform fit
     sig_frac = true_params[0]
-    bins = np.linspace(*pdfs.domain(), 200)
+    bins = definitions.mass_bins(200)
     counts, errs = stats.counts(combined, bins)
     binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
