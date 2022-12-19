@@ -2,13 +2,19 @@
 Definitions of stuff needed for creating/using the efficiency reweighter
 
 """
+import sys
 import pathlib
+
+sys.path.append(pathlib.Path(__file__).resolve().parents[2] / "k3pi_fitter")
+
+from lib_time_fit import definitions
+
 
 REWEIGHTER_DIR = pathlib.Path(__file__).resolve().parents[1] / "reweighter"
 
 # Time (in lifetimes) below which we just throw away events - the reweighting here is too
 # unstable
-MIN_TIME = 0.5
+MIN_TIME = definitions.TIME_BINS[2]
 
 # Absolute efficiencies from particle gun
 RS_EFF = 2.291
