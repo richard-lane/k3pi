@@ -9,9 +9,11 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 
 from lib_efficiency import mixing
 import pdg_params
+from lib_data.definitions import D0_LIFETIME_PS
 
 
 def _plot(params: mixing.MixingParams, path: str, *, log: bool = False) -> None:
@@ -23,10 +25,9 @@ def _plot(params: mixing.MixingParams, path: str, *, log: bool = False) -> None:
     :log: log scale
 
     """
-    d_lifetime_ps = 0.4103
-    times_ps = np.linspace(0, 6 * d_lifetime_ps, 500)
+    times_ps = np.linspace(0, 6 * D0_LIFETIME_PS, 500)
     times_inv_mev = times_ps * (10**10) / 6.58
-    times_lifetime = times_ps / d_lifetime_ps
+    times_lifetime = times_ps / D0_LIFETIME_PS
 
     # Assume no CPV in mixing
     p_q = 1 / np.sqrt(2)

@@ -31,6 +31,7 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
     # so we can just use numpy to read everything in nicely
     # Simply passing library="np" here seems to do the right thing, since apparently
     # setting uproot.default_library = "np" didn't work...
+    # TODO: consistent AmpGen time
     df["time"] = (
         tree[t_branch].array(library="np") * 1000 / 0.41
     )  # Convert to d lifetimes

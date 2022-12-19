@@ -4,6 +4,7 @@ import pathlib
 from typing import List
 
 D0_MASS_MEV = 1864.84
+D0_LIFETIME_PS = 0.4101
 
 DUMP_DIR = pathlib.Path(__file__).resolve().parents[1] / "dumps"
 

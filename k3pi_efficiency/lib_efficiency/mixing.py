@@ -10,11 +10,16 @@ where p and q are complex numbers satisfying $|q|^2 + |p|^2 = 1$.
 The mass and width difference between these mass states gives D mixing
 
 """
+import sys
+import pathlib
 from typing import Tuple
 from collections import namedtuple
 import numpy as np
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 from .amplitude_models import amplitudes
+from lib_data.definitions import D0_LIFETIME_PS
+
 
 MixingParams = namedtuple(
     "Params",
@@ -171,7 +176,7 @@ def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
 
     """
     return lifetimes / (1.605 * 10**-9)
-    decay_times_ps = lifetimes * 0.4103
+    decay_times_ps = lifetimes * D0_LIFETIME_PS
     return decay_times_ps * (10**10) / 6.58
 
 

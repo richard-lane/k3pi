@@ -184,10 +184,10 @@ def add_refit_times(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
 
     """
     # 0.3 to convert from ctau to ps
-    # 0.41 to convert from ps to D lifetimes
+    # then convert from ps to lifetimes
     # Take the first (best fit) value from each
     df["time"] = tree["Dst_ReFit_D0_ctau"].array(library="ak")[:, 0][keep] / (
-        0.3 * 0.41
+        0.3 * definitions.D_LIFETIME_PS
     )
 
 
