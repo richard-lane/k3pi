@@ -5,7 +5,7 @@ Definitions of stuff needed for creating/using the efficiency reweighter
 import sys
 import pathlib
 
-sys.path.append(pathlib.Path(__file__).resolve().parents[2] / "k3pi_fitter")
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_fitter"))
 
 from lib_time_fit import definitions
 
