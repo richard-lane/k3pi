@@ -25,8 +25,10 @@ def main():
 
     points = np.linspace(*pdfs.domain(), 10000)[1:-1]
 
-    plt.plot(points, dcs_pdf(points), label="DCS")
-    plt.plot(points, cf_pdf(points), label="CF")
+    plt.plot(
+        points, pdfs.estimated_bkg(points, dcs_pdf, 0.01, 0.0002, 0.0001), label="DCS"
+    )
+    plt.plot(points, pdfs.estimated_bkg(points, cf_pdf, 0, 0, 0), label="CF")
     plt.legend()
 
     plt.show()

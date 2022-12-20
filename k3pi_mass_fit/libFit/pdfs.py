@@ -4,7 +4,7 @@ PDFs, CDF, integrals etc. for mass fit signal and background shapes
 """
 import sys
 import pathlib
-from typing import Tuple
+from typing import Tuple, Callable
 import numpy as np
 from scipy.integrate import quad
 from iminuit import Minuit
@@ -392,3 +392,20 @@ def defaults(
     a, b = background_defaults(sign)
 
     return centre, width, alpha, beta, a, b
+
+
+def estimated_bkg(x: float, pdf: Callable, a_0: float, a_1: float, a_2: float) -> float:
+    """
+    Background model from estimated bkg
+
+    :param x: points
+    :param pdf: estimated bkg fcn - must be normalised
+    :params a_: polynomial coeffs
+
+    """
+    # Find the integral of the PDF so we can scale
+    a, b = domain()
+    width = b - a
+    integral = 1 + a_0 * width + a_1 * width**2 / 2 + a_2 * width**3 / 3
+
+    return (pdf(x) + a_0 + a_1 * (x - a) + a_2 * (x - a) ** 2) / integral
