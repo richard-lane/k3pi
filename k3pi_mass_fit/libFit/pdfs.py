@@ -409,3 +409,34 @@ def estimated_bkg(x: float, pdf: Callable, a_0: float, a_1: float, a_2: float) -
     integral = 1 + a_0 * width + a_1 * width**2 / 2 + a_2 * width**3 / 3
 
     return (pdf(x) + a_0 + a_1 * (x - a) + a_2 * (x - a) ** 2) / integral
+
+
+def model_alt_bkg(
+    x: np.ndarray,
+    n_sig: float,
+    n_bkg: float,
+    centre: float,
+    width_l: float,
+    width_r: float,
+    alpha_l: float,
+    alpha_r: float,
+    beta: float,
+    bkg_pdf: Callable,
+    a_0: float,
+    a_1: float,
+    a_2: float,
+) -> np.ndarray:
+    """
+    Fit model including the right number of signal and background events
+    with the alternate background model
+
+    """
+    return n_sig * normalised_signal(
+        x,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+    ) + n_bkg * estimated_bkg(x, bkg_pdf, a_0, a_1, a_2)
