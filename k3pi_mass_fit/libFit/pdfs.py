@@ -371,11 +371,11 @@ def signal_defaults(time_bin: int) -> Tuple[float, float, float, float]:
 
 def background_defaults(sign: str) -> Tuple[float, float]:
     """
-    default values for background parameters (a, b), for either "WS" or "WS"
+    default values for background parameters (a, b), for either "cf" or "dcs"
 
     """
-    assert sign in {"RS", "WS"}
-    if sign == "WS":
+    assert sign in {"dcs", "cf"}
+    if sign == "dcs":
         return 0.06, -0.00645
 
     return 0.004, -0.001
