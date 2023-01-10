@@ -262,3 +262,77 @@ def alt_bkg_fit(
     m.migrad()
 
     return m
+
+
+def alt_simultaneous_fit(
+    rs_counts: np.ndarray,
+    ws_counts: np.ndarray,
+    bins: np.ndarray,
+    time_bin: int,
+    rs_errors: np.ndarray = None,
+    ws_errors: np.ndarray = None,
+) -> Minuit:
+    """
+    Perform the fit, return the fitter
+
+    :param rs_delta_m: D* - D0 mass difference counts in the bins
+    :param ws_delta_m: D* - D0 mass difference counts in the bins
+    :param bins: delta M binning
+    :param time_bin: which time bin we're performing the fit in; this determines the value of beta
+    :param rs_errors: optional bin errors. Poisson errors assumed otherwise
+    :param ws_errors: optional bin errors. Poisson errors assumed otherwise
+
+    :returns: fitter after performing the fit
+
+    """
+    centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
+    width_r, alpha_r = width_l, alpha_l
+
+    a_0, a_1, a_2 = 0.0, 0.0, 0.0
+    # Get the bkg pdf from a pickle dump
+    # TODO do it right
+    cf_bkg = bkg.pdf(100, "cf", bdt_cut=False, efficiency=False)
+    dcs_bkg = bkg.pdf(100, "dcs", bdt_cut=False, efficiency=False)
+
+    chi2 = pdfs.SimulAltBkg(
+        cf_bkg, dcs_bkg, rs_counts, ws_counts, bins, rs_errors, ws_errors
+    )
+
+    n_rs = np.sum(rs_counts)
+    n_ws = np.sum(ws_counts)
+    rs_frac_guess, ws_frac_guess = 0.95, 0.05
+    m = Minuit(
+        chi2,
+        rs_n_sig=n_rs * rs_frac_guess,
+        rs_n_bkg=n_rs * (1 - rs_frac_guess),
+        ws_n_sig=n_ws * ws_frac_guess,
+        ws_n_bkg=n_ws * (1 - ws_frac_guess),
+        centre=centre,
+        width_l=width_l,
+        width_r=width_r,
+        alpha_l=alpha_l,
+        alpha_r=alpha_r,
+        beta=beta,
+        rs_a_0=a_0,
+        rs_a_1=a_1,
+        rs_a_2=a_2,
+        ws_a_0=a_0,
+        ws_a_1=a_1,
+        ws_a_2=a_2,
+    )
+    m.limits["centre"] = (144.0, 147.0)
+    m.limits["width_l"] = (0.1, 1.0)
+    m.limits["width_r"] = (0.1, 1.0)
+    m.limits["alpha_l"] = (0.01, 1.0)
+    m.limits["alpha_r"] = (0.01, 1.0)
+
+    m.fixed["beta"] = True
+
+    m.migrad(ncall=5000)
+
+    if m.valid:
+        m.minos()
+    else:
+        print(m)
+
+    return m

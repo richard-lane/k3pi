@@ -39,7 +39,7 @@ def _invmass_gen(year: str, sign: str, magnetisation: str, *, bdt_cut: bool):
 
     """
     # n iterations is the number of files * the number of repeats
-    n_repeats = 5
+    n_repeats = 1000
     total = n_repeats * _n_files(year, sign, magnetisation)
 
     df_generator = get.data(year, sign, magnetisation)

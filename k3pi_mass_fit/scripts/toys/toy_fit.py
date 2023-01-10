@@ -33,7 +33,7 @@ def _toy_fit(alt_bkg):
 
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
-    n_sig, n_bkg = 2000000, 5000000
+    n_sig, n_bkg = 2_000_000, 5_000_000
     combined, true_params = toy_utils.gen_points(
         np.random.default_rng(),
         n_sig,

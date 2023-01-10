@@ -76,6 +76,18 @@ def rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
     return rs_params, ws_params
 
 
+def alt_rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
+    """
+    Find RS and WS params from binned simultaneous fitter params
+    using the alternate bkg model
+
+    """
+    rs_params = (*params[:2], *params[4:13])
+    ws_params = (*params[2:10], *params[13:])
+
+    return rs_params, ws_params
+
+
 def _generators(
     year: str, magnetisation: str, *, bdt_cut: bool, phsp_bin: int
 ) -> Tuple[Iterable[pd.DataFrame], Iterable[pd.DataFrame]]:

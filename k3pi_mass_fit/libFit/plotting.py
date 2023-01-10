@@ -189,3 +189,66 @@ def alt_bkg_fit(
         yerr=errs,
         **err_kw,
     )
+
+
+def alt_bkg_simul(
+    rs_counts: np.ndarray,
+    rs_errs: np.ndarray,
+    ws_counts: np.ndarray,
+    ws_errs: np.ndarray,
+    bins: np.ndarray,
+    fit_params: Tuple,
+    *,
+    bdt_cut: bool,
+    efficiency: bool,
+) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
+    """
+    Plot a simultaneous RS and WS fit on four Axes - two histograms
+    and two pulls
+
+    :param rs_counts: counts in each bin
+    :param rs_errs: errors on the counts in each bin
+    :param ws_counts: counts in each bin
+    :param ws_errs: errors on the counts in each bin
+    :param bins: mass bins
+    :param fit_params: fit parameters as returned by the simultaneous fitter
+
+    :returns: the figure
+    :returns: a dict of A/B/C/D and the plot axes
+
+    """
+    rs_params, ws_params = util.alt_rs_ws_params(fit_params)
+
+    fig, axes = plt.subplot_mosaic(
+        "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(12, 8)
+    )
+
+    alt_bkg_fit(
+        (axes["A"], axes["C"]),
+        rs_counts,
+        rs_errs,
+        bins,
+        rs_params,
+        sign="cf",
+        bdt_cut=bdt_cut,
+        efficiency=efficiency,
+    )
+    alt_bkg_fit(
+        (axes["B"], axes["D"]),
+        ws_counts,
+        ws_errs,
+        bins,
+        ws_params,
+        sign="dcs",
+        bdt_cut=bdt_cut,
+        efficiency=efficiency,
+    )
+
+    axes["A"].legend()
+
+    axes["C"].plot(pdfs.domain(), [1, 1], "r-")
+    axes["D"].plot(pdfs.domain(), [1, 1], "r-")
+
+    fig.tight_layout()
+
+    return fig, axes

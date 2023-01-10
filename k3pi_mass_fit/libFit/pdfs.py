@@ -540,6 +540,8 @@ class SimulAltBkg:
 
     def __init__(
         self,
+        rs_bkg_pdf: np.ndarray,
+        ws_bkg_pdf: np.ndarray,
         rs_counts: np.ndarray,
         ws_counts: np.ndarray,
         bins: np.ndarray,
@@ -563,13 +565,16 @@ class SimulAltBkg:
                 "alpha_l",
                 "alpha_r",
                 "beta",
-                "a_0",
-                "a_1",
-                "a_2",
+                "rs_a_0",
+                "rs_a_1",
+                "rs_a_2",
+                "ws_a_0",
+                "ws_a_1",
+                "ws_a_2",
             ]
         )
-        self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
-        self.ws_chi2 = BinnedChi2(ws_counts, bins, ws_error)
+        self.rs_chi2 = AltBkgBinnedChi2(rs_bkg_pdf, rs_counts, bins, rs_error)
+        self.ws_chi2 = AltBkgBinnedChi2(ws_bkg_pdf, ws_counts, bins, ws_error)
 
     def __call__(
         self,
@@ -583,9 +588,12 @@ class SimulAltBkg:
         alpha_l: float,
         alpha_r: float,
         beta: float,
-        a_0: float,
-        a_1: float,
-        a_2: float,
+        rs_a_0: float,
+        rs_a_1: float,
+        rs_a_2: float,
+        ws_a_0: float,
+        ws_a_1: float,
+        ws_a_2: float,
     ) -> float:
         """
         Objective function
@@ -600,9 +608,9 @@ class SimulAltBkg:
             alpha_l,
             alpha_r,
             beta,
-            a_0,
-            a_1,
-            a_2,
+            rs_a_0,
+            rs_a_1,
+            rs_a_2,
         ) + self.ws_chi2(
             ws_n_sig,
             ws_n_bkg,
@@ -612,7 +620,7 @@ class SimulAltBkg:
             alpha_l,
             alpha_r,
             beta,
-            a_0,
-            a_1,
-            a_2,
+            ws_a_0,
+            ws_a_1,
+            ws_a_2,
         )
