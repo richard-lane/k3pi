@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from iminuit import Minuit
 
-from . import pdfs, plotting
+from . import pdfs, plotting, bkg
 
 
 def binned_fit(
@@ -24,7 +24,7 @@ def binned_fit(
 
     :param counts: array of D* - D0 mass differences
     :param bins: delta M binning used for the fit
-    :param sign: either "RS" or "WS"
+    :param sign: either "cf" or "dcs"
     :param time_bin: which time bin we're performing the fit in; this determines the value of beta
     :param signal_frac_guess: initial guess at the signal fraction
     :param errors: optional errors. If not provided Poisson errors assumed
@@ -32,7 +32,7 @@ def binned_fit(
     :returns: fitter after performing the fit
 
     """
-    assert sign in {"RS", "WS"}
+    assert sign in {"cf", "dcs"}
     assert len(counts) == len(bins) - 1
     if (errors is not None) and (len(errors) != len(counts)):
         raise ValueError(f"{len(errors)=}\t{len(counts)=}")
@@ -102,7 +102,7 @@ def binned_simultaneous_fit(
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
-    a, b = pdfs.background_defaults("RS")
+    a, b = pdfs.background_defaults("cf")
 
     chi2 = pdfs.SimultaneousBinnedChi2(rs_counts, ws_counts, bins, rs_errors, ws_errors)
 
@@ -188,3 +188,77 @@ def yields(
         plt.close(fig)
 
     return fit_yields, fit_errs
+
+
+def alt_bkg_fit(
+    counts: np.ndarray,
+    bins: np.ndarray,
+    sign: str,
+    time_bin: int,
+    signal_frac_guess: float,
+    *,
+    errors: np.ndarray = None,
+) -> Minuit:
+    """
+    Perform a binned fit with the alternate bkg, return the fitter
+
+    :param counts: array of D* - D0 mass differences
+    :param bins: delta M binning used for the fit
+    :param sign: either "cf" or "dcs"
+    :param time_bin: which time bin we're performing the fit in; this determines the value of beta
+    :param signal_frac_guess: initial guess at the signal fraction
+    :param errors: optional errors. If not provided Poisson errors assumed
+
+    :returns: fitter after performing the fit
+
+    """
+    assert sign in {"cf", "dcs"}
+    assert len(counts) == len(bins) - 1
+    if (errors is not None) and (len(errors) != len(counts)):
+        raise ValueError(f"{len(errors)=}\t{len(counts)=}")
+
+    centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
+    width_r, alpha_r = width_l, alpha_l
+
+    a_0, a_1, a_2 = 0.0, 0.0, 0.0
+
+    # Get the bkg pdf from a pickle dump
+    # TODO do it right
+    bkg_pdf = bkg.pdf(100, sign, bdt_cut=False, efficiency=False)
+
+    chi2 = pdfs.AltBkgBinnedChi2(bkg_pdf, counts, bins, errors)
+
+    n_tot = np.sum(counts)
+    m = Minuit(
+        chi2,
+        n_sig=signal_frac_guess * n_tot,
+        n_bkg=(1 - signal_frac_guess) * n_tot,
+        centre=centre,
+        width_l=width_l,
+        width_r=width_r,
+        alpha_l=alpha_l,
+        alpha_r=alpha_r,
+        beta=beta,
+        a_0=a_0,
+        a_1=a_1,
+        a_2=a_2,
+    )
+    m.limits = (
+        (None, None),  # N sig
+        (None, None),  # N bkg
+        (144.0, 147.0),  # Centre
+        (0.1, 1.0),  # width L
+        (0.1, 1.0),  # width R
+        (0.01, 1.0),  # alpha L
+        (0.01, 1.0),  # alpha R
+        (None, None),  # Beta (fixed below)
+        (None, None),  # Background a0
+        (None, None),  # Background a1
+        (None, None),  # Background a2
+    )
+
+    m.fixed["beta"] = True
+
+    m.migrad()
+
+    return m

@@ -440,3 +440,179 @@ def model_alt_bkg(
         alpha_r,
         beta,
     ) + n_bkg * estimated_bkg(x, bkg_pdf, a_0, a_1, a_2)
+
+
+class AltBkgBinnedChi2:
+    """
+    Cost function for binned mass fit
+
+    """
+
+    errordef = Minuit.LEAST_SQUARES
+
+    def __init__(
+        self,
+        bkg_pdf: Callable,
+        counts: np.ndarray,
+        bins: np.ndarray,
+        error: np.ndarray = None,
+    ):
+        """
+        Set things we need for the fit
+
+        If error not provided, Poisson errors assumed
+
+        """
+        # We need to tell Minuit what our function signature is explicitly
+        self.func_code = make_func_code(
+            [
+                "n_sig",
+                "n_bkg",
+                "centre",
+                "width_l",
+                "width_r",
+                "alpha_l",
+                "alpha_r",
+                "beta",
+                "a_0",
+                "a_1",
+                "a_2",
+            ]
+        )
+
+        if error is None:
+            error = np.sqrt(counts)
+
+        self.counts, self.error = counts, error
+        self.centres = (bins[1:] + bins[:-1]) / 2
+        self.widths = bins[1:] - bins[:-1]
+        self.pdf = bkg_pdf
+
+    def __call__(
+        self,
+        n_sig: float,
+        n_bkg: float,
+        centre: float,
+        width_l: float,
+        width_r: float,
+        alpha_l: float,
+        alpha_r: float,
+        beta: float,
+        a_0: float,
+        a_1: float,
+        a_2: float,
+    ) -> float:
+        """
+        Objective function
+
+        """
+        # Can't use stats.areas as that requires us to
+        # evaluate the PDF at each bin edge, which we can't
+        # do for the alt bkg (since it overflows)
+        # Instead evaluate at centres
+        predicted = self.widths * model_alt_bkg(
+            self.centres,
+            n_sig,
+            n_bkg,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            self.pdf,
+            a_0,
+            a_1,
+            a_2,
+        )
+
+        return np.sum((self.counts - predicted) ** 2 / self.error**2)
+
+
+class SimulAltBkg:
+    """
+    Cost function for binned mass fit,
+    simultaneous RS and WS fit with alt bkg model
+
+    """
+
+    errordef = Minuit.LEAST_SQUARES
+
+    def __init__(
+        self,
+        rs_counts: np.ndarray,
+        ws_counts: np.ndarray,
+        bins: np.ndarray,
+        rs_error: np.ndarray = None,
+        ws_error: np.ndarray = None,
+    ):
+        """
+        Set things we need for the fit
+
+        """
+        # We need to tell Minuit what our function signature is explicitly
+        self.func_code = make_func_code(
+            [
+                "rs_n_sig",
+                "rs_n_bkg",
+                "ws_n_sig",
+                "ws_n_bkg",
+                "centre",
+                "width_l",
+                "width_r",
+                "alpha_l",
+                "alpha_r",
+                "beta",
+                "a_0",
+                "a_1",
+                "a_2",
+            ]
+        )
+        self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
+        self.ws_chi2 = BinnedChi2(ws_counts, bins, ws_error)
+
+    def __call__(
+        self,
+        rs_n_sig: float,
+        rs_n_bkg: float,
+        ws_n_sig: float,
+        ws_n_bkg: float,
+        centre: float,
+        width_l: float,
+        width_r: float,
+        alpha_l: float,
+        alpha_r: float,
+        beta: float,
+        a_0: float,
+        a_1: float,
+        a_2: float,
+    ) -> float:
+        """
+        Objective function
+
+        """
+        return self.rs_chi2(
+            rs_n_sig,
+            rs_n_bkg,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a_0,
+            a_1,
+            a_2,
+        ) + self.ws_chi2(
+            ws_n_sig,
+            ws_n_bkg,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a_0,
+            a_1,
+            a_2,
+        )

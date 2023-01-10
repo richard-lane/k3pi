@@ -71,7 +71,7 @@ def _gen_bkg(
 
     """
     if n_bins is not None:
-        # Using the estimated bkg model
+        print("Generating toy points with the estimated bkg model")
         estimated_bkg = lib_bkg.pdf(
             n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency
         )
@@ -81,6 +81,8 @@ def _gen_bkg(
 
     else:
         # Using the sqrt model thing
+        print("Generating toy points with the sqrt bkg model")
+
         def bkg_pdf(x: np.ndarray) -> np.ndarray:
             return pdfs.background(x, *params)
 

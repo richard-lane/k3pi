@@ -5,6 +5,7 @@ Generate some points with accept/reject, fit to them and show the fit
 """
 import sys
 import pathlib
+import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,44 +17,73 @@ from libFit import pdfs, fit, toy_utils, plotting, definitions
 from lib_data import stats
 
 
-def _toy_fit():
+def _toy_fit(alt_bkg):
     """
     Generate some stuff, do a fit to it
 
     """
-    sign, time_bin = "RS", 5
+    sign, time_bin = "cf", 5
+
+    bkg_params = (0, 0, 0) if alt_bkg else pdfs.background_defaults(sign)
+    bkg_kw = (
+        {"n_bins": 100, "sign": sign, "bdt_cut": False, "efficiency": False}
+        if alt_bkg
+        else {}
+    )
 
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
-    n_sig, n_bkg = 1600000, 800000
+    n_sig, n_bkg = 2000000, 5000000
     combined, true_params = toy_utils.gen_points(
-        np.random.default_rng(), n_sig, n_bkg, sign, time_bin
+        np.random.default_rng(),
+        n_sig,
+        n_bkg,
+        sign,
+        time_bin,
+        bkg_params,
+        bkg_kw,
     )
 
-    # Perform fit
+    # Perform fits
     sig_frac = true_params[0]
     bins = definitions.mass_bins(200)
     counts, errs = stats.counts(combined, bins)
     binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
+    alt_fitter = fit.alt_bkg_fit(counts, bins, sign, time_bin, sig_frac)
 
-    fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nCCC")
+    fig, axes = plt.subplot_mosaic("AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(12, 8))
     plotting.mass_fit((axes["A"], axes["C"]), counts, errs, bins, binned_fitter.values)
+    plotting.alt_bkg_fit(
+        (axes["B"], axes["D"]),
+        counts,
+        errs,
+        bins,
+        alt_fitter.values,
+        sign=sign,
+        bdt_cut=False,
+        efficiency=False,
+    )
 
-    axes["A"].set_title("Binned")
+    axes["A"].set_title("Sqrt bkg fit")
+    axes["B"].set_title("Alt bkg fit")
 
-    fig.suptitle("toy data")
+    fig.suptitle(f"toy data{' alt bkg' if alt_bkg else ''}")
     fig.tight_layout()
 
-    plt.savefig("toy_mass_fit.png")
+    plt.savefig(f"toy_mass_fit{'_altbkg' if alt_bkg else ''}.png")
 
 
-def main():
+def main(args):
     """
     just do 1 fit
 
     """
-    _toy_fit()
+    alt_bkg = args.alt_bkg
+    _toy_fit(alt_bkg)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--alt_bkg", action="store_true")
+
+    main(parser.parse_args())
