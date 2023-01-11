@@ -22,17 +22,37 @@ def _separate_fit(
     bins: np.ndarray,
     sign: str,
     plot_path: str,
+    alt_bkg: bool,
 ):
     """
     Plot separate fits
 
     """
-    fitter = fit.binned_fit(
-        count, bins, sign, bin_number, 0.9 if sign == "RS" else 0.05
+    fitter = (
+        fit.alt_bkg_fit(
+            count, bins, sign, bin_number, 0.9 if sign == "cf" else 0.05, errors=err
+        )
+        if alt_bkg
+        else fit.binned_fit(
+            count, bins, sign, bin_number, 0.9 if sign == "cf" else 0.05, errors=err
+        )
     )
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(6, 8))
-    plotting.mass_fit((axes["A"], axes["B"]), count, err, bins, fitter.values)
+
+    if alt_bkg:
+        plotting.alt_bkg_fit(
+            (axes["A"], axes["B"]),
+            count,
+            err,
+            bins,
+            fitter.values,
+            sign=sign,
+            bdt_cut=False,
+            efficiency=False,
+        )
+    else:
+        plotting.mass_fit((axes["A"], axes["B"]), count, err, bins, fitter.values)
 
     axes["A"].legend()
 
@@ -55,30 +75,52 @@ def _fit(
     bin_number: int,
     bins: np.ndarray,
     fit_dir: str,
+    alt_bkg: bool,
 ) -> None:
     """
     Plot the fit
 
     """
-    fitter = fit.binned_simultaneous_fit(rs_count, ws_count, bins, bin_number)
+    fitter = (
+        fit.alt_simultaneous_fit(rs_count, ws_count, bins, bin_number, rs_err, ws_err)
+        if alt_bkg
+        else fit.binned_simultaneous_fit(
+            rs_count, ws_count, bins, bin_number, rs_err, ws_err
+        )
+    )
     params = fitter.values
     print(f"{fitter.valid=}", end="\t")
     print(f"{params[-2]} +- {fitter.errors[-2]}", end="\t")
     print(f"{params[-1]} +- {fitter.errors[-1]}")
 
-    fig, _ = plotting.simul_fits(
-        rs_count,
-        rs_err,
-        ws_count,
-        ws_err,
-        bins,
-        params,
+    fig, _ = (
+        plotting.alt_bkg_simul(
+            rs_count,
+            rs_err,
+            ws_count,
+            ws_err,
+            bins,
+            params,
+            bdt_cut=False,
+            efficiency=False,
+        )
+        if alt_bkg
+        else plotting.simul_fits(
+            rs_count,
+            rs_err,
+            ws_count,
+            ws_err,
+            bins,
+            params,
+        )
     )
 
     fig.suptitle(f"{fitter.valid=}")
     fig.tight_layout()
 
-    plot_path = f"{fit_dir}fit_{bin_number}.png"
+    bkg_str = "_alt_bkg" if alt_bkg else ""
+    plot_path = f"{fit_dir}fit_{bkg_str}{bin_number}.png"
+
     print(f"Saving {plot_path}")
     fig.savefig(plot_path)
     plt.close(fig)
@@ -92,7 +134,7 @@ def main(args: argparse.Namespace):
     if args.efficiency:
         assert args.bdt_cut
 
-    bins = definitions.mass_bins(200)
+    bins = definitions.mass_bins(100)
     time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
 
     year, magnetisation = args.year, args.magnetisation
@@ -109,12 +151,30 @@ def main(args: argparse.Namespace):
 
     plot_dir = mass_util.plot_dir(args.bdt_cut, args.efficiency, args.phsp_bin)
 
+    bkg_str = "alt_bkg_" if args.alt_bkg else ""
+
     for i, (dcs_count, cf_count, dcs_err, cf_err) in enumerate(
         zip(dcs_counts[1:-1], cf_counts[1:-1], dcs_errs[1:-1], cf_errs[1:-1])
     ):
-        _fit(cf_count, dcs_count, cf_err, dcs_err, i, bins, plot_dir)
-        _separate_fit(cf_count, cf_err, i, bins, "RS", f"{plot_dir}rs/{i}.png")
-        _separate_fit(dcs_count, dcs_err, i, bins, "WS", f"{plot_dir}ws/{i}.png")
+        _fit(cf_count, dcs_count, cf_err, dcs_err, i, bins, plot_dir, args.alt_bkg)
+        _separate_fit(
+            cf_count,
+            cf_err,
+            i,
+            bins,
+            "cf",
+            f"{plot_dir}{bkg_str}rs/{i}.png",
+            args.alt_bkg,
+        )
+        _separate_fit(
+            dcs_count,
+            dcs_err,
+            i,
+            bins,
+            "dcs",
+            f"{plot_dir}{bkg_str}ws/{i}.png",
+            args.alt_bkg,
+        )
 
 
 if __name__ == "__main__":
@@ -137,6 +197,11 @@ if __name__ == "__main__":
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")
     parser.add_argument(
         "--efficiency", action="store_true", help="Correct for the detector efficiency"
+    )
+    parser.add_argument(
+        "--alt_bkg",
+        action="store_true",
+        help="Whether to attempt the fits with the alternate background model",
     )
 
     main(parser.parse_args())

@@ -235,6 +235,7 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
     Creates it if it doesnt exist
 
     Also creates subdirs /ws/ and /rs/
+    and some alt bkg subdirs
 
     """
     if correct_efficiency:
@@ -249,7 +250,13 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
 
     retval = os.path.join(retval, f"bin_{phsp_bin}/")
 
-    for dir_ in (retval, f"{retval}ws/", f"{retval}rs/"):
+    for dir_ in (
+        retval,
+        f"{retval}ws/",
+        f"{retval}rs/",
+        f"{retval}alt_bkg_rs",
+        f"{retval}alt_bkg_ws",
+    ):
         if not os.path.isdir(dir_):
             os.makedirs(dir_)
 
