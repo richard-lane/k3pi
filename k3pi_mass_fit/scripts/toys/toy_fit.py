@@ -48,8 +48,12 @@ def _toy_fit(alt_bkg):
     sig_frac = true_params[0]
     bins = definitions.mass_bins(200)
     counts, errs = stats.counts(combined, bins)
-    binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
-    alt_fitter = fit.alt_bkg_fit(counts, bins, sign, time_bin, sig_frac)
+    binned_fitter = fit.binned_fit(
+        counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
+    )
+    alt_fitter = fit.alt_bkg_fit(
+        counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
+    )
 
     fig, axes = plt.subplot_mosaic("AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(12, 8))
     plotting.mass_fit((axes["A"], axes["C"]), counts, errs, bins, binned_fitter.values)

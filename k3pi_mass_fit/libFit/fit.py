@@ -198,6 +198,8 @@ def alt_bkg_fit(
     signal_frac_guess: float,
     *,
     errors: np.ndarray = None,
+    bdt_cut: bool = False,
+    efficiency: bool = False,
 ) -> Minuit:
     """
     Perform a binned fit with the alternate bkg, return the fitter
@@ -208,6 +210,8 @@ def alt_bkg_fit(
     :param time_bin: which time bin we're performing the fit in; this determines the value of beta
     :param signal_frac_guess: initial guess at the signal fraction
     :param errors: optional errors. If not provided Poisson errors assumed
+    :param bdt_cut: whether to model the background after the BDT cut
+    :param efficiency: whether to model the background after the efficiency correction
 
     :returns: fitter after performing the fit
 
@@ -223,8 +227,7 @@ def alt_bkg_fit(
     a_0, a_1, a_2 = 0.0, 0.0, 0.0
 
     # Get the bkg pdf from a pickle dump
-    # TODO do it right
-    bkg_pdf = bkg.pdf(100, sign, bdt_cut=False, efficiency=False)
+    bkg_pdf = bkg.pdf(len(counts), sign, bdt_cut=bdt_cut, efficiency=efficiency)
 
     chi2 = pdfs.AltBkgBinnedChi2(bkg_pdf, counts, bins, errors)
 
@@ -271,6 +274,9 @@ def alt_simultaneous_fit(
     time_bin: int,
     rs_errors: np.ndarray = None,
     ws_errors: np.ndarray = None,
+    *,
+    bdt_cut: bool = False,
+    efficiency: bool = False,
 ) -> Minuit:
     """
     Perform the fit, return the fitter
@@ -285,14 +291,16 @@ def alt_simultaneous_fit(
     :returns: fitter after performing the fit
 
     """
+    assert len(rs_counts) == len(ws_counts)
+    assert len(bins) - 1 == len(ws_counts)
+
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
     a_0, a_1, a_2 = 0.0, 0.0, 0.0
     # Get the bkg pdf from a pickle dump
-    # TODO do it right
-    cf_bkg = bkg.pdf(100, "cf", bdt_cut=False, efficiency=False)
-    dcs_bkg = bkg.pdf(100, "dcs", bdt_cut=False, efficiency=False)
+    cf_bkg = bkg.pdf(len(rs_counts), "cf", bdt_cut=bdt_cut, efficiency=efficiency)
+    dcs_bkg = bkg.pdf(len(rs_counts), "dcs", bdt_cut=bdt_cut, efficiency=efficiency)
 
     chi2 = pdfs.SimulAltBkg(
         cf_bkg, dcs_bkg, rs_counts, ws_counts, bins, rs_errors, ws_errors

@@ -22,7 +22,10 @@ def _separate_fit(
     bins: np.ndarray,
     sign: str,
     plot_path: str,
+    *,
     alt_bkg: bool,
+    bdt_cut: bool,
+    efficiency: bool,
 ):
     """
     Plot separate fits
@@ -30,7 +33,14 @@ def _separate_fit(
     """
     fitter = (
         fit.alt_bkg_fit(
-            count, bins, sign, bin_number, 0.9 if sign == "cf" else 0.05, errors=err
+            count,
+            bins,
+            sign,
+            bin_number,
+            0.9 if sign == "cf" else 0.05,
+            errors=err,
+            bdt_cut=bdt_cut,
+            efficiency=efficiency,
         )
         if alt_bkg
         else fit.binned_fit(
@@ -75,14 +85,26 @@ def _fit(
     bin_number: int,
     bins: np.ndarray,
     fit_dir: str,
+    *,
     alt_bkg: bool,
+    bdt_cut: bool,
+    efficiency: bool,
 ) -> None:
     """
     Plot the fit
 
     """
     fitter = (
-        fit.alt_simultaneous_fit(rs_count, ws_count, bins, bin_number, rs_err, ws_err)
+        fit.alt_simultaneous_fit(
+            rs_count,
+            ws_count,
+            bins,
+            bin_number,
+            rs_err,
+            ws_err,
+            bdt_cut=bdt_cut,
+            efficiency=efficiency,
+        )
         if alt_bkg
         else fit.binned_simultaneous_fit(
             rs_count, ws_count, bins, bin_number, rs_err, ws_err
@@ -156,7 +178,18 @@ def main(args: argparse.Namespace):
     for i, (dcs_count, cf_count, dcs_err, cf_err) in enumerate(
         zip(dcs_counts[1:-1], cf_counts[1:-1], dcs_errs[1:-1], cf_errs[1:-1])
     ):
-        _fit(cf_count, dcs_count, cf_err, dcs_err, i, bins, plot_dir, args.alt_bkg)
+        _fit(
+            cf_count,
+            dcs_count,
+            cf_err,
+            dcs_err,
+            i,
+            bins,
+            plot_dir,
+            alt_bkg=args.alt_bkg,
+            bdt_cut=args.bdt_cut,
+            efficiency=args.efficiency,
+        )
         _separate_fit(
             cf_count,
             cf_err,
@@ -164,7 +197,9 @@ def main(args: argparse.Namespace):
             bins,
             "cf",
             f"{plot_dir}{bkg_str}rs/{i}.png",
-            args.alt_bkg,
+            alt_bkg=args.alt_bkg,
+            bdt_cut=args.bdt_cut,
+            efficiency=args.efficiency,
         )
         _separate_fit(
             dcs_count,
@@ -173,7 +208,9 @@ def main(args: argparse.Namespace):
             bins,
             "dcs",
             f"{plot_dir}{bkg_str}ws/{i}.png",
-            args.alt_bkg,
+            alt_bkg=args.alt_bkg,
+            bdt_cut=args.bdt_cut,
+            efficiency=args.efficiency,
         )
 
 

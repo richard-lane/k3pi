@@ -45,10 +45,24 @@ def _toy_fit(alt_bkg: bool):
     rs_counts, rs_errs = stats.counts(rs_masses, bins)
     ws_counts, ws_errs = stats.counts(ws_masses, bins)
     binned_fitter = fit.binned_simultaneous_fit(
-        rs_counts, ws_counts, bins, time_bin, rs_errs, ws_errs
+        rs_counts,
+        ws_counts,
+        bins,
+        time_bin,
+        rs_errs,
+        ws_errs,
+        bdt_cut=False,
+        efficiency=False,
     )
     alt_fitter = fit.alt_simultaneous_fit(
-        rs_counts, ws_counts, bins, time_bin, rs_errs, ws_errs
+        rs_counts,
+        ws_counts,
+        bins,
+        time_bin,
+        rs_errs,
+        ws_errs,
+        bdt_cut=False,
+        efficiency=False,
     )
 
     fig, _ = plotting.simul_fits(
