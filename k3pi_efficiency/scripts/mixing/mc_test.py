@@ -193,7 +193,7 @@ def _mixing_weights(
     dcs_lifetimes = dcs_df["time"]
 
     # Need to find the right amount to scale the amplitudes by
-    dcs_scale = r_d * np.sqrt(amplitudes.DCS_AVG_SQ / amplitudes.CF_AVG_SQ)
+    dcs_scale = r_d * np.sqrt(amplitudes.CF_AVG_SQ / amplitudes.DCS_AVG_SQ)
     mixing_weights = mixing.ws_mixing_weights(
         dcs_k3pi, dcs_lifetimes, params, +1, q_p, cf_scale=1.0, dcs_scale=dcs_scale
     )
