@@ -1,0 +1,76 @@
+data
+====
+    mc corrections
+    ----
+    [ ] work out a scheme for storing these weights in a dataframe or something
+    [ ] pid calib
+        [ ] create histograms (partly done)
+        [ ] add weights column to dataframes
+    [ ] D momentum
+        [ ] create plot
+        [ ] add weights column to dataframes
+    [ ] eta
+        [ ] create plot
+        [ ] add weights column to dataframes
+
+    the other years
+    ----
+    [ ] 2018 MagDown
+    [ ] 2018 MagUp
+    [ ] 2017 MagDown
+    [ ] 2017 MagUp
+    [ ] 2016 MagDown
+    [ ] 2016 MagUp
+    [ ] whatever else
+
+    [ ] sensibly deal with K+ and K-
+
+bdt cut
+====
+    systematics
+    ----
+    [ ] work out how to do it
+    [ ] do it
+
+    [ ] see if secondaries really are removed by BDT cut
+        - [ ] turn the value of the BDT cut up - see what happens to secondaries
+
+efficiency
+====
+    implementation
+    ----
+    [ ] Make it smoother
+        - [ ] try with more trees
+        - [ ] compare it to time-only
+    [ ] Make the low time cutoff value consistent everywhere
+
+    systematic
+    ----
+    [ ] work out how to assign a systematic
+    [ ] do it
+
+    simulation
+    ----
+    [ ] fix the scaling
+    [ ] do a study where we correct for an efficiency after introducing some mixing
+
+
+mass fit
+====
+    implementation
+    ----
+    [ ] decide if it is now working
+
+    systematic
+    ----
+    [ ] work out how to assign a systematic
+    [ ] do it maybe
+
+charm fit
+====
+    BES-CLEO combination
+    ----
+    [ ] find out whether the CLEO params are right
+    [ ] address it - either remove CLEO or use the right param
+    [ ] find out whether the BES params are right (i think they are)
+
