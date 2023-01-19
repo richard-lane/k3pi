@@ -258,13 +258,13 @@ def main():
     dcs_df = dcs_df.astype({k: np.float64 for k in definitions.MOMENTUM_COLUMNS})
 
     # Parameters determining mixing
-    r_d = np.sqrt(0.3)
+    r_d = np.sqrt(0.5)
     print(f"{r_d**2=}")
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
-        mixing_x=10 * pdg_params.mixing_x(),
-        mixing_y=10 * pdg_params.mixing_y(),
+        mixing_x=5 * pdg_params.mixing_x(),
+        mixing_y=5 * pdg_params.mixing_y(),
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 

@@ -243,7 +243,7 @@ def main():
     dcs_df = efficiency_util.ampgen_df("dcs", "k_plus", train=None)
 
     # Parameters determining mixing
-    r_d = np.sqrt(0.1)
+    r_d = np.sqrt(0.5)
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
