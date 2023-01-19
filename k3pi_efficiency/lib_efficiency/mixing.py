@@ -187,6 +187,7 @@ def _ws_weights(
     params: MixingParams,
     q_p: Tuple,
     scales: Tuple = (1.0, 1.0),
+    denom_scale: float = 1.0,
 ) -> np.ndarray:
     """
     Weights from amplitudes + times
@@ -199,6 +200,7 @@ def _ws_weights(
     :param params: mixing parameters
     :param q_p: values of q and p.
     :param scales: (CF, DCS) amplitude scaling factors to apply to the numerator
+    :param denom_scale: scaling factors to apply to the amplitude in the denom
     :returns: weights
 
     """
@@ -215,7 +217,7 @@ def _ws_weights(
     )
     num = np.abs(num) ** 2
 
-    denom = np.exp(-times) * np.abs(d0_amplitudes) ** 2
+    denom = np.exp(-times) * (denom_scale * np.abs(d0_amplitudes)) ** 2
 
     return num / denom
 
@@ -228,6 +230,7 @@ def ws_mixing_weights(
     q_p: Tuple = None,
     cf_scale: float = 1.0,
     dcs_scale: float = 1.0,
+    denom_scale: float = 1.0,
 ) -> np.ndarray:
     """
     Weights to apply to WS events to add mixing as defined by the mixing parameters provided
@@ -240,6 +243,7 @@ def ws_mixing_weights(
     :param q_p: values of q and p. If not provided defaults to no CPV
     :param cf_scale: scaling factor to multiply CF amplitudes by
     :param dcs_scale: scaling factor to multiply DCS amplitudes by
+    :param denom_scale: scaling factor to multiply amplitude by in the denominator
 
     :returns: array of weights
 
@@ -262,4 +266,5 @@ def ws_mixing_weights(
         mixing_params,
         q_p,
         (cf_scale, dcs_scale),
+        denom_scale,
     )

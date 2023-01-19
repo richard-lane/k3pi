@@ -116,11 +116,12 @@ def _time_plot(
         im_z=expected_z.imag,
     )
     print(f"{ideal=}")
-    plotting.scan_fit(ax, ideal, "--m", "True")
+    plotting.scan_fit(ax, ideal, "--m", "Expected Fit,\nsmall mixing approximation")
 
     ax.set_xlabel(r"$\frac{t}{\tau}$")
     ax.set_ylabel(r"$\frac{WS}{RS}$")
     ax.legend()
+    ax.set_xlim(0.0, None)
     plt.savefig("ampgen_mixed_times.png")
 
     plt.show()
@@ -191,19 +192,43 @@ def _mixing_weights(
     dcs_lifetimes = dcs_df["time"]
 
     # Need to find the right amount to scale the amplitudes by
-    dcs_scale = r_d * np.sqrt(amplitudes.CF_AVG_SQ / amplitudes.DCS_AVG_SQ)
+    dcs_scale = r_d / np.sqrt(amplitudes.DCS_AVG_SQ)
+    cf_scale = 1 / np.sqrt(amplitudes.CF_AVG_SQ)
+    denom_scale = 1 / np.sqrt(amplitudes.DCS_AVG_SQ)
     mixing_weights = mixing.ws_mixing_weights(
-        dcs_k3pi, dcs_lifetimes, params, +1, q_p, cf_scale=1.0, dcs_scale=dcs_scale
+        dcs_k3pi,
+        dcs_lifetimes,
+        params,
+        +1,
+        q_p,
+        dcs_scale=dcs_scale,
+        cf_scale=cf_scale,
+        denom_scale=denom_scale,
     )
 
-    _hists(cf_df, dcs_df, mixing_weights)
+    # Print the mixing weight at t=0; this should be r_D^2
+    weights_at_zero_time = mixing.ws_mixing_weights(
+        dcs_k3pi,
+        np.zeros(len(dcs_df)),
+        params,
+        +1,
+        q_p,
+        dcs_scale=dcs_scale,
+        cf_scale=cf_scale,
+        denom_scale=denom_scale,
+    )
+    print(f"{weights_at_zero_time=}")
+
+    # _hists(cf_df, dcs_df, mixing_weights)
 
     # Scale weights such that their mean is right
+    # This only works for small mixing
     # Want sum(wt) = N_{cf} * dcs integral / cf integral
     # cf integral = 1 since its just an exponential
-    z = _z(dcs_df, mixing_weights)
-    dcs_integral = _exact_dcs_integral(r_d, params.mixing_x, params.mixing_y, z)
-    scale = dcs_integral * len(cf_df) / (np.mean(mixing_weights) * len(mixing_weights))
+    # z = _z(dcs_df, mixing_weights)
+    # dcs_integral = _exact_dcs_integral(r_d, params.mixing_x, params.mixing_y, z)
+    # scale = dcs_integral * len(cf_df) / (np.mean(mixing_weights) * len(mixing_weights))
+    scale = len(dcs_df) / len(cf_df)
 
     return mixing_weights * scale
 
@@ -218,12 +243,12 @@ def main():
     dcs_df = efficiency_util.ampgen_df("dcs", "k_plus", train=None)
 
     # Parameters determining mixing
-    r_d = np.sqrt(0.5)
+    r_d = np.sqrt(0.1)
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
-        mixing_x=10 * pdg_params.mixing_x(),
-        mixing_y=10 * pdg_params.mixing_y(),
+        mixing_x=5 * pdg_params.mixing_x(),
+        mixing_y=5 * pdg_params.mixing_y(),
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
