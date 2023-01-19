@@ -32,7 +32,7 @@ Mass Fit Toy
 ----
 With some toy $\Delta M$ values (generated from the fitting PDF), we can do a mass fit:
 
-![binned mass fit](/../example_plots/binned_toy_simul_fit.png)
+![binned mass fit](/../example_plots/simul_sqrt_model_sqrt_fit.png)
 ![unbinned mass fit](/../example_plots/unbinned_toy_simul_fit.png)
 
 Time Fitter Toys

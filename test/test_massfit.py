@@ -19,7 +19,7 @@ def test_bkg_normalised():
 
     """
     assert np.isclose(
-        quad(pdfs.normalised_bkg, *pdfs.domain(), args=pdfs.background_defaults("WS"))[
+        quad(pdfs.normalised_bkg, *pdfs.domain(), args=pdfs.background_defaults("dcs"))[
             0
         ],
         1.0,
