@@ -44,6 +44,8 @@ efficiency
         - [ ] compare it to time-only
     [ ] Make the low time cutoff value consistent everywhere
     [ ] Implement absolute efficiency scaling
+    [ ] Normalise weights correctly
+        - instead of normalising a chunk at a time, should somehow normalise them overall
 
     systematic
     ----
