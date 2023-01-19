@@ -48,28 +48,30 @@ def _toy_fit(alt_bkg):
     sig_frac = true_params[0]
     bins = definitions.mass_bins(200)
     counts, errs = stats.counts(combined, bins)
-    binned_fitter = fit.binned_fit(
-        counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
-    )
-    alt_fitter = fit.alt_bkg_fit(
-        counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
-    )
+    binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
     fig, axes = plt.subplot_mosaic("AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(12, 8))
     plotting.mass_fit((axes["A"], axes["C"]), counts, errs, bins, binned_fitter.values)
-    plotting.alt_bkg_fit(
-        (axes["B"], axes["D"]),
-        counts,
-        errs,
-        bins,
-        alt_fitter.values,
-        sign=sign,
-        bdt_cut=False,
-        efficiency=False,
-    )
+
+    try:
+        alt_fitter = fit.alt_bkg_fit(
+            counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
+        )
+        plotting.alt_bkg_fit(
+            (axes["B"], axes["D"]),
+            counts,
+            errs,
+            bins,
+            alt_fitter.values,
+            sign=sign,
+            bdt_cut=False,
+            efficiency=False,
+        )
+        axes["B"].set_title("Alt bkg fit")
+    except FileNotFoundError:
+        axes["B"].set_title("Alt bkg not possible; pickle dump not created")
 
     axes["A"].set_title("Sqrt bkg fit")
-    axes["B"].set_title("Alt bkg fit")
 
     fig.suptitle(f"toy data{' alt bkg' if alt_bkg else ''}")
     fig.tight_layout()

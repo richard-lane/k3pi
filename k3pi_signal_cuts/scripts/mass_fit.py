@@ -19,9 +19,10 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
-from libFit import pdfs
-from libFit.fit import simultaneous_fit
-from lib_data import get
+from libFit import plotting, definitions, pdfs
+from libFit.fit import binned_simultaneous_fit
+from libFit.util import rs_ws_params
+from lib_data import get, stats
 
 
 def _delta_m(data: pd.DataFrame) -> np.ndarray:
@@ -30,12 +31,11 @@ def _delta_m(data: pd.DataFrame) -> np.ndarray:
 
 
 def _plot(
-    ax: plt.Axes,
+    axes: Tuple[plt.Axes, plt.Axes],
     delta_m: np.ndarray,
     bins: np.ndarray,
     params: Tuple,
     scale: float,
-    fmt: str,
 ):
     """
     Plot shared stuff - the fits + signal/bkg components
@@ -44,26 +44,7 @@ def _plot(
     count, _ = np.histogram(delta_m, bins)
     err = np.sqrt(count)
 
-    centres = (bins[1:] + bins[:-1]) / 2
-    ax.errorbar(centres, count, yerr=err, fmt="k.")
-    predicted = scale * pdfs.fractional_pdf(centres, *params)
-    ax.plot(centres, predicted, fmt + "-")
-
-    ax.plot(
-        centres,
-        scale * params[0] * pdfs.normalised_signal(centres, *params[1:-2]),
-        fmt + "--",
-        label="signal",
-    )
-
-    ax.plot(
-        centres,
-        scale * (1 - params[0]) * pdfs.normalised_bkg(centres, *params[-2:]),
-        fmt + ":",
-        label="bkg",
-    )
-
-    ax.set_xlabel(r"$\Delta M$ / MeV")
+    plotting.mass_fit(axes, count, err, bins, params)
 
 
 def _ws_bkg(
@@ -89,11 +70,11 @@ def _rs_signal(
     Fitted signal component for RS data, scaled using the amplitude ratio ^ 2
 
     """
-    return scale * signal_fraction * pdfs.normalised_signal(domain, *sig_params)
+    return scale * signal_fraction * pdfs.normalised_signal(domain, *sig_params[1:])
 
 
 def _rs_plot(
-    axis: plt.Axes,
+    axes: Tuple[plt.Axes, plt.Axes],
     delta_m: np.ndarray,
     bins: np.ndarray,
     params: Tuple,
@@ -104,11 +85,11 @@ def _rs_plot(
     Plot RS stuff - the signal, bkg and shaded/scaled signal on an axis
 
     """
-    _plot(axis, delta_m, bins, params, scale, "b")
+    _plot(axes, delta_m, bins, params, scale)
 
     # Shade the RS signal region; this is where we will take the number of signal events
     # for optimising the classifier
-    axis.fill_between(
+    axes[0].fill_between(
         signal_region,
         _rs_signal(signal_region, scale, params[0], params[1:-2]),
         color="b",
@@ -117,7 +98,7 @@ def _rs_plot(
 
 
 def _ws_plot(
-    axis: plt.Axes,
+    axes: Tuple[plt.Axes, plt.Axes],
     delta_m: np.ndarray,
     bins: np.ndarray,
     params: Tuple,
@@ -128,11 +109,11 @@ def _ws_plot(
     Plot WS stuff - the signal, bkg and shaded/scaled signal on an axis
 
     """
-    _plot(axis, delta_m, bins, params, scale, "r")
+    _plot(axes, delta_m, bins, params, scale)
 
     # Shade the WS bkg region where we want to take the number of bkg events from for optimising
     # the classifier
-    axis.fill_between(
+    axes[0].fill_between(
         signal_region,
         _ws_bkg(signal_region, scale, params[0], params[-2:]),
         color="r",
@@ -148,18 +129,18 @@ def _plot_fit(
 
     """
     bins = np.linspace(140, 152, 150)
-    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+    fig, ax = plt.subplot_mosaic("AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(12, 6))
 
     signal_region = np.linspace(144, 147, 200)
     # scales assume equally spaced bins
-    rs_params = params[:-1]
-    ws_params = (params[-1], *params[1:-1])
+    rs_params, ws_params = rs_ws_params(params)
+
     rs_scale = len(rs) * (bins[1] - bins[0])
-    _rs_plot(ax[0], rs, bins, rs_params, rs_scale, signal_region)
+    _rs_plot((ax["A"], ax["C"]), rs, bins, rs_params, rs_scale, signal_region)
 
     ws_scale = len(ws) * (bins[1] - bins[0])
     _ws_plot(
-        ax[1],
+        (ax["B"], ax["D"]),
         ws,
         bins,
         ws_params,
@@ -174,15 +155,15 @@ def _plot_fit(
         )
 
     amplitude_ratio = 0.0601387
-    ax[1].fill_between(
+    ax["A"].fill_between(
         signal_region,
         _scaled_signal(signal_region),
         color="b",
         alpha=0.2,
     )
 
-    ax[0].set_title(r"RS $\Delta M$")
-    ax[1].set_title(r"WS $\Delta M$")
+    ax["A"].set_title(r"RS $\Delta M$")
+    ax["B"].set_title(r"WS $\Delta M$")
 
     # Draw an arrow between the signal peaks to show it's scaled
     start = 145.5, 20000
@@ -192,8 +173,8 @@ def _plot_fit(
         xyB=end,
         coordsA="data",
         coordsB="data",
-        axesA=ax[0],
-        axesB=ax[1],
+        axesA=ax["A"],
+        axesB=ax["B"],
         color="b",
         linewidth=2,
         arrowstyle="->",
@@ -204,8 +185,8 @@ def _plot_fit(
     # xy is the mean of the start/end points as returned by ax[1].transData.transform, etc
     # For some reason calling these refreshes the canvas in the right way to make the calculation
     # work
-    _ = ax[0].get_xlim(), ax[0].get_ylim()
-    _ = ax[1].get_xlim(), ax[1].get_ylim()
+    _ = ax["A"].get_xlim(), ax["A"].get_ylim()
+    _ = ax["B"].get_xlim(), ax["B"].get_ylim()
 
     def data2fig(fig, ax, point):
         transform = ax.transData + fig.transFigure.inverted()
@@ -213,7 +194,7 @@ def _plot_fit(
 
     # Don't want the label exactly at the midpoint because it looks messy
     # This should be a function really but I'm quite tired now
-    arrow_start, arrow_end = data2fig(fig, ax[0], start), data2fig(fig, ax[1], end)
+    arrow_start, arrow_end = data2fig(fig, ax["A"], start), data2fig(fig, ax["B"], end)
     length = np.linalg.norm(arrow_end - arrow_start)
     dirn = (arrow_end - arrow_start) / length
     text_locn = arrow_start + 0.85 * length * dirn
@@ -230,7 +211,7 @@ def _plot_fit(
 
     print(f"{n_signal=:.4f}, {n_bkg=:.4f}")
     fig.suptitle(f"signal fraction {n_signal / (n_signal + n_bkg):.4f}")
-    ax[1].set_title(f"{ax[1].get_title()}; sig/bkg {n_signal:.1f}/{n_bkg:.1f}")
+    ax["B"].set_title(f"{ax['B'].get_title()}; sig/bkg {n_signal:.1f}/{n_bkg:.1f}")
 
     return fig, ax
 
@@ -240,10 +221,16 @@ def main():
     Create plots
 
     """
-    rs = _delta_m(pd.concat(get.data("2018", "cf", "magdown")))
-    ws = _delta_m(pd.concat(get.data("2018", "dcs", "magdown")))
+    bins = definitions.mass_bins()
 
-    fitter = simultaneous_fit(rs, ws, 5)
+    rs = stats.counts_generator(
+        (_delta_m(dataframe) for dataframe in get.data("2018", "cf", "magdown")), bins
+    )
+    ws = stats.counts_generator(
+        (_delta_m(dataframe) for dataframe in get.data("2018", "dcs", "magdown")), bins
+    )
+
+    fitter = binned_simultaneous_fit(rs, ws, bins, 5)
     fig, _ = _plot_fit(rs, ws, fitter.values)
 
     fig.tight_layout()

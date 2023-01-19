@@ -32,8 +32,9 @@ bdt cut
     [ ] work out how to do it
     [ ] do it
 
-    [ ] see if secondaries really are removed by BDT cut
-        - [ ] turn the value of the BDT cut up - see what happens to secondaries
+    [x] see if secondaries really are removed by BDT cut
+        - [x] turn the value of the BDT cut up - see what happens to secondaries
+        - looks good enough for now; should do a full study with 11166001 in future but we can do that later (i.e. never)
 
 efficiency
 ====

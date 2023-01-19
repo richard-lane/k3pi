@@ -126,7 +126,7 @@ def gen_points(
     """
     Generate n_sig and n_bkg points; see which are kept using accept-reject; return an array of both
 
-    bkg_params is a dict of args to pass to gen_bkg fcn,
+    bkg_kw is a dict of args to pass to gen_bkg fcn,
     in case we want to pass info like n_bins for finding the
     estimated bkg fcn from a pickle dump
 

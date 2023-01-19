@@ -57,7 +57,7 @@ def main():
     time_bins = np.array((-100, *TIME_BINS[1:], np.inf))
 
     # Get counts
-    bins = np.concatenate(([-15], np.linspace(-10, 10, 500), [15]))
+    bins = np.concatenate(([-20], np.linspace(-10, 10, 500), [20]))
     dcs_counts, dcs_errors = _counts(
         "dcs", time_bins, bins, _time_indices("dcs", time_bins)
     )

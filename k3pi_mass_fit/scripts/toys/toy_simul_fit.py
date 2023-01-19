@@ -51,20 +51,7 @@ def _toy_fit(alt_bkg: bool):
         time_bin,
         rs_errs,
         ws_errs,
-        bdt_cut=False,
-        efficiency=False,
     )
-    alt_fitter = fit.alt_simultaneous_fit(
-        rs_counts,
-        ws_counts,
-        bins,
-        time_bin,
-        rs_errs,
-        ws_errs,
-        bdt_cut=False,
-        efficiency=False,
-    )
-
     fig, _ = plotting.simul_fits(
         rs_counts,
         rs_errs,
@@ -77,20 +64,33 @@ def _toy_fit(alt_bkg: bool):
     fig.suptitle(f"{model_str}; sqrt fit")
     fig.tight_layout()
     fig.savefig(f"simul_{model_str.replace(' ', '_')}_sqrt_fit.png")
+    try:
+        alt_fitter = fit.alt_simultaneous_fit(
+            rs_counts,
+            ws_counts,
+            bins,
+            time_bin,
+            rs_errs,
+            ws_errs,
+            bdt_cut=False,
+            efficiency=False,
+        )
 
-    fig, _ = plotting.alt_bkg_simul(
-        rs_counts,
-        rs_errs,
-        ws_counts,
-        ws_errs,
-        bins,
-        alt_fitter.values,
-        bdt_cut=False,
-        efficiency=False,
-    )
-    fig.suptitle(f"{model_str}; alt fit")
-    fig.tight_layout()
-    fig.savefig(f"simul_{model_str.replace(' ', '_')}_alt_fit.png")
+        fig, _ = plotting.alt_bkg_simul(
+            rs_counts,
+            rs_errs,
+            ws_counts,
+            ws_errs,
+            bins,
+            alt_fitter.values,
+            bdt_cut=False,
+            efficiency=False,
+        )
+        fig.suptitle(f"{model_str}; alt fit")
+        fig.tight_layout()
+        fig.savefig(f"simul_{model_str.replace(' ', '_')}_alt_fit.png")
+    except FileNotFoundError:
+        pass
 
 
 def main(args):

@@ -64,12 +64,20 @@ def test_alt_bkg_normalised():
     domain_width = b - a
 
     # Pretend the estimated bkg is a constant
-    estimated_bkg_pdf = lambda x: 1/domain_width
+    estimated_bkg_pdf = lambda x: 1 / domain_width
 
-    assert np.isclose(quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 0, 0, 0), a, b)[0], 1.0)
+    assert np.isclose(
+        quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 0, 0, 0), a, b)[0], 1.0
+    )
 
-    assert np.isclose(quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 0, 0), a, b)[0], 1.0)
+    assert np.isclose(
+        quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 0, 0), a, b)[0], 1.0
+    )
 
-    assert np.isclose(quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 2, 0), a, b)[0], 1.0)
+    assert np.isclose(
+        quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 2, 0), a, b)[0], 1.0
+    )
 
-    assert np.isclose(quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 2, 1), a, b)[0], 1.0)
+    assert np.isclose(
+        quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 2, 1), a, b)[0], 1.0
+    )

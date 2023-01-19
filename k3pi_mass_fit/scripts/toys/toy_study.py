@@ -27,7 +27,9 @@ def _pull(
     Returns array of pulls
 
     """
-    combined, true_params = toy_utils.gen_points(rng, n_sig, n_bkg, sign, time_bin)
+    combined, true_params = toy_utils.gen_points(
+        rng, n_sig, n_bkg, sign, time_bin, pdfs.background_defaults(sign), {}
+    )
 
     # Perform fit
     sig_frac = true_params[0]
