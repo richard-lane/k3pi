@@ -175,7 +175,7 @@ def main():
 
     for threshhold, colour in tqdm(
         zip(
-            [0.01, 0.03, 0.05, 0.10, 0.15, 0.20],
+            [0.005, 0.01, 0.015, 0.02, 0.03, 0.05, 0.20],
             plt.rcParams["axes.prop_cycle"].by_key()["color"][1:],
         )
     ):
