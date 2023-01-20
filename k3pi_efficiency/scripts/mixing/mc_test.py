@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
 from fourbody.param import helicity_param
+from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
@@ -58,6 +59,130 @@ def _ratio_err(
     dcs_counts, dcs_errs = fit_util.bin_times(dcs_df["time"], bins=bins, weights=dcs_wt)
 
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
+
+
+def _plot_xy_pulls(
+    x_pulls: np.ndarray, y_pulls: np.ndarray, covariances: np.ndarray, chi2s: np.ndarray, n_levels: int
+):
+    """
+    Plot pulls for x and y
+
+    """
+    flat_x, flat_y, flat_chi2 = (a.ravel() for a in (x_pulls, y_pulls, chi2s))
+
+    # TODO - do something with these
+    flat_covs = covariances.reshape(len(flat_x), 2, 2)
+
+    # Get masks of chi2<1, 1<chi2<2, etc.
+    masks = (
+        flat_chi2 < 1.0,
+        (1.0 < flat_chi2) & (flat_chi2 < 2.0),
+        (2.0 < flat_chi2) & (flat_chi2 < 3.0),
+        flat_chi2 > 3.0,
+    )
+
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    colours = plt.rcParams["axes.prop_cycle"].by_key()["color"][:n_levels]
+    labels = (
+        r"$\chi^2 < 1.0$",
+        r"$1.0 < \chi^2 < 2.0$",
+        r"$2.0 < \chi^2 < 3.0$",
+        r"\chi^2 > 3.0",
+    )
+    hist_kw = {
+        "bins": np.linspace(-10, 10, 50),
+        "stacked": True,
+        "color": colours,
+        "label": labels,
+    }
+
+    ax[0].hist([flat_x[mask] for mask in masks], **hist_kw)
+    ax[1].hist([flat_y[mask] for mask in masks], **hist_kw)
+
+    ax[0].legend()
+
+    ax[0].set_xlabel(r"$\frac{x_{\mathrm{fit}} - x_{\mathrm{true}}}{\sigma_x}$")
+    ax[1].set_xlabel(r"$\frac{y_{\mathrm{fit}} - y_{\mathrm{true}}}{\sigma_y}$")
+    fig.suptitle(r"MC mixing $xy$ scan: pulls")
+
+    fig.tight_layout()
+
+    path = "mc_mixed_xy_scan.png"
+    print(f"saving {path}")
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def _scan(
+    ratio: np.ndarray,
+    errs: np.ndarray,
+    bins: np.ndarray,
+    r_d: float,
+    params: mixing.MixingParams,
+) -> None:
+    """
+    Do a scan
+
+    """
+    # Need x/y widths and correlations for the Gaussian constraint
+    width = 0.005
+    correlation = 0.5
+
+    n_re, n_im = 50, 51
+    n_fits = n_re * n_im
+    allowed_rez = np.linspace(-1, 1, n_re)
+    allowed_imz = np.linspace(-1, 1, n_im)
+
+    # To store the value from the fits
+    x_pulls = np.ones((n_im, n_re)) * np.inf
+    y_pulls = np.ones((n_im, n_re)) * np.inf
+    covs = np.ones((n_im, n_re, 2, 2)) * np.inf
+
+    chi2s = np.ones((n_im, n_re)) * np.inf
+    with tqdm(total=n_fits) as pbar:
+        for i, re_z in enumerate(allowed_rez):
+            for j, im_z in enumerate(allowed_imz):
+                these_params = fit_util.ScanParams(
+                    r_d, params.mixing_x, params.mixing_y, re_z, im_z
+                )
+                scan = fitter.scan_fit(
+                    ratio, errs, bins, these_params, (width, width), correlation
+                )
+
+                fit_vals = scan.values
+                fit_errs = scan.errors
+
+                x_pulls[j, i] = (fit_vals[1] - params.mixing_x) / fit_errs[1]
+                y_pulls[j, i] = (fit_vals[2] - params.mixing_y) / fit_errs[2]
+                covs[j, i] = scan.covariance[1:, 1:]
+
+                chi2s[j, i] = scan.fval
+                pbar.update(1)
+
+    chi2s -= np.min(chi2s)
+    chi2s = np.sqrt(chi2s)
+
+    n_contours = 4
+    _plot_xy_pulls(x_pulls, y_pulls, covs, chi2s, n_contours)
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    contours = plotting.scan(
+        ax,
+        allowed_rez,
+        allowed_imz,
+        chi2s,
+        levels=np.arange(n_contours),
+    )
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.1, 0.05, 0.8])
+    fig.colorbar(contours, cax=cbar_ax)
+    cbar_ax.set_title(r"$\sigma$")
+
+    path = "mc_mixed_scan.png"
+    print(f"saving {path}")
+    plt.savefig(path)
+    plt.close(fig)
 
 
 def _time_plot(
@@ -124,9 +249,13 @@ def _time_plot(
     ax.set_ylabel(r"$\frac{WS}{RS}$")
     ax.legend()
     ax.set_xlim(0.0, None)
-    plt.savefig("mc_mixed_times.png")
+    path = "mc_mixed_times.png"
+    print(f"plotting {path}")
+    plt.savefig(path)
+    plt.close(fig)
 
-    plt.show()
+    # Do a scan as well
+    _scan(ratio, err, bins, r_d, params)
 
 
 def _hists(cf_df: pd.DataFrame, dcs_df: pd.DataFrame, weights: np.ndarray) -> None:
@@ -141,7 +270,7 @@ def _hists(cf_df: pd.DataFrame, dcs_df: pd.DataFrame, weights: np.ndarray) -> No
         (helicity_param(*efficiency_util.k_3pi(dcs_df)), dcs_df["time"])
     )
 
-    _, ax = plt.subplots(2, 3, figsize=(12, 8))
+    fig, ax = plt.subplots(2, 3, figsize=(12, 8))
     hist_kw = {"histtype": "step", "density": True}
     for a, cf, dcs, label in zip(ax.ravel(), cf_pts.T, dcs_pts.T, phsp_labels()):
         contents, bins, _ = a.hist(cf, bins=100, label="CF", **hist_kw)
@@ -153,7 +282,8 @@ def _hists(cf_df: pd.DataFrame, dcs_df: pd.DataFrame, weights: np.ndarray) -> No
     ax[0, 0].legend()
     ax.ravel()[-1].legend()
 
-    plt.savefig("mc_mixed_hists.png")
+    fig.savefig("mc_mixed_hists.png")
+    plt.close(fig)
 
 
 def _exact_dcs_integral(r_d: float, x: float, y: float, z: complex):
@@ -263,8 +393,8 @@ def main():
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
         d_width=pdg_params.d_width(),
-        mixing_x=5 * pdg_params.mixing_x(),
-        mixing_y=5 * pdg_params.mixing_y(),
+        mixing_x=2 * pdg_params.mixing_x(),
+        mixing_y=2 * pdg_params.mixing_y(),
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
