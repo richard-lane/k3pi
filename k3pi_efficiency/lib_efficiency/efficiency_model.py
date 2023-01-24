@@ -5,7 +5,7 @@ User interface for the efficiency reweighting
 
 import sys
 import pathlib
-from typing import Iterator
+from typing import Iterator, List
 import numpy as np
 import pandas as pd
 
@@ -131,3 +131,17 @@ def weights_generator(
     """
     for dataframe in dataframes:
         yield weights_df(dataframe, reweighter, verbose)
+
+
+def weights_list(
+    dataframes: Iterator[pd.DataFrame],
+    reweighter: EfficiencyWeighter,
+    verbose: bool = False,
+) -> List[np.ndarray]:
+    """
+    Get a list of weights from a reweighter and an iterator of dataframes
+
+    Useful for scaling and stuff
+
+    """
+    return list(weights_generator(dataframes, reweighter, verbose))

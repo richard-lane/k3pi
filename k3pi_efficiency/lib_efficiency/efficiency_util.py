@@ -4,7 +4,7 @@ Utility functions for efficiency stuff
 """
 import sys
 import pathlib
-from typing import Tuple
+from typing import Tuple, List
 import numpy as np
 import pandas as pd
 from fourbody.param import helicity_param
@@ -127,3 +127,30 @@ def pgun_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     # We may also only want to consider candidates with the same sign kaon
     dataframe = k_sign_cut(dataframe, k_charge)
     return dataframe
+
+
+def scale_weights(
+    rs_wts: List[np.ndarray], ws_wts: List[np.ndarray], dcs_cf_ratio: float
+) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+    """
+    Scale lists of RS and WS weights to have the right dcs/cf ratio
+
+    Does not scale the CF weights
+
+    :param rs_wts: list of arrays of efficiency weights for a RS sample
+    :param ws_wts: list of arrays of efficiency weights for a WS sample
+    :param dcs_cf_ratio: desired average of dcs/cf weights. DCS_AVG / CF_AVG
+
+    :returns: scaled list of RS weights
+    :returns: scaled list of WS weights
+
+    """
+    # Find the sum of each type of weight
+    rs_sum = np.sum(rs_wts)
+    ws_sum = np.sum(ws_wts)
+
+    # Scale them
+    scale_factor = dcs_cf_ratio * rs_sum / ws_sum
+    scaled_ws_wts = [arr * scale_factor for arr in ws_wts]
+
+    return rs_wts, scaled_ws_wts

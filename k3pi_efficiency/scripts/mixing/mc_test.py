@@ -62,7 +62,11 @@ def _ratio_err(
 
 
 def _plot_xy_pulls(
-    x_pulls: np.ndarray, y_pulls: np.ndarray, covariances: np.ndarray, chi2s: np.ndarray, n_levels: int
+    x_pulls: np.ndarray,
+    y_pulls: np.ndarray,
+    covariances: np.ndarray,
+    chi2s: np.ndarray,
+    n_levels: int,
 ):
     """
     Plot pulls for x and y
