@@ -15,15 +15,19 @@ data
 
     the other years
     ----
-    [ ] 2018 MagDown
-    [ ] 2018 MagUp
-    [ ] 2017 MagDown
-    [ ] 2017 MagUp
-    [ ] 2016 MagDown
-    [ ] 2016 MagUp
+    [x] 2018 MagDown
+    [x] 2018 MagUp
+    [x] 2017 MagDown
+    [x] 2017 MagUp
+    [x] 2016 MagDown
+    [x] 2016 MagUp
     [ ] whatever else
 
     [ ] sensibly deal with K+ and K-
+
+    cuts
+    ----
+    [ ] decide if we should remove candidates at random; atm i just pick the first
 
 bdt cut
 ====
@@ -45,12 +49,16 @@ efficiency
         - [ ] compare it to time-only
     [ ] Make the low time cutoff value consistent everywhere
     [ ] Implement absolute efficiency scaling
-    [ ] Normalise weights correctly
+    [x] Normalise weights correctly
         - instead of normalising a chunk at a time, should somehow normalise them overall
+    [ ] Get some evidence that the WS and RS efficiencies are different
+        - double misID rate study from MC (without cuts)... should show that they're different...
+          though I tried this during the group meeting and it didn't seem to show any double misIDs
 
     systematic
     ----
     [ ] work out how to assign a systematic
+        - maybe compare efficiencies from MC and pgun?
     [ ] do it
 
     simulation
@@ -64,6 +72,8 @@ mass fit
     implementation
     ----
     [ ] decide if it is now working
+    [ ] check that I get the right signal fraction out of it
+    [ ] plot the sqrt bkg fit alongside the alt bkg fit
 
     systematic
     ----
@@ -77,4 +87,10 @@ charm fit
     [ ] find out whether the CLEO params are right
     [ ] address it - either remove CLEO or use the right param
     [ ] find out whether the BES params are right (i think they are)
+
+    Other stuff
+    ----
+    [ ] update x, y constraints to the latest version
+    [ ] decide if we need a simultaneous fitter across bins
+    [ ] add a fifth phase space bin for the ks veto
 
