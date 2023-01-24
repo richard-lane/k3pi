@@ -113,3 +113,84 @@ def scan(
         plot_kw = {}
 
     return ax.contourf(*np.meshgrid(re_z, im_z), chi2, levels=levels, **plot_kw)
+
+
+def _plot_fits(
+    axis: plt.Axes,
+    fit_vals: np.ndarray,
+    chi2s: np.ndarray,
+    colours: np.ndarray,
+) -> None:
+    """
+    Plot a scan of fits on an axis, colour-coded according to the chi2 of each
+
+    """
+    # TODO make it work with variable n_levels
+
+    for params, chi2 in zip(fit_vals.ravel(), chi2s.ravel()):
+        if chi2 < 1.0:
+            colour = colours[0]
+            alpha = 0.3
+        elif chi2 < 2.0:
+            colour = colours[1]
+            alpha = 0.2
+        elif chi2 < 3.0:
+            colour = colours[2]
+            alpha = 0.05
+
+        if chi2 < 3.0:
+            scan_fit(
+                axis,
+                params,
+                fmt="--",
+                label=None,
+                plot_kw={"alpha": alpha, "color": colour},
+            )
+
+
+def fits_and_scan(
+    axes: Tuple[plt.Axes, plt.Axes],
+    allowed_z: Tuple[np.ndarray, np.ndarray],
+    chi2s: np.ndarray,
+    fit_vals: np.ndarray,
+    n_contours: int,
+) -> QuadContourSet:
+    """
+    Plot fits and a scan on a plot
+
+    :param axes: tuple of axes for (fit plot, scan plot)
+    :param allowed_z: tuple of allowed values for (re_z, im_z)
+    :param chi2s: 2d array of chi2s for the fits
+    :param fit_vals: 2d array of fitter values from the fits
+    :param n_coutours: 1 more than the number of contours lol
+
+    :returns: contours
+
+    """
+    fit_ax, scan_ax = axes
+    allowed_rez, allowed_imz = allowed_z
+
+    colours = plt.rcParams["axes.prop_cycle"].by_key()["color"][:n_contours]
+
+    _plot_fits(fit_ax, fit_vals, chi2s, colours)
+
+    contours = scan(
+        scan_ax,
+        allowed_rez,
+        allowed_imz,
+        chi2s,
+        levels=np.arange(n_contours),
+        plot_kw={"colors": colours},
+    )
+
+    scan_ax.set_xlabel("Re(Z)")
+    scan_ax.set_ylabel("Im(Z)")
+
+    # Plot the best fit value
+    min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
+    scan_ax.plot(allowed_rez[min_re], allowed_imz[min_im], "r*")
+
+    # Draw a circle
+    scan_ax.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))
+
+    return contours

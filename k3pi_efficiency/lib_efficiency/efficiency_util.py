@@ -151,6 +151,7 @@ def scale_weights(
 
     # Scale them
     scale_factor = dcs_cf_ratio * rs_sum / ws_sum
+    print(f"Scaling weights by {scale_factor}")
     scaled_ws_wts = [arr * scale_factor for arr in ws_wts]
 
     return rs_wts, scaled_ws_wts

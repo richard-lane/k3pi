@@ -28,6 +28,8 @@ data
     cuts
     ----
     [ ] decide if we should remove candidates at random; atm i just pick the first
+        [ ] remove candidates after the BDT cut
+        [ ] remove them randomly, ideally
 
 bdt cut
 ====
@@ -48,7 +50,7 @@ efficiency
         - [ ] try with more trees
         - [ ] compare it to time-only
     [ ] Make the low time cutoff value consistent everywhere
-    [ ] Implement absolute efficiency scaling
+    [x] Implement absolute efficiency scaling
     [x] Normalise weights correctly
         - instead of normalising a chunk at a time, should somehow normalise them overall
     [ ] Get some evidence that the WS and RS efficiencies are different
@@ -60,11 +62,13 @@ efficiency
     [ ] work out how to assign a systematic
         - maybe compare efficiencies from MC and pgun?
     [ ] do it
+    [ ] mess up pgun a little, see how wrong the efficiency correction gets it
 
     simulation
     ----
-    [ ] fix the scaling
+    [x] fix the scaling
     [ ] do a study where we correct for an efficiency after introducing some mixing
+    [ ] weight both RS and WS to phsp, then apply weights to introduce mixing to WS
 
 
 mass fit
@@ -77,8 +81,8 @@ mass fit
 
     systematic
     ----
-    [ ] work out how to assign a systematic
-    [ ] do it maybe
+    [x] work out how to assign a systematic
+    [ ] pull study using MC + simulated bkg
 
 charm fit
 ====
