@@ -35,7 +35,7 @@ def main(args):
 
     # We might want to do BDT cut
     if args.cut:
-        mask = cut.mask(pgun_df, args.year, args.magnetisation, args.decay_type)
+        mask = cut.mask(pgun_df, args.year, args.magnetisation, "dcs")  # Always use the DCS bdt cut
         print(f"BDT cut: cutting {np.sum(mask)} of {len(mask)}")
         pgun_df = pgun_df[mask]
 
