@@ -55,10 +55,10 @@ def _invmass_gen(year: str, sign: str, magnetisation: str, *, bdt_cut: bool):
             )
             d_mass = util.inv_mass(*k3pi)
 
-            for _ in range(n_repeats):
+            for j in range(n_repeats):
                 # Shift the slow pi
                 # use np.roll(slowpi, 1, axis=1) to just shift the array by 1
-                slowpi = np.roll(slowpi, 1, axis=1)
+                slowpi = np.roll(slowpi, j + 1, axis=1)
 
                 dst_mass = util.inv_mass(*k3pi, slowpi)
 
