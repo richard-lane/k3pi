@@ -39,11 +39,14 @@ def _amplitudes(gen, n_gen: int):
     cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1)
     dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1)
 
+    # Find cross term
+    cross = cf * dcs.conjugate()
+
     # Find sum of squares
     cf = np.abs(cf) ** 2
     dcs = np.abs(dcs) ** 2
 
-    return len(cf), np.sum(cf), np.sum(dcs)
+    return len(cf), np.sum(cf), np.sum(dcs), np.sum(cross)
 
 
 def main():
@@ -57,6 +60,7 @@ def main():
     n_tot = 0
     cf_sum = 0
     dcs_sum = 0
+    cross = 0.0 + 0.0j
 
     # We only want to initialise our generator once
     k_mass = 493.677
@@ -72,8 +76,13 @@ def main():
             n_tot += retval[0]
             cf_sum += retval[1]
             dcs_sum += retval[2]
+            cross += retval[3]
 
-            print(f"{n_tot: <10,}\t{cf_sum / n_tot:.10f}\t{dcs_sum / n_tot:.10f}")
+            cf_avg = cf_sum / n_tot
+            dcs_avg = dcs_sum / n_tot
+            z = cross / np.sqrt(cf_sum * dcs_sum)
+
+            print(f"{n_tot: <10,}\t{cf_avg:.10f}\t{dcs_avg:.10f}\t{z:.10f}")
     except KeyboardInterrupt:
         ...
 

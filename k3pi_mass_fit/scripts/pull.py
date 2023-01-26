@@ -30,7 +30,7 @@ from libFit import util as mass_util, fit
 
 
 def _gen_bkg(
-    i: int, year: str, sign: str, magnetisation: str, bins: np.ndarray
+    year: str, sign: str, magnetisation: str, bins: np.ndarray
 ) -> np.ndarray:
     """
     Combine slow pions from different events
@@ -45,25 +45,28 @@ def _gen_bkg(
     clf = get_clf(year, "dcs", magnetisation)
     data_generator = cut_dfs(data_generator, clf)
 
-    masses = []
+    mass_counts = np.zeros(len(bins) - 1)
 
-    for dataframe in data_generator:
-        k3pi = k_3pi(dataframe)
+    n_repeats = 10
+    for i in tqdm(range(n_repeats)):
+        for dataframe in data_generator:
+            k3pi = k_3pi(dataframe)
 
-        slowpi = np.row_stack(
-            [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
-        )
-        d_mass = util.inv_mass(*k3pi)
+            slowpi = np.row_stack(
+                [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
+            )
+            d_mass = util.inv_mass(*k3pi)
 
-        slowpi = np.roll(slowpi, i + 1, axis=1)
+            slowpi = np.roll(slowpi, i + 1, axis=1)
 
-        dst_mass = util.inv_mass(*k3pi, slowpi)
-        delta_m = dst_mass - d_mass
-        keep = (delta_m > bins[0]) & (delta_m < bins[-1])
+            dst_mass = util.inv_mass(*k3pi, slowpi)
+            delta_m = dst_mass - d_mass
+            keep = (delta_m > bins[0]) & (delta_m < bins[-1])
 
-        masses.append(delta_m[keep])
+            counts, _ = stats.counts(delta_m[keep], bins)
+            mass_counts += counts
 
-    return np.concatenate(masses)
+    return mass_counts
 
 
 def _select_sig(
@@ -152,7 +155,7 @@ def _plot_pulls(sig_pull: np.ndarray, bkg_pull: np.ndarray) -> None:
     plt.close(fig)
 
 
-def _pull(out_dict: dict, label: int):
+def _pull(out_dict: dict, label: int, year, sign, magnetisation):
     """
     Generate background by combining random pions with
     k3pi
@@ -173,15 +176,11 @@ def _pull(out_dict: dict, label: int):
 
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
-    year, sign, magnetisation = "2018", "cf", "magdown"
-
     # How much of the MC dataframe we use for the signal
     sig_proportion = 0.03
 
-    bins = mass_bins(100)
-
     for i in tqdm(range(n_experiments)):
-        bkg = _gen_bkg(i, year, sign, magnetisation, bins)
+        bkg = _gen_bkg(year, sign, magnetisation, bins)
         sig = _select_sig(rng, sig_proportion, year, sign, magnetisation)
 
         counts, errs = _count_err(bkg, sig, bins)
@@ -205,6 +204,14 @@ def main():
     Multiprocessed
 
     """
+    # Generate lots of background - only do this once
+    year, sign, magnetisation = "2018", "cf", "magdown"
+    bins = mass_bins(100)
+    bkg_counts = _gen_bkg(year, sign, magnetisation, bins)
+
+    plt.plot((bins[1:] + bins[:-1]) / 2, bkg_counts)
+    plt.show()
+
     out_dict = Manager().dict()
     n_procs = 6
 

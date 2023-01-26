@@ -9,13 +9,14 @@ import numpy as np
 
 # Average values of the amplitude models across all of phase space
 # Not actually sure where i got these and i think they're wrong
-CF_AVG = 0.08043
-DCS_AVG = 0.06707
+# CF_AVG = 0.08043
+# DCS_AVG = 0.06707
 
-# Average values of the |amplitudes|^2 across all of phase space
-# 290,654,749	12.4287694731	14.9029385276
-CF_AVG_SQ = 12.429
-DCS_AVG_SQ = 14.903
+# Average values of the amplitudes across all of phase space
+# num           |cf|            |dcs|           z
+# 290,070,471	0.0804273903	0.0670481851	0.4588388528+0.0073530076j
+# 290,361,024	0.0804271819	0.0670482273	0.4588377810+0.0073540604j
+# 290,651,729	0.0804271177	0.0670485385	0.4588387456+0.0073525461j
 
 
 def _dcs_path() -> pathlib.Path:
@@ -154,7 +155,7 @@ def dcs_amplitudes(k, pi1, pi2, pi3, k_charge):
     :param k_charge: charge of the kaon, either +1 or -1
 
     """
-    return _amplitudes("dcs", k, pi1, pi2, pi3, k_charge) / DCS_AVG
+    return _amplitudes("dcs", k, pi1, pi2, pi3, k_charge)
 
 
 def cf_amplitudes(k, pi1, pi2, pi3, k_charge):
@@ -173,4 +174,4 @@ def cf_amplitudes(k, pi1, pi2, pi3, k_charge):
     :param k_charge: charge of the kaon, either +1 or -1
 
     """
-    return _amplitudes("cf", k, pi1, pi2, pi3, k_charge) / CF_AVG
+    return _amplitudes("cf", k, pi1, pi2, pi3, k_charge)

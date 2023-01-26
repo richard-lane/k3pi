@@ -38,29 +38,41 @@ def _invmass_gen(year: str, sign: str, magnetisation: str, *, bdt_cut: bool):
     Get a generator of (K3pi - K4pi) invariant masses
 
     """
-    # n iterations is the number of files * the number of repeats
-    n_repeats = 1000
-    total = n_repeats * _n_files(year, sign, magnetisation)
-
+    # Get arrays of K3pi and slow pi
     df_generator = get.data(year, sign, magnetisation)
     if bdt_cut:
         clf = get_clf(year, "dcs", magnetisation)
         df_generator = cut_dfs(df_generator, clf)
 
-    with tqdm(total=total) as pbar:
-        for dataframe in df_generator:
-            k3pi = k_3pi(dataframe)
-            slowpi = np.row_stack(
-                [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
-            )
-            d_mass = util.inv_mass(*k3pi)
+    k_list = []
+    pi1_list = []
+    pi2_list = []
+    pi3_list = []
+    slow_pi_list = []
 
-            for j in range(n_repeats):
-                # Shift the slow pi
-                # use np.roll(slowpi, 1, axis=1) to just shift the array by 1
-                slowpi = np.roll(slowpi, j + 1, axis=1)
+    # Get lists of daughter particle arrays separately
+    # In case we want to do a larger number of rolls, which might
+    # involve having to concatenate the arrays
+    print("getting lists of stuff")
+    for dataframe in tqdm(df_generator, total=_n_files(year, sign, magnetisation)):
+        k, pi1, pi2, pi3 = k_3pi(dataframe)
+        slowpi = np.row_stack(
+            [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
+        )
+        k_list.append(k)
+        pi1_list.append(pi1)
+        pi2_list.append(pi2)
+        pi3_list.append(pi3)
+        slow_pi_list.append(slowpi)
 
-                dst_mass = util.inv_mass(*k3pi, slowpi)
+    print("rolling")
+    n_repeats = 500
+    with tqdm(total = n_repeats * len(k_list)) as pbar:
+        for k, pi1, pi2, pi3, slowpi in zip(k_list, pi1_list, pi2_list, pi3_list, slow_pi_list):
+            d_mass = util.inv_mass(k, pi1, pi2, pi3)
+            for _ in range(n_repeats):
+                slowpi = np.roll(slowpi, 1, axis=1)
+                dst_mass = util.inv_mass(k, pi1, pi2, pi3, slowpi)
 
                 pbar.update(1)
                 yield dst_mass - d_mass
