@@ -30,9 +30,8 @@ def _z(dataframe: pd.DataFrame, weights: np.ndarray) -> complex:
     """
     k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
 
-    # I don't think it actually matters if we scale the amplitudes here
-    cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.CF_AVG
-    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.DCS_AVG
+    cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1)
+    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1)
 
     # Find Z and integrals
     z = np.sum(cf * dcs.conjugate() * weights)

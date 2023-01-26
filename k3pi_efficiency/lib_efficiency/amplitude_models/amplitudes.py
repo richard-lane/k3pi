@@ -7,16 +7,14 @@ import ctypes
 import pathlib
 import numpy as np
 
-# Average values of the amplitude models across all of phase space
-# Not actually sure where i got these and i think they're wrong
-# CF_AVG = 0.08043
-# DCS_AVG = 0.06707
-
 # Average values of the amplitudes across all of phase space
 # num           |cf|            |dcs|           z
 # 290,070,471	0.0804273903	0.0670481851	0.4588388528+0.0073530076j
 # 290,361,024	0.0804271819	0.0670482273	0.4588377810+0.0073540604j
 # 290,651,729	0.0804271177	0.0670485385	0.4588387456+0.0073525461j
+DCS_AVG_SQ = 0.067048
+CF_AVG_SQ = 0.080427
+AMPGEN_Z = 0.458838 + 0.00735j
 
 
 def _dcs_path() -> pathlib.Path:

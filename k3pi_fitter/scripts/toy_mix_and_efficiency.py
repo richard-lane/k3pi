@@ -48,9 +48,8 @@ def _z(dataframe: pd.DataFrame, weights: np.ndarray) -> complex:
     """
     k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
 
-    # I don't think it actually matters if we scale the amplitudes here
-    cf_amp = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.CF_AVG
-    dcs_amp = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1) / amplitudes.DCS_AVG
+    cf_amp = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1)
+    dcs_amp = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1)
 
     # Find Z and integrals
     cross_term = np.sum(cf_amp * dcs_amp.conjugate() * weights)

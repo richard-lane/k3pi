@@ -365,7 +365,7 @@ def main():
     bins = np.linspace(0, 7, 15)
 
     # Parameters determining mixing
-    r_d = np.sqrt(0.003025)
+    r_d = np.sqrt(0.003025) / 10
     print(f"{r_d**2=}")
     params = mixing.MixingParams(
         d_mass=pdg_params.d_mass(),
@@ -380,14 +380,12 @@ def main():
     # Find mixed ratio and error
     ratio, err = _ratio_err(bins, cf_df, dcs_df, mixing_weights)
 
-    # TODO find this properly
-    ampgen_z = 0.6708020379588885 - 0.050344237199943055j
     ideal = fit_util.ScanParams(
         r_d=r_d,
         x=params.mixing_x,
         y=params.mixing_y,
-        re_z=ampgen_z.real,
-        im_z=ampgen_z.imag,
+        re_z=amplitudes.AMPGEN_Z.real,
+        im_z=amplitudes.AMPGEN_Z.imag,
     )
 
     # Make a plot showing fits and scan
