@@ -186,9 +186,12 @@ def fits_and_scan(
     scan_ax.set_xlabel("Re(Z)")
     scan_ax.set_ylabel("Im(Z)")
 
+    fit_ax.set_xlabel(r"t/$\tau$")
+    fit_ax.set_ylabel(r"$\frac{WS}{RS}$")
+
     # Plot the best fit value
     min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
-    scan_ax.plot(allowed_rez[min_re], allowed_imz[min_im], "r*")
+    scan_ax.plot(allowed_rez[min_re], allowed_imz[min_im], "r*", label="Best Fit")
 
     # Draw a circle
     scan_ax.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))

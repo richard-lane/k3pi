@@ -67,8 +67,10 @@ def _invmass_gen(year: str, sign: str, magnetisation: str, *, bdt_cut: bool):
 
     print("rolling")
     n_repeats = 500
-    with tqdm(total = n_repeats * len(k_list)) as pbar:
-        for k, pi1, pi2, pi3, slowpi in zip(k_list, pi1_list, pi2_list, pi3_list, slow_pi_list):
+    with tqdm(total=n_repeats * len(k_list)) as pbar:
+        for k, pi1, pi2, pi3, slowpi in zip(
+            k_list, pi1_list, pi2_list, pi3_list, slow_pi_list
+        ):
             d_mass = util.inv_mass(k, pi1, pi2, pi3)
             for _ in range(n_repeats):
                 slowpi = np.roll(slowpi, 1, axis=1)

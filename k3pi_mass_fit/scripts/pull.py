@@ -16,61 +16,36 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_efficiency"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 
-from lib_cuts.get import classifier as get_clf, cut_dfs
-from lib_cuts.definitions import THRESHOLD
-from lib_efficiency.efficiency_util import k_3pi
 from lib_data import stats
-from lib_data import get, definitions, util, training_vars
+from lib_data import get, training_vars
+from lib_cuts.get import classifier as get_clf
+from lib_cuts.definitions import THRESHOLD
+from libFit import util as mass_util, fit, plotting
 from libFit.definitions import mass_bins
-from libFit import util as mass_util, fit
+from libFit.bkg import get_dump
+from libFit.pdfs import domain
 
 
-def _gen_bkg(
+class FitNotValidException(Exception):
+    """
+    Fit didn't converge or something
+    """
+
+
+def _bkg_counts(sign: str, n_bins: int) -> np.ndarray:
+    """
+    Open pickle dump, return histogram of bkg counts
+    after the BDT cut
+
+    """
+    return get_dump(n_bins, sign, bdt_cut=False, efficiency=False)[0]
+
+
+def _sig_counts(
     year: str, sign: str, magnetisation: str, bins: np.ndarray
-) -> np.ndarray:
-    """
-    Combine slow pions from different events
-    with the K3pi to find background
-
-    :param i: tells us which slow pion to use
-    :returns: array of background delta masses
-
-    """
-    data_generator = get.data(year, sign, magnetisation)
-
-    clf = get_clf(year, "dcs", magnetisation)
-    data_generator = cut_dfs(data_generator, clf)
-
-    mass_counts = np.zeros(len(bins) - 1)
-
-    n_repeats = 10
-    for i in tqdm(range(n_repeats)):
-        for dataframe in data_generator:
-            k3pi = k_3pi(dataframe)
-
-            slowpi = np.row_stack(
-                [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
-            )
-            d_mass = util.inv_mass(*k3pi)
-
-            slowpi = np.roll(slowpi, i + 1, axis=1)
-
-            dst_mass = util.inv_mass(*k3pi, slowpi)
-            delta_m = dst_mass - d_mass
-            keep = (delta_m > bins[0]) & (delta_m < bins[-1])
-
-            counts, _ = stats.counts(delta_m[keep], bins)
-            mass_counts += counts
-
-    return mass_counts
-
-
-def _select_sig(
-    gen: np.random.Generator, fraction: float, year: str, sign: str, magnetisation: str
 ) -> np.ndarray:
     """
     Randomly choose a subset of the MC
@@ -89,22 +64,9 @@ def _select_sig(
 
     mc_df = mc_df[sig_predictions]
 
-    # Randomly choose some of it
-    mask = gen.random(len(mc_df)) < fraction
-    return mass_util.delta_m(mc_df)[mask]
+    count, _ = stats.counts(mass_util.delta_m(mc_df), bins)
 
-
-def _count_err(
-    bkg: np.ndarray, sig: np.ndarray, bins: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Bin invariant masses
-
-    :returns: counts in each bin
-    :returns: error on counts in each bin
-
-    """
-    return stats.counts(np.concatenate((bkg, sig)), bins)
+    return count
 
 
 def _fit(
@@ -118,8 +80,30 @@ def _fit(
 
     """
     fitter = fit.alt_bkg_fit(
-        counts, bins, sign, 5, 0.5, errors=errs, bdt_cut=True, efficiency=False
+        counts, bins, sign, 5, 0.5, bdt_cut=False, efficiency=False, errors=errs
     )
+
+    if not fitter.valid:
+        print(fitter)
+
+        # For plotting
+        # fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB")
+        # axes["A"].plot((bins[1:] + bins[:-1]) / 2, counts)
+        # plotting.alt_bkg_fit(
+        #     (axes["A"], axes["B"]),
+        #     counts,
+        #     errs,
+        #     bins,
+        #     fitter.values,
+        #     sign=sign,
+        #     bdt_cut=False,
+        #     efficiency=False,
+        # )
+        # plt.show()
+        # fig.savefig("mass_pull_invalid_fit.png")
+        # plt.close(fig)
+
+        raise FitNotValidException
 
     return fitter.values, fitter.errors
 
@@ -149,13 +133,58 @@ def _plot_pulls(sig_pull: np.ndarray, bkg_pull: np.ndarray) -> None:
     ax[0].legend()
     ax[1].legend()
 
+    fig.suptitle(f"N={len(sig_pull)}")
+
     fig.tight_layout()
 
     fig.savefig("mass_pulls.png")
     plt.close(fig)
 
 
-def _pull(out_dict: dict, label: int, year, sign, magnetisation):
+def _bkg_acc_rej(
+    rng: np.random.Generator, bkg_pdf: np.ndarray, bins: np.ndarray
+) -> np.ndarray:
+    """
+    Generate uniform points in unit square
+
+    See which ones lie below the bkg_pdf counts
+    Keep them
+
+    """
+    num = 1000000
+    x, y = rng.random((2, num))
+
+    # Scale x to be in the domain
+    low, high = domain()
+    x *= high - low
+    x += low
+
+    # Scale y to be smaller to make it more efficient
+    y /= 5
+
+    # Counts in the bin for each x value
+    pdf_counts = bkg_pdf[np.digitize(x, bins) - 1]
+
+    keep = y < pdf_counts
+
+    # For plotting, just in case
+    # plt.plot(x[keep], y[keep], "r.")
+    # plt.plot(x[~keep], y[~keep], "k.")
+    # plt.stairs(bkg_pdf, bins, color="g")
+    # plt.show()
+
+    count, _ = stats.counts(x[keep], bins)
+    return count
+
+
+def _pull(
+    out_dict: dict,
+    label: int,
+    bkg_pdf: int,
+    signal_counts: np.ndarray,
+    bins: np.ndarray,
+    sign: str,
+) -> None:
     """
     Generate background by combining random pions with
     k3pi
@@ -168,30 +197,41 @@ def _pull(out_dict: dict, label: int, year, sign, magnetisation):
 
     Record the pull
 
-    stores the pull in out_dict, with key starting with i
+    stores the pull in out_dict, key starting with label
 
     """
-    n_experiments = 10
-    sig_pull, bkg_pull = (np.ones(n_experiments) * np.inf for _ in range(2))
-
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
-    # How much of the MC dataframe we use for the signal
-    sig_proportion = 0.03
+    n_experiments = 100
+    sig_pull, bkg_pull = (np.ones(n_experiments) * np.inf for _ in range(2))
 
     for i in tqdm(range(n_experiments)):
-        bkg = _gen_bkg(year, sign, magnetisation, bins)
-        sig = _select_sig(rng, sig_proportion, year, sign, magnetisation)
+        # Try the fit until it converges
+        while True:
+            try:
+                # Do accept-reject for background
+                bkg_counts = _bkg_acc_rej(rng, bkg_pdf, bins)
 
-        counts, errs = _count_err(bkg, sig, bins)
-        # centres = (bins[1:] + bins[:-1]) / 2
-        # widths = (bins[1:] - bins[:-1]) / 2
-        # plt.errorbar(centres, counts, xerr=widths, yerr=errs, fmt="k+")
+                # Add poisson fluctuations to the signal counts
+                sig_counts = rng.poisson(lam=signal_counts).astype(np.float64)
 
-        fit_params, fit_errs = _fit(counts, errs, sign, bins)
+                # Scale the signal counts to give a sensible amount
+                sig_scale = 0.3
+                sig_counts *= sig_scale
 
-        sig_pull[i] = (fit_params[0] - len(sig)) / fit_errs[0]
-        bkg_pull[i] = (fit_params[1] - len(bkg)) / fit_errs[1]
+                counts = bkg_counts + sig_counts
+                errs = np.sqrt(bkg_counts + sig_scale * sig_scale * sig_counts)
+
+                fit_params, fit_errs = _fit(counts, errs, sign, bins)
+
+            except FitNotValidException:
+                print("fit not valid")
+                continue
+
+            else:
+                sig_pull[i] = (fit_params[0] - np.sum(sig_counts)) / fit_errs[0]
+                bkg_pull[i] = (fit_params[1] - np.sum(bkg_counts)) / fit_errs[1]
+                break
 
     out_dict[f"{label}_sig"] = sig_pull
     out_dict[f"{label}_bkg"] = bkg_pull
@@ -204,18 +244,21 @@ def main():
     Multiprocessed
 
     """
-    # Generate lots of background - only do this once
-    year, sign, magnetisation = "2018", "cf", "magdown"
-    bins = mass_bins(100)
-    bkg_counts = _gen_bkg(year, sign, magnetisation, bins)
+    # Get background counts from the pickle dump
+    n_bins = 100
+    year, sign, magnetisation = "2018", "dcs", "magdown"
+    bkg_pdf = _bkg_counts(sign, n_bins)
 
-    plt.plot((bins[1:] + bins[:-1]) / 2, bkg_counts)
-    plt.show()
+    # Get MC counts from the dataframes
+    bins = mass_bins(n_bins)
+    sig_counts = _sig_counts(year, sign, magnetisation, bins)
 
     out_dict = Manager().dict()
     n_procs = 6
-
-    procs = [Process(target=_pull, args=(out_dict, i)) for i in range(n_procs)]
+    procs = [
+        Process(target=_pull, args=(out_dict, i, bkg_pdf, sig_counts, bins, sign))
+        for i in range(n_procs)
+    ]
 
     for p in procs:
         p.start()
@@ -224,7 +267,7 @@ def main():
         p.join()
 
     sig_pull = np.concatenate(
-        [out_dict[key] for key in out_dict.keys() if key.endswith("_sig")]
+        [item for key, item in out_dict.items() if key.endswith("_sig")]
     )
 
     bkg_pull = np.concatenate(
