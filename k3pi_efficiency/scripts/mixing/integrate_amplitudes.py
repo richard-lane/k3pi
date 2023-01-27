@@ -25,7 +25,7 @@ def _gen(gen, n_gen: int):
     return (particles[name].numpy()[keep].T for name in ["k", "pi1", "pi2", "pi3"])
 
 
-def _amplitudes(gen, n_gen: int):
+def _amplitudes(gen, n_gen: int, k_charge: int):
     """
     Generate n_gen points, keep some of them, find average amplitude model
 
@@ -36,8 +36,8 @@ def _amplitudes(gen, n_gen: int):
     k, pi1, pi2, pi3 = _gen(gen, n_gen)
 
     # Evaluate amplitude at each
-    cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, +1)
-    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, +1)
+    cf = amplitudes.cf_amplitudes(k, pi1, pi2, pi3, k_charge)
+    dcs = amplitudes.dcs_amplitudes(k, pi1, pi2, pi3, k_charge)
 
     # Find cross term
     cross = cf * dcs.conjugate()
@@ -54,6 +54,8 @@ def main():
     Generate phsp evts, evaluate |amplitudes|^2
 
     """
+    k_charge = -1
+
     # Generate lots of phase space events
     n_gen = 500000
 
@@ -72,7 +74,7 @@ def main():
 
     try:
         for _ in range(1000):
-            retval = _amplitudes(gen, n_gen)
+            retval = _amplitudes(gen, n_gen, k_charge)
             n_tot += retval[0]
             cf_sum += retval[1]
             dcs_sum += retval[2]

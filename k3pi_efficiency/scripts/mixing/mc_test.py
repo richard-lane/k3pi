@@ -16,10 +16,11 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 import pdg_params
+import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
-from lib_time_fit import fitter, plotting
+from lib_time_fit import fitter, plotting, models
 from lib_data import get, definitions, stats
 
 
@@ -37,41 +38,6 @@ def _ratio_err(
     dcs_counts, dcs_errs = stats.counts(dcs_df["time"], bins=bins, weights=dcs_wt)
 
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
-
-
-def _mixing_weights(
-    cf_df: pd.DataFrame,
-    dcs_df: pd.DataFrame,
-    r_d: float,
-    params: mixing.MixingParams,
-    q_p: Tuple[float, float],
-):
-    """
-    Find weights to apply to the dataframe to introduce mixing
-
-    """
-    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
-    dcs_lifetimes = dcs_df["time"]
-
-    # Need to find the right amount to scale the amplitudes by
-    dcs_scale = r_d / np.sqrt(amplitudes.DCS_AVG_SQ)
-    cf_scale = 1 / np.sqrt(amplitudes.CF_AVG_SQ)
-    denom_scale = 1 / np.sqrt(amplitudes.DCS_AVG_SQ)
-    mixing_weights = mixing.ws_mixing_weights(
-        dcs_k3pi,
-        dcs_lifetimes,
-        params,
-        +1,
-        q_p,
-        dcs_scale=dcs_scale,
-        cf_scale=cf_scale,
-        denom_scale=denom_scale,
-    )
-
-    # Scale weights such that their mean is right
-    scale = len(dcs_df) / len(cf_df)
-
-    return mixing_weights * scale
 
 
 def _scan(
@@ -139,7 +105,7 @@ def _scan_fits(
 
     # Create axes
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-    ax[0].set_xlim(bins[0], bins[-1])
+    ax[0].set_xlim(0, bins[-1])
 
     # Plot fits and scan on the axes
     contours = plotting.fits_and_scan(ax, allowed_z, chi2s, fit_params, 4)
@@ -156,6 +122,13 @@ def _scan_fits(
     # Plot the true value of Z
     ax[1].plot(amplitudes.AMPGEN_Z.real, amplitudes.AMPGEN_Z.imag, "y*")
 
+    # plot "ideal" fit
+    plotting.scan_fit(ax[0], ideal, "--m", "Expected Fit,\nsmall mixing approximation")
+    ax[0].legend()
+    ax[1].legend()
+
+    ax[0].set_ylim(0.9 * ideal.r_d**2, 1.1 * models.scan(bins[-1], ideal))
+
     fig.suptitle("Weighted MC")
     fig.tight_layout()
 
@@ -164,10 +137,7 @@ def _scan_fits(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    # plot "ideal" fit
-    plotting.scan_fit(ax[0], ideal, "--m", "Expected Fit,\nsmall mixing approximation")
-    ax[0].legend()
-    ax[1].legend()
+    ax[0].set_ylim(0.9 * ideal.r_d**2, 1.1 * models.scan(bins[-1], ideal))
 
     fig.savefig("mc_mixed_fits.png")
 
@@ -178,19 +148,20 @@ def main():
     of the decay times
 
     """
-    # Read AmpGen dataframes
+    k_sign = "k_minus"
+
+    # Read MC dataframes
     cf_df = get.mc("2018", "cf", "magdown")
     dcs_df = get.mc("2018", "dcs", "magdown")
 
-    # K+ only
-    cf_df = cf_df[cf_df["K ID"] > 0]
-    dcs_df = dcs_df[dcs_df["K ID"] > 0]
-
     # Time cut
-    cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < 7)
-    dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < 7)
+    max_time = 7
+    cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < max_time)
+    dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
     dcs_df = dcs_df[dcs_keep]
+
+    bins = np.linspace(0, max_time, 15)
 
     # Convert dtype
     cf_df = cf_df.astype({k: np.float64 for k in definitions.MOMENTUM_COLUMNS})
@@ -209,7 +180,9 @@ def main():
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
-    mixing_weights = _mixing_weights(cf_df, dcs_df, r_d, params, q_p)
+    mixing_weights = mixing_helpers.mixing_weights(
+        cf_df, dcs_df, r_d, params, k_sign, q_p
+    )
 
     # Find mixed ratio and error
     ratio, err = _ratio_err(bins, cf_df, dcs_df, mixing_weights)

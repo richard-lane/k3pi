@@ -182,25 +182,25 @@ def _lifetimes2invmev(lifetimes: np.ndarray) -> np.ndarray:
 
 def _ws_weights(
     times: np.ndarray,
-    d0_amplitudes: np.ndarray,
-    dbar0_amplitudes: np.ndarray,
+    ws_amplitudes: np.ndarray,
+    rs_amplitudes: np.ndarray,
     params: MixingParams,
     q_p: Tuple,
-    scales: Tuple = (1.0, 1.0),
+    scales: Tuple[float, float] = (1.0, 1.0),
     denom_scale: float = 1.0,
 ) -> np.ndarray:
     """
     Weights from amplitudes + times
 
-    Only works for WS D0->K+3pi decays
+    Only works for WS decays
 
     :param times: decay times in lifetimes
-    :param d0_amplitudes: DCS amplitudes
-    :param dbar0_amplitudes: CF amplitudes
+    :param ws_amplitudes: DCS amplitudes
+    :param rs_amplitudes: CF amplitudes
     :param params: mixing parameters
     :param q_p: values of q and p.
     :param scales: (CF, DCS) amplitude scaling factors to apply to the numerator
-    :param denom_scale: scaling factors to apply to the amplitude in the denom
+    :param denom_scale: scaling factor to apply to the amplitude in the denom
     :returns: weights
 
     """
@@ -211,13 +211,13 @@ def _ws_weights(
     g_minus = _g_minus(times=t_invmev, params=params)
 
     q, p = q_p
+    cf_scale, dcs_scale = scales
     num = (
-        scales[1] * g_plus * d0_amplitudes
-        + scales[0] * q * g_minus * dbar0_amplitudes / p
+        dcs_scale * g_plus * ws_amplitudes + cf_scale * q * g_minus * rs_amplitudes / p
     )
     num = np.abs(num) ** 2
 
-    denom = np.exp(-times) * (denom_scale * np.abs(d0_amplitudes)) ** 2
+    denom = np.exp(-times) * (denom_scale * np.abs(ws_amplitudes)) ** 2
 
     return num / denom
 
@@ -250,10 +250,6 @@ def ws_mixing_weights(
     """
     if not q_p:
         q_p = 1 / np.sqrt(2), 1 / np.sqrt(2)
-
-    # For now only deal with K+
-    # TODO deal with K- as well
-    assert k_charge == 1
 
     # Evaluate amplitudes
     cf_amplitudes = amplitudes.cf_amplitudes(*k3pi, k_charge)

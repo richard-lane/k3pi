@@ -16,6 +16,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 import pdg_params
+import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
@@ -37,41 +38,6 @@ def _ratio_err(
     dcs_counts, dcs_errs = stats.counts(dcs_df["time"], bins=bins, weights=dcs_wt)
 
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
-
-
-def _mixing_weights(
-    cf_df: pd.DataFrame,
-    dcs_df: pd.DataFrame,
-    r_d: float,
-    params: mixing.MixingParams,
-    q_p: Tuple[float, float],
-):
-    """
-    Find weights to apply to the dataframe to introduce mixing
-
-    """
-    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
-    dcs_lifetimes = dcs_df["time"]
-
-    # Need to find the right amount to scale the amplitudes by
-    dcs_scale = r_d / np.sqrt(amplitudes.DCS_AVG_SQ)
-    cf_scale = 1 / np.sqrt(amplitudes.CF_AVG_SQ)
-    denom_scale = 1 / np.sqrt(amplitudes.DCS_AVG_SQ)
-    mixing_weights = mixing.ws_mixing_weights(
-        dcs_k3pi,
-        dcs_lifetimes,
-        params,
-        +1,
-        q_p,
-        dcs_scale=dcs_scale,
-        cf_scale=cf_scale,
-        denom_scale=denom_scale,
-    )
-
-    # Scale weights such that their mean is right
-    scale = len(dcs_df) / len(cf_df)
-
-    return mixing_weights * scale
 
 
 def _scan(
@@ -181,8 +147,9 @@ def main():
 
     """
     # Read AmpGen dataframes
-    cf_df = get.ampgen("cf")
-    dcs_df = get.ampgen("dcs")
+    k_sign = "both"
+    cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
+    dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
 
     # Time cut
     max_time = 11
@@ -204,7 +171,9 @@ def main():
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
-    mixing_weights = _mixing_weights(cf_df, dcs_df, r_d, params, q_p)
+    mixing_weights = mixing_helpers.mixing_weights(
+        cf_df, dcs_df, r_d, params, k_sign, q_p
+    )
 
     # Find mixed ratio and error
     ratio, err = _ratio_err(bins, cf_df, dcs_df, mixing_weights)

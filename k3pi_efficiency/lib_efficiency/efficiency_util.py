@@ -73,6 +73,15 @@ def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     """
     AmpGen dataframe
 
+    :param decay_type: "dcs", "cf" or "false"
+    :param k_charge: "k_plus", "k_minus" or "both"
+    :param train: True, False or otherwise
+                  Training events if True; testing events if False
+                  Otherwise, both
+
+    :returns: dataframe with 3-momenta flipped if required
+              and a "K ID" column added
+
     """
     assert decay_type in {"dcs", "cf", "false"}
     assert k_charge in {"k_plus", "k_minus", "both"}
@@ -90,6 +99,9 @@ def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
 
     dataframe = dataframe[train_mask]
 
+    # Add a K ID column to the dataframe
+    dataframe["K ID"] = 321 * np.ones(len(dataframe))
+
     if k_charge == "k_plus":
         # Don't flip any momenta
         return dataframe
@@ -102,7 +114,12 @@ def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
         # Flip half of the momenta randomly
         mask = np.random.random(len(dataframe)) < 0.5
 
+    # Flip the right IDs if necessary
+    dataframe.loc[mask, "K ID"] *= -1
+
+    # Flip 3 momenta
     dataframe = util.flip_momenta(dataframe, mask)
+
     return dataframe
 
 

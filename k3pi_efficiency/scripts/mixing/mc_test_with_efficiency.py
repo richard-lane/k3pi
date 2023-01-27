@@ -18,11 +18,13 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 import pdg_params
+import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.amplitude_models import amplitudes
 from lib_efficiency.get import reweighter_dump as get_reweighter
+from lib_efficiency.efficiency_definitions import RS_EFF, WS_EFF
 from lib_time_fit import util as fit_util
-from lib_time_fit import fitter, plotting
+from lib_time_fit import fitter, plotting, models
 from lib_data import get, definitions, stats
 
 
@@ -34,9 +36,8 @@ def _efficiency_weights(
 
     """
     # Get the right reweighter
-    # TODO for now just use the DCS reweighter for both since there seems to be some issue with the relative scaling
     reweighter = get_reweighter(
-        year, "dcs", magnetisation, k_sign=k_sign, fit=False, cut=False
+        year, sign, magnetisation, k_sign="both", fit=False, cut=False
     )
 
     # Find weights
@@ -55,7 +56,7 @@ def _ratio_err(
     k_sign: str,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Ratio and error
+    Ratio and error, with efficiency correction
 
     """
     # Get efficiency weights from the dataframes
@@ -64,7 +65,10 @@ def _ratio_err(
 
     # Scale efficiency weights
     cf_eff_wt, dcs_eff_wt = (
-        arr[0] for arr in efficiency_util.scale_weights([cf_eff_wt], [dcs_eff_wt], 1.0)
+        arr[0]
+        for arr in efficiency_util.scale_weights(
+            [cf_eff_wt], [dcs_eff_wt], WS_EFF / RS_EFF
+        )
     )
 
     cf_counts, cf_errs = stats.counts(cf_df["time"], bins=bins, weights=cf_eff_wt)
@@ -73,41 +77,6 @@ def _ratio_err(
     )
 
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
-
-
-def _mixing_weights(
-    cf_df: pd.DataFrame,
-    dcs_df: pd.DataFrame,
-    r_d: float,
-    params: mixing.MixingParams,
-    q_p: Tuple[float, float],
-):
-    """
-    Find weights to apply to the dataframe to introduce mixing
-
-    """
-    dcs_k3pi = efficiency_util.k_3pi(dcs_df)
-    dcs_lifetimes = dcs_df["time"]
-
-    # Need to find the right amount to scale the amplitudes by
-    dcs_scale = r_d / np.sqrt(amplitudes.DCS_AVG_SQ)
-    cf_scale = 1 / np.sqrt(amplitudes.CF_AVG_SQ)
-    denom_scale = 1 / np.sqrt(amplitudes.DCS_AVG_SQ)
-    mixing_weights = mixing.ws_mixing_weights(
-        dcs_k3pi,
-        dcs_lifetimes,
-        params,
-        +1,
-        q_p,
-        dcs_scale=dcs_scale,
-        cf_scale=cf_scale,
-        denom_scale=denom_scale,
-    )
-
-    # Scale weights such that their mean is right
-    scale = len(dcs_df) / len(cf_df)
-
-    return mixing_weights * scale
 
 
 def _scan(
@@ -189,7 +158,17 @@ def _scan_fits(
         fmt="k+",
     )
 
-    fig.suptitle("Weighted MC with efficiency")
+    # Plot the true value of Z
+    ax[1].plot(amplitudes.AMPGEN_Z.real, amplitudes.AMPGEN_Z.imag, "y*")
+
+    # plot "ideal" fit
+    plotting.scan_fit(ax[0], ideal, "--m", "Expected Fit,\nsmall mixing approximation")
+    ax[0].legend()
+    ax[1].legend()
+
+    ax[0].set_ylim(0.9 * ideal.r_d**2, 1.1 * models.scan(bins[-1], ideal))
+
+    fig.suptitle("Weighted MC, efficiency corrected")
     fig.tight_layout()
 
     fig.subplots_adjust(right=0.85)
@@ -197,38 +176,34 @@ def _scan_fits(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    # plot "ideal" fit
-    plotting.scan_fit(ax[0], ideal, "--m", "Expected Fit,\nsmall mixing approximation")
-
     fig.savefig("mc_mixed_fits_eff.png")
 
 
 def main():
     """
     Read MC dataframes, add some mixing to the DCS frame, plot the ratio
-    of the decay times with the efficiency correction to see what effect it has
+    of the decay times with efficiency correction
 
     """
-    # Read AmpGen dataframes
+    k_sign = "k_plus"
+
+    # Read MC dataframes
     year, magnetisation = "2018", "magdown"
     cf_df = get.mc(year, "cf", magnetisation)
     dcs_df = get.mc(year, "dcs", magnetisation)
 
-    # K+ only
-    cf_df = cf_df[cf_df["K ID"] > 0]
-    dcs_df = dcs_df[dcs_df["K ID"] > 0]
-
     # Time cut
-    cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < 7)
-    dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < 7)
+    max_time = 7
+    cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < max_time)
+    dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
     dcs_df = dcs_df[dcs_keep]
 
-    # Convert dtype
+    bins = np.linspace(0, max_time, 15)
+
+    # Convert dtype of kinematic columns
     cf_df = cf_df.astype({k: np.float64 for k in definitions.MOMENTUM_COLUMNS})
     dcs_df = dcs_df.astype({k: np.float64 for k in definitions.MOMENTUM_COLUMNS})
-
-    bins = np.linspace(0, 7, 15)
 
     # Parameters determining mixing
     r_d = np.sqrt(0.003025)
@@ -241,7 +216,9 @@ def main():
     )
     q_p = [1 / np.sqrt(2) for _ in range(2)]
 
-    mixing_weights = _mixing_weights(cf_df, dcs_df, r_d, params, q_p)
+    mixing_weights = mixing_helpers.mixing_weights(
+        cf_df, dcs_df, r_d, params, k_sign, q_p
+    )
 
     # Find mixed ratio and error
     ratio, err = _ratio_err(
@@ -251,22 +228,20 @@ def main():
         mixing_weights,
         year,
         magnetisation,
-        "both",  # Use the k+/k- reweighter for now
+        k_sign,
     )
 
-    # Cut off the first bin cus its rubbish
+    # Cut off the first bin because it's bad
     ratio = ratio[1:]
     err = err[1:]
     bins = bins[1:]
 
-    # TODO find this properly
-    ampgen_z = 0.6708020379588885 - 0.050344237199943055j
     ideal = fit_util.ScanParams(
         r_d=r_d,
         x=params.mixing_x,
         y=params.mixing_y,
-        re_z=ampgen_z.real,
-        im_z=ampgen_z.imag,
+        re_z=amplitudes.AMPGEN_Z.real,
+        im_z=amplitudes.AMPGEN_Z.imag,
     )
 
     # Make a plot showing fits and scan
