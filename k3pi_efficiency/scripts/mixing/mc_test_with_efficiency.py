@@ -1,11 +1,12 @@
 """
 Introduce some mixing to the MC dataframes via weighting
 
-Also do the efficiency correction to see what difference it makes
+Also option to do the efficiency correction to see what difference it makes
 
 """
 import sys
 import pathlib
+import argparse
 from typing import Tuple
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_fitter"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_signal_cuts"))
 import pdg_params
 import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
@@ -26,6 +28,19 @@ from lib_efficiency.efficiency_definitions import RS_EFF, WS_EFF
 from lib_time_fit import util as fit_util
 from lib_time_fit import fitter, plotting, models
 from lib_data import get, definitions, stats
+from lib_cuts import get as cuts_get
+from lib_cuts.definitions import THRESHOLD
+
+
+def _bdt_cut_df(
+    dataframe: pd.DataFrame, year: str, sign: str, magnetisation: str
+) -> pd.DataFrame:
+    """
+    Perform BDT cut on a dataframe
+
+    """
+    clf = cuts_get.classifier(year, sign, magnetisation)
+    return cuts_get.signal_cut_df(dataframe, clf, THRESHOLD)
 
 
 def _efficiency_weights(
@@ -54,22 +69,27 @@ def _ratio_err(
     year: str,
     magnetisation: str,
     k_sign: str,
+    eff: bool,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Ratio and error, with efficiency correction
 
     """
     # Get efficiency weights from the dataframes
-    cf_eff_wt = _efficiency_weights(cf_df, year, magnetisation, "cf", k_sign)
-    dcs_eff_wt = _efficiency_weights(dcs_df, year, magnetisation, "dcs", k_sign)
+    if eff:
+        cf_eff_wt = _efficiency_weights(cf_df, year, magnetisation, "cf", k_sign)
+        dcs_eff_wt = _efficiency_weights(dcs_df, year, magnetisation, "dcs", k_sign)
 
-    # Scale efficiency weights
-    cf_eff_wt, dcs_eff_wt = (
-        arr[0]
-        for arr in efficiency_util.scale_weights(
-            [cf_eff_wt], [dcs_eff_wt], WS_EFF / RS_EFF
+        # Scale efficiency weights
+        cf_eff_wt, dcs_eff_wt = (
+            arr[0]
+            for arr in efficiency_util.scale_weights(
+                [cf_eff_wt], [dcs_eff_wt], WS_EFF / RS_EFF
+            )
         )
-    )
+    else:
+        cf_eff_wt = np.ones(len(cf_df))
+        dcs_eff_wt = np.ones(len(dcs_df))
 
     cf_counts, cf_errs = stats.counts(cf_df["time"], bins=bins, weights=cf_eff_wt)
     dcs_counts, dcs_errs = stats.counts(
@@ -131,7 +151,13 @@ def _scan(
 
 
 def _scan_fits(
-    ratio: np.ndarray, err: np.ndarray, bins: np.ndarray, ideal: fit_util.ScanParams
+    ratio: np.ndarray,
+    err: np.ndarray,
+    bins: np.ndarray,
+    ideal: fit_util.ScanParams,
+    eff: bool,
+    bdt: bool,
+    path: str,
 ) -> None:
     """
     Plot a scan and each fit
@@ -168,7 +194,9 @@ def _scan_fits(
 
     ax[0].set_ylim(0.9 * ideal.r_d**2, 1.1 * models.scan(bins[-1], ideal))
 
-    fig.suptitle("Weighted MC, efficiency corrected")
+    fig.suptitle(
+        f"Weighted MC{', efficiency corrected' if eff else ''}{', with BDT cut' if bdt else ''}"
+    )
     fig.tight_layout()
 
     fig.subplots_adjust(right=0.85)
@@ -176,16 +204,17 @@ def _scan_fits(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    fig.savefig("mc_mixed_fits_eff.png")
+    print(f"saving {path}")
+    fig.savefig(path)
 
 
-def main():
+def main(args: argparse.Namespace):
     """
     Read MC dataframes, add some mixing to the DCS frame, plot the ratio
     of the decay times with efficiency correction
 
     """
-    k_sign = "k_plus"
+    k_sign = args.k_sign
 
     # Read MC dataframes
     year, magnetisation = "2018", "magdown"
@@ -204,6 +233,11 @@ def main():
     # Convert dtype of kinematic columns
     cf_df = cf_df.astype({k: np.float64 for k in definitions.MOMENTUM_COLUMNS})
     dcs_df = dcs_df.astype({k: np.float64 for k in definitions.MOMENTUM_COLUMNS})
+
+    # Perform BDT cuts if needed
+    if args.bdt:
+        cf_df = _bdt_cut_df(cf_df, year, "dcs", magnetisation)
+        dcs_df = _bdt_cut_df(dcs_df, year, "dcs", magnetisation)
 
     # Parameters determining mixing
     r_d = np.sqrt(0.003025)
@@ -229,6 +263,7 @@ def main():
         year,
         magnetisation,
         k_sign,
+        args.eff,
     )
 
     # Cut off the first bin because it's bad
@@ -245,8 +280,29 @@ def main():
     )
 
     # Make a plot showing fits and scan
-    _scan_fits(ratio, err, bins, ideal)
+    path = f"mc_mixed_fits_{k_sign}{'_eff' if args.eff else ''}{'_bdt' if args.bdt else ''}.png"
+    _scan_fits(ratio, err, bins, ideal, args.eff, args.bdt, path)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Introduce D mixing via weighting to the LHCb MC dataframes"
+    )
+
+    parser.add_argument(
+        "k_sign",
+        help="whether to use K+ or K- type events (or both)",
+        choices={"k_plus", "k_minus", "both"},
+    )
+    parser.add_argument(
+        "--eff",
+        help="Whether to do an efficiency correction.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--bdt",
+        help="Whether to do the BDT cut.",
+        action="store_true",
+    )
+
+    main(parser.parse_args())
