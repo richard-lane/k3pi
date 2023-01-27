@@ -4,6 +4,7 @@ Introduce some mixing to the AmpGen dataframes via weighting
 """
 import sys
 import pathlib
+import argparse
 from typing import Tuple
 import numpy as np
 import pandas as pd
@@ -21,7 +22,7 @@ from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
 from lib_time_fit import fitter, plotting
-from lib_data import get, definitions, stats
+from lib_data import stats
 
 
 def _ratio_err(
@@ -92,7 +93,11 @@ def _scan(
 
 
 def _scan_fits(
-    ratio: np.ndarray, err: np.ndarray, bins: np.ndarray, ideal: fit_util.ScanParams
+    ratio: np.ndarray,
+    err: np.ndarray,
+    bins: np.ndarray,
+    ideal: fit_util.ScanParams,
+    path,
 ) -> None:
     """
     Plot a scan and each fit
@@ -136,23 +141,26 @@ def _scan_fits(
     cbar_ax = fig.add_axes([0.88, 0.1, 0.06, 0.755])
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
-    fig.savefig("ampgen_mixed_fits.png")
+
+    print(f"saving {path}")
+    fig.savefig(path)
     plt.close(fig)
 
 
-def main():
+def main(args):
     """
     Read MC dataframes, add some mixing to the DCS frame, plot the ratio
     of the decay times
 
     """
     # Read AmpGen dataframes
-    k_sign = "both"
+    k_sign = args.k_sign
+
     cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
 
     # Time cut
-    max_time = 11
+    max_time = 15
     cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < max_time)
     dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
@@ -187,8 +195,18 @@ def main():
     )
 
     # Make a plot showing fits and scan
-    _scan_fits(ratio, err, bins, ideal)
+    path = f"ampgen_mixed_fits_{k_sign}.png"
+    _scan_fits(ratio, err, bins, ideal, path)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Introduce D mixing via weighting to the AmpGen dataframes"
+    )
+
+    parser.add_argument(
+        "k_sign",
+        help="whether to use K+ or K- type events (or both)",
+        choices={"k_plus", "k_minus", "both"},
+    )
+    main(parser.parse_args())
