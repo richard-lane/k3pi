@@ -27,6 +27,7 @@ def mixing_weights(
 
     """
     assert k_sign in {"both", "k_plus", "k_minus"}
+    print(f"\tfinding mixing weights: {len(dcs_df)=}")
 
     dcs_lifetimes = dcs_df["time"]
 
@@ -53,9 +54,10 @@ def mixing_weights(
     else:
         weights = np.ones(len(dcs_df)) * np.inf
         plus_mask = dcs_df["K ID"] == 321
+        print(f"\tK+ {np.sum(plus_mask)=}")
+        print(f"\tK- {np.sum(~plus_mask)=}")
 
         # K+ weights
-        print(f"finding {np.sum(plus_mask)} k+ mixing weights")
         weights[plus_mask] = mixing.ws_mixing_weights(
             efficiency_util.k_3pi(dcs_df[plus_mask]),
             dcs_lifetimes[plus_mask],
@@ -68,7 +70,6 @@ def mixing_weights(
         )
 
         # K- weights
-        print(f"finding {len(plus_mask) - np.sum(plus_mask)} k- mixing weights")
         weights[~plus_mask] = mixing.ws_mixing_weights(
             efficiency_util.k_3pi(dcs_df[~plus_mask]),
             dcs_lifetimes[~plus_mask],

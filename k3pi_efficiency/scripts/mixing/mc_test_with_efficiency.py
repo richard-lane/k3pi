@@ -28,6 +28,7 @@ from lib_efficiency.efficiency_definitions import RS_EFF, WS_EFF
 from lib_time_fit import util as fit_util
 from lib_time_fit import fitter, plotting, models
 from lib_data import get, definitions, stats
+from lib_data import util as data_util
 from lib_cuts import get as cuts_get
 from lib_cuts.definitions import THRESHOLD
 
@@ -55,9 +56,13 @@ def _efficiency_weights(
         year, sign, magnetisation, k_sign="both", fit=False, cut=False
     )
 
-    # Find weights
+    # Get the k3pi
+    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    # Momentum order the pions
+    pi1, pi2 = data_util.momentum_order(k, pi1, pi2)
+
     return reweighter.weights(
-        efficiency_util.points(*efficiency_util.k_3pi(dataframe), dataframe["time"])
+        efficiency_util.points(k, pi1, pi2, pi3, dataframe["time"])
     )
 
 
@@ -208,6 +213,17 @@ def _scan_fits(
     fig.savefig(path)
 
 
+def _time_cut(dataframe: pd.DataFrame, max_time: float) -> pd.DataFrame:
+    """
+    Do the time cut on a dataframe
+
+    """
+    max_time = 7
+    keep = (0 < dataframe["time"]) & (dataframe["time"] < max_time)
+
+    return dataframe.loc[keep]
+
+
 def main(args: argparse.Namespace):
     """
     Read MC dataframes, add some mixing to the DCS frame, plot the ratio
@@ -221,12 +237,28 @@ def main(args: argparse.Namespace):
     cf_df = get.mc(year, "cf", magnetisation)
     dcs_df = get.mc(year, "dcs", magnetisation)
 
-    # Time cut
+    # Time cuts
     max_time = 7
-    cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < max_time)
-    dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < max_time)
-    cf_df = cf_df[cf_keep]
-    dcs_df = dcs_df[dcs_keep]
+    cf_df = _time_cut(cf_df, max_time)
+    dcs_df = _time_cut(dcs_df, max_time)
+
+    # Select K signs
+    if not k_sign == "both":
+        assert np.all(np.abs(dcs_df["K ID"]) == 321), "Check DCS K ids all +-321"
+        assert np.all(np.abs(cf_df["K ID"]) == 321), "Check CF K ids all +-321"
+
+        if k_sign == "k_plus":
+            cf_keep = cf_df["K ID"] > 0
+            dcs_keep = dcs_df["K ID"] > 0
+        else:
+            cf_keep = cf_df["K ID"] < 0
+            dcs_keep = dcs_df["K ID"] < 0
+
+        cf_df = cf_df.loc[cf_keep]
+        dcs_df = dcs_df.loc[dcs_keep]
+
+    if not k_sign == "both":
+        print(f"{k_sign=}\t{len(dcs_df)} evts")
 
     bins = np.linspace(0, max_time, 15)
 
@@ -236,6 +268,7 @@ def main(args: argparse.Namespace):
 
     # Perform BDT cuts if needed
     if args.bdt:
+        print("performing bdt cut")
         cf_df = _bdt_cut_df(cf_df, year, "dcs", magnetisation)
         dcs_df = _bdt_cut_df(dcs_df, year, "dcs", magnetisation)
 
