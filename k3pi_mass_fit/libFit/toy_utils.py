@@ -64,14 +64,16 @@ def _gen_bkg(
     n_bins: int = None,
     sign: str = None,
     bdt_cut: bool = False,
-    efficiency: bool = False
+    efficiency: bool = False,
+    verbose: bool = True,
 ) -> np.ndarray:
     """
     Generate background points; returns an array
 
     """
     if n_bins is not None:
-        print("Generating toy points with the estimated bkg model")
+        if verbose:
+            print("Generating toy points with the estimated bkg model")
         estimated_bkg = lib_bkg.pdf(
             n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency
         )
@@ -81,7 +83,8 @@ def _gen_bkg(
 
     else:
         # Using the sqrt model thing
-        print("Generating toy points with the sqrt bkg model")
+        if verbose:
+            print("Generating toy points with the sqrt bkg model")
 
         def bkg_pdf(x: np.ndarray) -> np.ndarray:
             return pdfs.background(x, *params)
@@ -122,6 +125,7 @@ def gen_points(
     time_bin: int,
     bkg_params: Tuple,
     bkg_kw: dict = None,
+    verbose: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate n_sig and n_bkg points; see which are kept using accept-reject; return an array of both
@@ -130,11 +134,11 @@ def gen_points(
     in case we want to pass info like n_bins for finding the
     estimated bkg fcn from a pickle dump
 
-    Also returns true fit params (signal frac, centre, width, alpha, beta, a, b)
+    Also returns true fit params (n_sig, n_bkg, centre, width, alpha, beta, *bkg_params)
 
     """
     bkg_kw = {} if bkg_kw is None else bkg_kw
-    bkg = _gen_bkg(rng, int(n_bkg), bkg_params, **bkg_kw)
+    bkg = _gen_bkg(rng, int(n_bkg), bkg_params, **bkg_kw, verbose=verbose)
 
     centre, width, alpha, beta = pdfs.signal_defaults(time_bin)
     sig = _gen_sig(
@@ -142,12 +146,9 @@ def gen_points(
         int(n_sig),
         (centre, width, alpha, beta),
     )
+    if verbose:
+        print(f"{len(sig)=}\t{len(bkg)=}")
 
-    # Find signal and bkg fractions
-    sig_frac = len(sig) / (len(sig) + len(bkg))
-    bkg_frac = len(bkg) / (len(sig) + len(bkg))
-
-    # TODO return the right params
     return np.concatenate((sig, bkg)), np.array(
-        (sig_frac, bkg_frac, centre, width, width, alpha, alpha, beta, *bkg_params)
+        (len(sig), len(bkg), centre, width, width, alpha, alpha, beta, *bkg_params)
     )

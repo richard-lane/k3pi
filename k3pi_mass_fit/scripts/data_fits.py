@@ -68,7 +68,15 @@ def _separate_fit(
 
     axes["B"].plot(pdfs.domain(), [1, 1], "r-")
 
-    fig.suptitle(f"{fitter.valid=}")
+    fig.suptitle(
+        f"Nsig={fitter.values[0]:.4f}"
+        r"$\pm$"
+        f"{fitter.errors[0]:.4f}"
+        f"\tNbkg={fitter.values[1]:.4f}"
+        r"$\pm$"
+        f"{fitter.errors[1]:.4f}"
+        f"\t{fitter.valid=}"
+    )
     fig.tight_layout()
 
     fig.tight_layout()
@@ -137,7 +145,16 @@ def _fit(
         )
     )
 
-    fig.suptitle(f"{fitter.valid=}")
+    print(fitter.values)
+    fig.suptitle(
+        f"Nsig={fitter.values[2]:.4f}"
+        r"$\pm$"
+        f"{fitter.errors[2]:.4f}"
+        f"\tNbkg={fitter.values[3]:.4f}"
+        r"$\pm$"
+        f"{fitter.errors[3]:.4f}"
+        f"\t{fitter.valid=}"
+    )
     fig.tight_layout()
 
     bkg_str = "_alt_bkg" if alt_bkg else ""
