@@ -1,5 +1,5 @@
 """
-Introduce some mixing to the MC dataframes via weighting
+Introduce some mixing to the particle dataframes via weighting
 
 Also option to do the efficiency correction to see what difference it makes
 
@@ -123,8 +123,10 @@ def main(args: argparse.Namespace):
 
     # Read MC dataframes
     year, magnetisation = "2018", "magdown"
-    cf_df = get.mc(year, "cf", magnetisation)
-    dcs_df = get.mc(year, "dcs", magnetisation)
+    print("getting cf")
+    cf_df = get.particle_gun("cf")
+    print("getting dcs")
+    dcs_df = get.particle_gun("dcs")
 
     # Time cuts
     max_time = 7
@@ -203,7 +205,7 @@ def main(args: argparse.Namespace):
 
     # Make a plot showing fits and scan
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    path = f"mc_mixed_fits_{k_sign}{'_eff' if args.eff else ''}{'_bdt' if args.bdt else ''}.png"
+    path = f"pgun_mixed_fits_{k_sign}{'_eff' if args.eff else ''}{'_bdt' if args.bdt else ''}.png"
     mixing_helpers.scan_fits(fig, axes, ratio, err, bins, ideal, path)
 
 

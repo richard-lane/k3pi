@@ -41,112 +41,6 @@ def _ratio_err(
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
 
 
-def _scan(
-    ratio: np.ndarray, err: np.ndarray, bins: np.ndarray, ideal: fit_util.ScanParams
-) -> Tuple[np.ndarray, np.ndarray, Tuple]:
-    """
-    Do scan of fits
-
-    Returns arrays of chi2 and fit params and a tuple of (allowed_rez, allowed_imz)
-
-    """
-    n_re, n_im = 75, 76
-    n_fits = n_re * n_im
-    allowed_rez = np.linspace(-1, 1, n_re)
-    allowed_imz = np.linspace(-1, 1, n_im)
-
-    # To store the value from the fits
-    fit_params = np.ones((n_im, n_re), dtype=object) * np.inf
-    chi2s = np.ones((n_im, n_re)) * np.inf
-
-    # Need x/y widths and correlations for the Gaussian constraint
-    width = 0.005
-    correlation = 0.5
-
-    with tqdm(total=n_fits) as pbar:
-        for i, re_z in enumerate(allowed_rez):
-            for j, im_z in enumerate(allowed_imz):
-                these_params = fit_util.ScanParams(
-                    ideal.r_d, ideal.x, ideal.y, re_z, im_z
-                )
-                scan = fitter.scan_fit(
-                    ratio, err, bins, these_params, (width, width), correlation
-                )
-
-                fit_vals = scan.values
-
-                fit_params[j, i] = fit_util.ScanParams(
-                    r_d=fit_vals[0],
-                    x=fit_vals[1],
-                    y=fit_vals[2],
-                    re_z=re_z,
-                    im_z=im_z,
-                )
-
-                chi2s[j, i] = scan.fval
-                pbar.update(1)
-
-    chi2s -= np.min(chi2s)
-    chi2s = np.sqrt(chi2s)
-
-    return chi2s, fit_params, (allowed_rez, allowed_imz)
-
-
-def _scan_fits(
-    ratio: np.ndarray,
-    err: np.ndarray,
-    bins: np.ndarray,
-    ideal: fit_util.ScanParams,
-    path,
-) -> None:
-    """
-    Plot a scan and each fit
-
-    """
-    bin_centres = (bins[1:] + bins[:-1]) / 2
-    bin_widths = (bins[1:] - bins[:-1]) / 2
-
-    chi2s, fit_params, allowed_z = _scan(ratio, err, bins, ideal)
-
-    # Create axes
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-    ax[0].set_xlim(bins[0], bins[-1])
-
-    # Plot fits and scan on the axes
-    contours = plotting.fits_and_scan(ax, allowed_z, chi2s, fit_params, 4)
-
-    # Plot the errorbars now so they show up on top of the fits
-    ax[0].errorbar(
-        bin_centres,
-        ratio,
-        yerr=err,
-        xerr=bin_widths,
-        fmt="k+",
-    )
-
-    # Plot the true value of Z
-    ax[1].plot(amplitudes.AMPGEN_Z.real, amplitudes.AMPGEN_Z.imag, "y*", label="True Z")
-
-    # plot "ideal" fit
-    plotting.scan_fit(ax[0], ideal, "--m", "Expected Fit,\nsmall mixing approximation")
-
-    ax[0].legend()
-    ax[1].legend()
-
-    fig.suptitle("Weighted AmpGen")
-    fig.tight_layout()
-
-    # Colourbar
-    fig.subplots_adjust(right=0.85)
-    cbar_ax = fig.add_axes([0.88, 0.1, 0.06, 0.755])
-    fig.colorbar(contours, cax=cbar_ax)
-    cbar_ax.set_title(r"$\sigma$")
-
-    print(f"saving {path}")
-    fig.savefig(path)
-    plt.close(fig)
-
-
 def main(args):
     """
     Read MC dataframes, add some mixing to the DCS frame, plot the ratio
@@ -195,8 +89,9 @@ def main(args):
     )
 
     # Make a plot showing fits and scan
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     path = f"ampgen_mixed_fits_{k_sign}.png"
-    _scan_fits(ratio, err, bins, ideal, path)
+    mixing_helpers.scan_fits(fig, axes, ratio, err, bins, ideal, path)
 
 
 if __name__ == "__main__":
