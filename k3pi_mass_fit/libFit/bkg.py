@@ -34,7 +34,12 @@ def dump_path(
 
 
 def get_dump(
-        n_bins: int, sign: str, *, bdt_cut: bool, efficiency: bool, verbose: bool = False,
+    n_bins: int,
+    sign: str,
+    *,
+    bdt_cut: bool,
+    efficiency: bool,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Get an array of estimated background counts from a pickle dump

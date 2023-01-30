@@ -21,6 +21,12 @@ from libFit import pdfs, fit, toy_utils, definitions, bkg
 from lib_data import stats
 
 
+class InvalidFitError(Exception):
+    """
+    Invalid fit
+    """
+
+
 def _fit(fit_params, bkg_params, combined, fit_axis, sqrt_fit):
     """
     Plot fit on an axis
@@ -103,6 +109,8 @@ def _pull(
             efficiency=bkg_params["efficiency"],
         )
     )
+    if not fitter.valid:
+        raise InvalidFitError
 
     fit_params = fitter.values
     fit_errs = fitter.errors
@@ -150,16 +158,22 @@ def _pull_study(
 
     return_vals = tuple([] for _ in range(n_params))
     for _ in tqdm(range(n_experiments)):
-        pulls = _pull(
-            rng,
-            n_sig,
-            n_bkg,
-            sign,
-            time_bin,
-            out_dict,
-            sqrt_gen=sqrt_gen,
-            sqrt_fit=sqrt_fit,
-        )
+        while True:
+            try:
+                pulls = _pull(
+                    rng,
+                    n_sig,
+                    n_bkg,
+                    sign,
+                    time_bin,
+                    out_dict,
+                    sqrt_gen=sqrt_gen,
+                    sqrt_fit=sqrt_fit,
+                )
+                break
+            except InvalidFitError:
+                print("invalid fit")
+                pass
 
         if sqrt_gen is sqrt_fit:
             # We're fitting to and generating the same model
@@ -209,13 +223,21 @@ def _plot_pulls(
             axis = ax.ravel()[i]
             pull = pulls[i]
 
-            axis.hist(pull, label=f"{np.mean(pull):.4f}+-{np.std(pull):.4f}", bins=20)
+            axis.hist(
+                pull,
+                label=f"{np.mean(pull):.4f}+-{np.std(pull):.4f}",
+                bins=np.linspace(-6, 6, 120),
+            )
             axis.set_title(labels[i])
             axis.legend()
 
     else:
         for a, p, l in zip(ax.ravel(), pulls, labels):
-            a.hist(p, label=f"{np.mean(p):.4f}+-{np.std(p):.4f}", bins=20)
+            a.hist(
+                p,
+                label=f"{np.mean(p):.4f}+-{np.std(p):.4f}",
+                bins=np.linspace(-6, 6, 120),
+            )
             a.set_title(l)
             a.legend()
 
@@ -241,8 +263,8 @@ def _do_pull_study(args: argparse.Namespace):
     # For plotting pulls
     fig, ax = plt.subplots(4, 3, figsize=(12, 9))
 
-    n_procs = 7
-    n_experiments = 75
+    n_procs = 6
+    n_experiments = 750
     procs = [
         Process(
             target=_pull_study,
