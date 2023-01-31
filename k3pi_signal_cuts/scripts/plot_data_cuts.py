@@ -14,6 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts.get import classifier as get_clf
+from lib_cuts.definitions import THRESHOLD
 from lib_data import get, training_vars
 
 
@@ -41,7 +42,7 @@ def main():
     # Read dataframes of stuff
     year, sign, magnetisation = "2018", "cf", "magdown"
 
-    n_dfs = 50
+    n_dfs = 100
     dataframes = list(
         tqdm(islice(get.data(year, sign, magnetisation), n_dfs), total=n_dfs)
     )
@@ -53,8 +54,9 @@ def main():
 
     training_labels = list(training_vars.training_var_names())
 
-    threshhold = 0.180
+    threshhold = THRESHOLD
     predictions = clf.predict_proba(dataframe[training_labels])[:, 1] > threshhold
+    print(f"{threshhold=}\tefficiency: {np.sum(predictions) / len(predictions)}")
 
     # Plot histograms of our variables before/after doing these cuts
     columns = list(training_vars.training_var_names()) + ["D0 mass", "D* mass"]
