@@ -1,6 +1,8 @@
 """
 Toy study for mass fit
 
+TODO: write a fcn for bkg_params dict so it's not hard coded everywhere
+
 """
 import os
 import sys
@@ -38,11 +40,12 @@ def _fit(fit_params, bkg_params, combined, fit_axis, sqrt_fit):
             return pdfs.model(x, *fit_params)
 
     else:
+        # TODO don't hard code
         bkg_pdf = bkg.pdf(
-            bkg_params["n_bins"],
-            bkg_params["sign"],
-            bdt_cut=bkg_params["bdt_cut"],
-            efficiency=bkg_params["efficiency"],
+            100,
+            "cf",
+            bdt_cut=True,
+            efficiency=False,
         )
 
         def fitted_pdf(x: np.ndarray) -> np.ndarray:
@@ -105,8 +108,9 @@ def _pull(
             sign,
             time_bin,
             sig_frac,
-            bdt_cut=bkg_params["bdt_cut"],
-            efficiency=bkg_params["efficiency"],
+            # TODO change these to not be hard coded
+            bdt_cut=True,
+            efficiency=False,
         )
     )
     if not fitter.valid:
@@ -129,6 +133,39 @@ def _pull(
 
     else:
         pull = (true_params - fit_params) / fit_errs
+
+    if abs(pull[0]) > 20:
+        # Just raise
+        raise InvalidFitError(f"{pull[0]=}")
+
+        if sqrt_fit:
+
+            def fitted_pdf(x: np.ndarray) -> np.ndarray:
+                return pdfs.model(x, *fit_params)
+
+        else:
+            # TODO don't hard code
+            bkg_pdf = bkg.pdf(
+                100,
+                "cf",
+                bdt_cut=True,
+                efficiency=False,
+            )
+
+            def fitted_pdf(x: np.ndarray) -> np.ndarray:
+                return pdfs.model_alt_bkg(x, *fit_params[:8], bkg_pdf, *fit_params[-3:])
+
+        pts = definitions.mass_bins(500)
+        centres = (pts[1:] + pts[:-1]) / 2
+        widths = pts[1:] - pts[:-1]
+
+        fig, ax = plt.subplots()
+        ax.plot(centres, widths * fitted_pdf(centres), "r--")
+        ax.hist(combined, bins=pts)
+        fig.suptitle(f"N sig pull = {pull[0]}")
+        print("plotting bad fit")
+        fig.savefig(f"bad_fit_{pull[0]:.0f}.png")
+        plt.close(fig)
 
     return pull
 
@@ -196,6 +233,7 @@ def _plot_pulls(
     pulls: Tuple,
     sqrt_gen: bool,
     sqrt_fit: bool,
+    n_experiments: int,
 ) -> None:
     """
     Plot pulls
@@ -204,19 +242,21 @@ def _plot_pulls(
     labels = (
         "n signal",
         "n bkg",
-        "centre",
-        "width L",
-        "width R",
-        r"$\alpha_L$",
-        r"$\alpha_R$",
-        r"$\beta$",
-        "a",
-        "b",
+        # "centre",
+        # "width L",
+        # "width R",
+        # r"$\alpha_L$",
+        # r"$\alpha_R$",
+        # r"$\beta$",
+        # "a",
+        # "b",
     )
-    if not sqrt_fit:
-        labels = tuple(list(labels) + ["c"])
+    # if not sqrt_fit:
+    #     labels = tuple(list(labels) + ["c"])
 
-    if sqrt_gen != sqrt_fit:
+    # Always want this path for now since I don't want to
+    # plot the pulls for the shape parameters, just Nsig and Nbkg
+    if True or sqrt_gen != sqrt_fit:
         # Fitting to and generating different models;
         # only plot n sig and n bkg pulls
         for i in range(2):
@@ -226,7 +266,7 @@ def _plot_pulls(
             axis.hist(
                 pull,
                 label=f"{np.mean(pull):.4f}+-{np.std(pull):.4f}",
-                bins=np.linspace(-6, 6, 120),
+                bins=100,  # np.linspace(-6, 6, 120),
             )
             axis.set_title(labels[i])
             axis.legend()
@@ -242,7 +282,7 @@ def _plot_pulls(
             a.legend()
 
     fig.suptitle(
-        f"Generated: {'sqrt' if sqrt_gen else 'alt'} model; Fit: {'sqrt' if sqrt_fit else 'alt'} model"
+        f"Generated: {'sqrt' if sqrt_gen else 'alt'} model; Fit: {'sqrt' if sqrt_fit else 'alt'} model\n{n_experiments=}"
     )
 
 
@@ -261,10 +301,10 @@ def _do_pull_study(args: argparse.Namespace):
     out_dict = manager.dict()
 
     # For plotting pulls
-    fig, ax = plt.subplots(4, 3, figsize=(12, 9))
+    fig, ax = plt.subplots(1, 3, figsize=(9, 3))
 
     n_procs = 6
-    n_experiments = 750
+    n_experiments = 200
     procs = [
         Process(
             target=_pull_study,
@@ -302,6 +342,7 @@ def _do_pull_study(args: argparse.Namespace):
         pulls,
         args.sqrt_gen,
         args.sqrt_fit,
+        n_procs * n_experiments,
     )
 
     _fit(
