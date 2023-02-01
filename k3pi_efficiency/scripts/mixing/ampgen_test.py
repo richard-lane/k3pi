@@ -60,6 +60,8 @@ def main(args):
     cf_df = cf_df[cf_keep]
     dcs_df = dcs_df[dcs_keep]
 
+    print(f"{len(cf_df)=}\t{len(dcs_df)=}")
+
     bins = np.linspace(0, max_time, 20)
 
     # Parameters determining mixing

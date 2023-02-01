@@ -87,7 +87,7 @@ def mixing_weights(
         )
 
     # Scale weights such that their mean is right
-    scale = len(dcs_df) / len(cf_df)
+    scale = len(cf_df) / len(dcs_df)
 
     return weights * scale
 
