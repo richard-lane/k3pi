@@ -19,6 +19,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 import pdg_params
 import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
+from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
 from lib_time_fit import fitter, plotting
@@ -47,14 +48,18 @@ def main(args):
     of the decay times
 
     """
-    # Read AmpGen dataframes
     k_sign = args.k_sign
 
+    # Read AmpGen dataframes
     cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
 
+    if args.apply_efficiency:
+        cf_df = cf_df[cf_df["accepted"]]
+        dcs_df = dcs_df[dcs_df["accepted"]]
+
     # Time cut
-    max_time = 15
+    max_time = 10
     cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < max_time)
     dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
@@ -62,7 +67,7 @@ def main(args):
 
     print(f"{len(cf_df)=}\t{len(dcs_df)=}")
 
-    bins = np.linspace(0, max_time, 20)
+    bins = np.linspace(MIN_TIME, max_time, 12)
 
     # Parameters determining mixing
     r_d = np.sqrt(0.003025)
@@ -105,5 +110,11 @@ if __name__ == "__main__":
         "k_sign",
         help="whether to use K+ or K- type events (or both)",
         choices={"k_plus", "k_minus", "both"},
+    )
+
+    parser.add_argument(
+        "--apply_efficiency",
+        help="whether to apply a mock efficiency model",
+        action="store_true",
     )
     main(parser.parse_args())
