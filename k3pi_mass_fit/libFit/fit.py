@@ -64,8 +64,8 @@ def binned_fit(
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
-        (0.01, 1.0),  # alpha L
-        (0.01, 1.0),  # alpha R
+        (0.0, 2.0),  # alpha L
+        (0.0, 2.0),  # alpha R
         (None, None),  # Beta (fixed below)
         (None, None),  # Background a
         (None, None),  # Background b
@@ -127,8 +127,8 @@ def binned_simultaneous_fit(
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
-    m.limits["alpha_l"] = (0.01, 1.0)
-    m.limits["alpha_r"] = (0.01, 1.0)
+    m.limits["alpha_l"] = (0.0, 2.0)
+    m.limits["alpha_r"] = (0.0, 2.0)
 
     m.fixed["beta"] = True
 
@@ -252,8 +252,8 @@ def alt_bkg_fit(
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
-        (0.01, 1.0),  # alpha L
-        (0.01, 1.0),  # alpha R
+        (0.0, 2.0),  # alpha L
+        (0.0, 2.0),  # alpha R
         (None, None),  # Beta (fixed below)
         (None, None),  # Background a0
         (None, None),  # Background a1
@@ -331,8 +331,8 @@ def alt_simultaneous_fit(
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
-    m.limits["alpha_l"] = (0.01, 1.0)
-    m.limits["alpha_r"] = (0.01, 1.0)
+    m.limits["alpha_l"] = (0.0, 2.0)
+    m.limits["alpha_r"] = (0.0, 2.0)
 
     m.fixed["beta"] = True
 

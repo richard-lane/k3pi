@@ -135,6 +135,7 @@ def _pull(
         pull = (true_params - fit_params) / fit_errs
 
     if abs(pull[0]) > 20:
+        print(fitter)
         # Just raise
         raise InvalidFitError(f"{pull[0]=}")
 
@@ -155,7 +156,7 @@ def _pull(
             def fitted_pdf(x: np.ndarray) -> np.ndarray:
                 return pdfs.model_alt_bkg(x, *fit_params[:8], bkg_pdf, *fit_params[-3:])
 
-        pts = definitions.mass_bins(500)
+        pts = definitions.mass_bins(100)
         centres = (pts[1:] + pts[:-1]) / 2
         widths = pts[1:] - pts[:-1]
 
