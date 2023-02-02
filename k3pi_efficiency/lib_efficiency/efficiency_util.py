@@ -163,11 +163,11 @@ def scale_weights(
 
     """
     # Find the sum of each type of weight
-    rs_sum = np.sum(rs_wts)
-    ws_sum = np.sum(ws_wts)
+    rs_mean = np.mean(rs_wts)
+    ws_mean = np.mean(ws_wts)
 
     # Scale them
-    scale_factor = dcs_cf_ratio * rs_sum / ws_sum
+    scale_factor = dcs_cf_ratio * rs_mean / ws_mean
     print(f"Scaling weights by {scale_factor}")
     scaled_ws_wts = [arr * scale_factor for arr in ws_wts]
 

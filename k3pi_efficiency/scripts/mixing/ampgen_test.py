@@ -9,7 +9,6 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
@@ -22,8 +21,34 @@ from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_efficiency.amplitude_models import amplitudes
 from lib_time_fit import util as fit_util
-from lib_time_fit import fitter, plotting
 from lib_data import stats
+
+
+def _efficiency_weights(
+    dataframe: pd.DataFrame, sign: str, *, correct_efficiency: bool
+) -> np.ndarray:
+    """
+    Get efficiency weights for a dataframe
+
+    """
+    if not correct_efficiency:
+        return np.ones(len(dataframe))
+
+    # For now return an array of ones in any case
+    return np.ones(len(dataframe))
+
+    # # Get the right reweighter
+    # reweighter = get_reweighter(sign)
+
+    # # Get the k3pi
+    # k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+
+    # # Momentum order the pions
+    # pi1, pi2 = data_util.momentum_order(k, pi1, pi2)
+
+    # return reweighter.weights(
+    #     efficiency_util.points(k, pi1, pi2, pi3, dataframe["time"])
+    # )
 
 
 def _ratio_err(
@@ -31,13 +56,37 @@ def _ratio_err(
     cf_df: pd.DataFrame,
     dcs_df: pd.DataFrame,
     dcs_wt: np.ndarray,
+    abs_eff_ratio: float,
+    *,
+    correct_efficiency: bool,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Ratio and error
 
     """
-    cf_counts, cf_errs = stats.counts(cf_df["time"], bins=bins)
-    dcs_counts, dcs_errs = stats.counts(dcs_df["time"], bins=bins, weights=dcs_wt)
+    if not correct_efficiency:
+        # Don't need if if we're not correcting
+        assert abs_eff_ratio is None
+
+    # Get efficiency weights if we need
+    cf_eff_wt = _efficiency_weights(cf_df, "cf", correct_efficiency=correct_efficiency)
+    dcs_eff_wt = _efficiency_weights(
+        dcs_df, "dcs", correct_efficiency=correct_efficiency
+    )
+
+    # Scale
+    if correct_efficiency:
+        cf_eff_wt, dcs_eff_wt = (
+            arr[0]
+            for arr in efficiency_util.scale_weights(
+                [cf_eff_wt], [dcs_eff_wt], abs_eff_ratio
+            )
+        )
+
+    cf_counts, cf_errs = stats.counts(cf_df["time"], bins=bins, weights=cf_eff_wt)
+    dcs_counts, dcs_errs = stats.counts(
+        dcs_df["time"], bins=bins, weights=dcs_wt * dcs_eff_wt
+    )
 
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
 
@@ -50,13 +99,12 @@ def main(args):
     """
     k_sign = args.k_sign
 
+    if args.correct_efficiency:
+        assert args.apply_efficiency
+
     # Read AmpGen dataframes
     cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
-
-    if args.apply_efficiency:
-        cf_df = cf_df[cf_df["accepted"]]
-        dcs_df = dcs_df[dcs_df["accepted"]]
 
     # Time cut
     max_time = 10
@@ -67,7 +115,16 @@ def main(args):
 
     print(f"{len(cf_df)=}\t{len(dcs_df)=}")
 
-    bins = np.linspace(MIN_TIME, max_time, 12)
+    # Find the absolute efficiencies from the dataframes after
+    # the time cuts
+    if args.correct_efficiency:
+        dcs_abs_eff = np.sum(dcs_df["accepted"]) / len(dcs_df)
+        cf_abs_eff = np.sum(cf_df["accepted"]) / len(cf_df)
+
+    # Apply the efficiency via the boolean mask
+    if args.apply_efficiency:
+        cf_df = cf_df[cf_df["accepted"]]
+        dcs_df = dcs_df[dcs_df["accepted"]]
 
     # Parameters determining mixing
     r_d = np.sqrt(0.003025)
@@ -85,7 +142,15 @@ def main(args):
     )
 
     # Find mixed ratio and error
-    ratio, err = _ratio_err(bins, cf_df, dcs_df, mixing_weights)
+    bins = np.linspace(MIN_TIME, max_time, 12)
+    ratio, err = _ratio_err(
+        bins,
+        cf_df,
+        dcs_df,
+        mixing_weights,
+        dcs_abs_eff / cf_abs_eff if args.correct_efficiency else None,
+        correct_efficiency=args.correct_efficiency,
+    )
 
     ideal = fit_util.ScanParams(
         r_d=r_d,
@@ -97,7 +162,11 @@ def main(args):
 
     # Make a plot showing fits and scan
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    path = f"ampgen_mixed_fits_{k_sign}.png"
+    path = (
+        f"ampgen_mixed_fits_{k_sign}"
+        f"{'_eff' if args.apply_efficiency else ''}"
+        f"{'_corrected' if args.correct_efficiency else ''}.png"
+    )
     mixing_helpers.scan_fits(fig, axes, ratio, err, bins, ideal, path)
 
 
@@ -117,4 +186,11 @@ if __name__ == "__main__":
         help="whether to apply a mock efficiency model",
         action="store_true",
     )
+
+    parser.add_argument(
+        "--correct_efficiency",
+        help="whether to correct for the efficiency",
+        action="store_true",
+    )
+
     main(parser.parse_args())
