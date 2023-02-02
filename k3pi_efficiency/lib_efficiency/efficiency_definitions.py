@@ -48,6 +48,15 @@ def reweighter_path(
     return REWEIGHTER_DIR / f"{year}_{sign}_{magnetisation}_{k_sign}{suffix}.pkl"
 
 
+def ampgen_reweighter_path(sign: str) -> pathlib.Path:
+    """
+    Where the efficiency correction reweighter lives
+
+    """
+    assert sign in {"cf", "dcs"}
+    return REWEIGHTER_DIR / f"ampgen_{sign}.pkl"
+
+
 def reweighter_exists(
     year: str, sign: str, magnetisation: str, k_sign: str, time_fit: bool, cut: bool
 ) -> bool:

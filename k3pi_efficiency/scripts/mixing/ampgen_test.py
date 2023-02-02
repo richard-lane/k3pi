@@ -20,8 +20,9 @@ import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_efficiency.amplitude_models import amplitudes
+from lib_efficiency.get import ampgen_reweighter_dump as get_reweighter
 from lib_time_fit import util as fit_util
-from lib_data import stats
+from lib_data import stats, util as data_util
 
 
 def _efficiency_weights(
@@ -34,21 +35,19 @@ def _efficiency_weights(
     if not correct_efficiency:
         return np.ones(len(dataframe))
 
-    # For now return an array of ones in any case
-    return np.ones(len(dataframe))
+    # Get the right reweighter
+    reweighter = get_reweighter(sign, verbose=True)
 
-    # # Get the right reweighter
-    # reweighter = get_reweighter(sign)
+    # Get the k3pi
+    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
 
-    # # Get the k3pi
-    # k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    # Momentum order the pions
+    pi1, pi2 = data_util.momentum_order(k, pi1, pi2)
 
-    # # Momentum order the pions
-    # pi1, pi2 = data_util.momentum_order(k, pi1, pi2)
-
-    # return reweighter.weights(
-    #     efficiency_util.points(k, pi1, pi2, pi3, dataframe["time"])
-    # )
+    weights = reweighter.weights(
+        efficiency_util.points(k, pi1, pi2, pi3, dataframe["time"])
+    )
+    return weights
 
 
 def _ratio_err(
@@ -108,8 +107,8 @@ def main(args):
 
     # Time cut
     max_time = 10
-    cf_keep = (0 < cf_df["time"]) & (cf_df["time"] < max_time)
-    dcs_keep = (0 < dcs_df["time"]) & (dcs_df["time"] < max_time)
+    cf_keep = (MIN_TIME < cf_df["time"]) & (cf_df["time"] < max_time)
+    dcs_keep = (MIN_TIME < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
     dcs_df = dcs_df[dcs_keep]
 
