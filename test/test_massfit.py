@@ -81,3 +81,47 @@ def test_alt_bkg_normalised():
     assert np.isclose(
         quad(lambda x: pdfs.estimated_bkg(x, estimated_bkg_pdf, 3, 2, 1), a, b)[0], 1.0
     )
+
+
+def test_reduced_bkg_normalised():
+    """
+    Check the reduced background pdf is normalised
+
+    """
+    assert np.isclose(
+        quad(
+            pdfs.normalised_bkg_reduced,
+            *pdfs.reduced_domain(),
+            args=pdfs.background_defaults("dcs")
+        )[0],
+        1.0,
+    )
+
+
+def test_reduced_signal_normalised():
+    """
+    Check the reduced signal pdf is normalised
+
+    """
+    params = (146, 0.2, 0.2, 0.2, 0.2, 0.002)
+    points = definitions.reduced_mass_bins(1000)
+
+    integral = stats.integral(points, pdfs.normalised_signal_reduced(points, *params))
+
+    assert np.isclose(integral, 1.0)
+
+
+def test_reduced_model_normalised():
+    """
+    Check that the reduced pdf is normalised correctly
+
+    """
+    n_sig = 1000
+    n_bkg = 10000
+
+    params = (146, 0.2, 0.2, 0.2, 0.2, 0.002, 0.004, -0.001)
+    points = definitions.reduced_mass_bins(1000)
+
+    integral = stats.integral(points, pdfs.model_reduced(points, n_sig, n_bkg, *params))
+
+    assert np.isclose(integral, n_sig + n_bkg)

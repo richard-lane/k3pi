@@ -78,6 +78,74 @@ def binned_fit(
     return m
 
 
+def binned_fit_reduced(
+    counts: np.ndarray,
+    bins: np.ndarray,
+    sign: str,
+    time_bin: int,
+    signal_frac_guess: float,
+    *,
+    errors: np.ndarray = None,
+) -> Minuit:
+    """
+    Perform a binned fit with reduced domain, return the fitter
+
+    :param counts: array of D* - D0 mass differences
+    :param bins: delta M binning used for the fit
+    :param sign: either "cf" or "dcs"
+    :param time_bin: which time bin we're performing the fit in; this determines the value of beta
+    :param signal_frac_guess: initial guess at the signal fraction
+    :param errors: optional errors. If not provided Poisson errors assumed
+
+    :returns: fitter after performing the fit
+
+    """
+    assert sign in {"cf", "dcs"}
+    assert len(counts) == len(bins) - 1
+    if (errors is not None) and (len(errors) != len(counts)):
+        raise ValueError(f"{len(errors)=}\t{len(counts)=}")
+
+    centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
+    width_r, alpha_r = width_l, alpha_l
+
+    a, b = pdfs.background_defaults(sign)
+
+    chi2 = pdfs.BinnedChi2Reduced(counts, bins, errors)
+
+    n_tot = np.sum(counts)
+    m = Minuit(
+        chi2,
+        n_sig=signal_frac_guess * n_tot,
+        n_bkg=(1 - signal_frac_guess) * n_tot,
+        centre=centre,
+        width_l=width_l,
+        width_r=width_r,
+        alpha_l=alpha_l,
+        alpha_r=alpha_r,
+        beta=beta,
+        a=a,
+        b=b,
+    )
+    m.limits = (
+        (None, None),  # N sig
+        (None, None),  # N bkg
+        (144.0, 147.0),  # Centre
+        (0.1, 1.0),  # width L
+        (0.1, 1.0),  # width R
+        (0.0, 2.0),  # alpha L
+        (0.0, 2.0),  # alpha R
+        (None, None),  # Beta (fixed below)
+        (None, None),  # Background a
+        (None, None),  # Background b
+    )
+
+    m.fixed["beta"] = True
+
+    m.migrad()
+
+    return m
+
+
 def binned_simultaneous_fit(
     rs_counts: np.ndarray,
     ws_counts: np.ndarray,
