@@ -22,7 +22,24 @@ from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_efficiency.amplitude_models import amplitudes
 from lib_efficiency.get import ampgen_reweighter_dump as get_reweighter
 from lib_time_fit import util as fit_util
+from lib_time_fit.definitions import TIME_BINS
 from lib_data import stats, util as data_util
+
+
+def _weights(scale, df):
+    wts = np.zeros(len(df))
+    times = df["time"]
+
+    # efficiency
+    eff = scale * (df["time"] - MIN_TIME)
+
+    # Weights above the min time should be set to 1 / fcn val
+    wts[times > MIN_TIME] = 1 / eff[times > MIN_TIME]
+
+    # Weights where fcn > 1 should be set to 1
+    wts[eff > 1.0] = 1.0
+
+    return wts
 
 
 def _efficiency_weights(
@@ -34,6 +51,13 @@ def _efficiency_weights(
     """
     if not correct_efficiency:
         return np.ones(len(dataframe))
+
+    # Analytical efficiency
+    if sign == "dcs":
+        return _weights(0.98, dataframe)
+    if sign == "cf":
+        return _weights(1.0, dataframe)
+    raise
 
     # Get the right reweighter
     reweighter = get_reweighter(sign, verbose=True)
@@ -90,6 +114,14 @@ def _ratio_err(
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
 
 
+def _abs_eff(dataframe: pd.DataFrame) -> float:
+    """
+    Absolute efficiency
+
+    """
+    return np.sum(dataframe["accepted"]) / len(dataframe)
+
+
 def main(args):
     """
     Read MC dataframes, add some mixing to the DCS frame, plot the ratio
@@ -106,24 +138,24 @@ def main(args):
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
 
     # Time cut
-    max_time = 10
+    max_time = TIME_BINS[-2]
     cf_keep = (MIN_TIME < cf_df["time"]) & (cf_df["time"] < max_time)
     dcs_keep = (MIN_TIME < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
     dcs_df = dcs_df[dcs_keep]
 
-    print(f"{len(cf_df)=}\t{len(dcs_df)=}")
-
     # Find the absolute efficiencies from the dataframes after
     # the time cuts
     if args.correct_efficiency:
-        dcs_abs_eff = np.sum(dcs_df["accepted"]) / len(dcs_df)
-        cf_abs_eff = np.sum(cf_df["accepted"]) / len(cf_df)
+        dcs_abs_eff = _abs_eff(dcs_df)
+        cf_abs_eff = _abs_eff(cf_df)
 
     # Apply the efficiency via the boolean mask
     if args.apply_efficiency:
         cf_df = cf_df[cf_df["accepted"]]
         dcs_df = dcs_df[dcs_df["accepted"]]
+
+    print(f"{len(cf_df)=}\t{len(dcs_df)=}")
 
     # Parameters determining mixing
     r_d = np.sqrt(0.003025)
@@ -141,7 +173,7 @@ def main(args):
     )
 
     # Find mixed ratio and error
-    bins = np.linspace(MIN_TIME, max_time, 12)
+    bins = TIME_BINS[2:-1]
     ratio, err = _ratio_err(
         bins,
         cf_df,
