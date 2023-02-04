@@ -26,22 +26,6 @@ from lib_time_fit.definitions import TIME_BINS
 from lib_data import stats, util as data_util
 
 
-def _weights(scale, df):
-    wts = np.zeros(len(df))
-    times = df["time"]
-
-    # efficiency
-    eff = scale * (df["time"] - MIN_TIME)
-
-    # Weights above the min time should be set to 1 / fcn val
-    wts[times > MIN_TIME] = 1 / eff[times > MIN_TIME]
-
-    # Weights where fcn > 1 should be set to 1
-    wts[eff > 1.0] = 1.0
-
-    return wts
-
-
 def _efficiency_weights(
     dataframe: pd.DataFrame, sign: str, *, correct_efficiency: bool
 ) -> np.ndarray:
@@ -51,13 +35,6 @@ def _efficiency_weights(
     """
     if not correct_efficiency:
         return np.ones(len(dataframe))
-
-    # Analytical efficiency
-    if sign == "dcs":
-        return _weights(0.98, dataframe)
-    if sign == "cf":
-        return _weights(1.0, dataframe)
-    raise
 
     # Get the right reweighter
     reweighter = get_reweighter(sign, verbose=True)
@@ -136,7 +113,6 @@ def main(args):
     # Read AmpGen dataframes
     cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
-    cf_df = cf_df[:int(len(cf_df) * 0.9)]
 
     # Time cut
     max_time = TIME_BINS[-2]

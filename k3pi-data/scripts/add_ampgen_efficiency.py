@@ -65,8 +65,8 @@ def _add_col(rng: np.random.Generator, sign: str, axes: plt.Axes):
         print(f"overwriting {sign} column")
 
     # Use rejection sampling to see which events are kept
-    time_factor = 0.98 if sign == "dcs" else 1.0
-    phsp_factor = 1.0 if sign == "dcs" else 0.9  # unused internally
+    time_factor = 0.9 if sign == "dcs" else 1.0
+    phsp_factor = 1.0 if sign == "dcs" else 0.9
     kept = mock_efficiency.accepted(
         rng, dataframe, time_factor=time_factor, phsp_factor=phsp_factor
     )

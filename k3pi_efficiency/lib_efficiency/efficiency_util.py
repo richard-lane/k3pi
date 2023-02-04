@@ -199,7 +199,7 @@ def scale_weights(
 
     # Find the average of each type of weight
     rs_avg = np.sum(rs_wts) / n_rs
-    ws_avg = np.sum(ws_wts) / n_rs
+    ws_avg = np.sum(ws_wts) / n_ws
 
     # We want sum of WS wts to equal N WS generated evts,
     # which is equivalent to N WS reco evts / avg eff

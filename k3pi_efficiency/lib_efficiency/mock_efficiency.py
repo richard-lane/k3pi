@@ -33,6 +33,7 @@ def time_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
     )
 
     assert np.max(retvals) < 1.0
+    assert np.min(retvals) >= 0.0
 
     return retvals
 
@@ -49,9 +50,6 @@ def phsp_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
     :raises AssertionError: if the efficiencies exceed 1 somehow
 
     """
-    # No phase space efficiency
-    return np.ones(len(dataframe))
-
     # Find the transverse momentum of the kaon
     k_pt = np.sqrt(dataframe["Kplus_Px"] ** 2 + dataframe["Kplus_Py"] ** 2)
 
