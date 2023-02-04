@@ -146,8 +146,33 @@ def pgun_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     return dataframe
 
 
+def _check_none_zero(list_of_arrays: List[np.ndarray]):
+    """
+    Check that none of the entries in a list of arrays is zero
+
+    :raises AssertionError: if not
+
+    """
+    for array in list_of_arrays:
+        assert np.count_nonzero(array) == len(array)
+
+
+def _total_length(list_of_arrays: List[np.ndarray]):
+    """
+    Find the total length of a list of arrays
+
+    :returns: sum of lengths of arrays in a list
+
+    """
+    retval = 0
+    for array in list_of_arrays:
+        retval += len(array)
+
+    return retval
+
+
 def scale_weights(
-    rs_wts: List[np.ndarray], ws_wts: List[np.ndarray], dcs_cf_ratio: float
+    rs_wts: List[np.ndarray], ws_wts: List[np.ndarray], avg_eff_ratio: float
 ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """
     Scale lists of RS and WS weights to have the right dcs/cf ratio
@@ -156,18 +181,31 @@ def scale_weights(
 
     :param rs_wts: list of arrays of efficiency weights for a RS sample
     :param ws_wts: list of arrays of efficiency weights for a WS sample
-    :param dcs_cf_ratio: desired average of dcs/cf weights. DCS_AVG / CF_AVG
+    :param avg_eff_ratio: average of dcs/cf absolute efficiencies. DCS_AVG / CF_AVG
 
     :returns: scaled list of RS weights
     :returns: scaled list of WS weights
 
     """
-    # Find the sum of each type of weight
-    rs_mean = np.mean(rs_wts)
-    ws_mean = np.mean(ws_wts)
+    # Check that there are no zero weight in our sample,
+    # since this is likely to break things we think
+    _check_none_zero(rs_wts)
+    _check_none_zero(ws_wts)
 
-    # Scale them
-    scale_factor = dcs_cf_ratio * rs_mean / ws_mean
+    # Find the number of each type of weight
+    # This is the number of (reconstructed) events
+    n_rs = _total_length(rs_wts)
+    n_ws = _total_length(ws_wts)
+
+    # Find the average of each type of weight
+    rs_avg = np.sum(rs_wts) / n_rs
+    ws_avg = np.sum(ws_wts) / n_rs
+
+    # We want sum of WS wts to equal N WS generated evts,
+    # which is equivalent to N WS reco evts / avg eff
+    # Scaling factor for WS works out to this, leaving
+    # RS unscaled
+    scale_factor = n_ws * rs_avg / (n_rs * ws_avg * avg_eff_ratio)
     print(f"Scaling weights by {scale_factor}")
     scaled_ws_wts = [arr * scale_factor for arr in ws_wts]
 

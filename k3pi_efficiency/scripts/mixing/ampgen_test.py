@@ -136,6 +136,7 @@ def main(args):
     # Read AmpGen dataframes
     cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
+    cf_df = cf_df[:int(len(cf_df) * 0.9)]
 
     # Time cut
     max_time = TIME_BINS[-2]
