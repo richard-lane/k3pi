@@ -23,7 +23,7 @@ import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.amplitude_models import amplitudes
 from lib_efficiency.get import reweighter_dump as get_reweighter
-from lib_efficiency.efficiency_definitions import RS_EFF, WS_EFF, MIN_TIME
+from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_time_fit import util as fit_util
 from lib_data import get, definitions, stats
 from lib_data import util as data_util
@@ -64,6 +64,26 @@ def _efficiency_weights(
     )
 
 
+def _efficiency(dataframe: pd.DataFrame, sign: str) -> float:
+    """
+    abs efficiency
+
+    """
+    n_tot = get.pgun_n_generated(sign)
+    retval = len(dataframe) / n_tot
+
+    print(f"{sign} total {n_tot}, abs efficiency {100 * retval:2.4f}%")
+    return retval
+
+
+def _efficiency_ratio(dcs_df: pd.DataFrame, cf_df: pd.DataFrame) -> float:
+    """
+    Ratio of DCS to CF efficiencies
+
+    """
+    return _efficiency(dcs_df, "dcs") / _efficiency(cf_df, "cf")
+
+
 def _ratio_err(
     bins: np.ndarray,
     cf_df: pd.DataFrame,
@@ -87,7 +107,7 @@ def _ratio_err(
         cf_eff_wt, dcs_eff_wt = (
             arr[0]
             for arr in efficiency_util.scale_weights(
-                [cf_eff_wt], [dcs_eff_wt], WS_EFF / RS_EFF
+                [cf_eff_wt], [dcs_eff_wt], _efficiency_ratio(dcs_df, cf_df)
             )
         )
     else:
@@ -107,7 +127,6 @@ def _time_cut(dataframe: pd.DataFrame, max_time: float) -> pd.DataFrame:
     Do the time cut on a dataframe
 
     """
-    max_time = 7
     keep = (MIN_TIME < dataframe["time"]) & (dataframe["time"] < max_time)
 
     return dataframe.loc[keep]

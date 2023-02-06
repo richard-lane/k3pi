@@ -4,6 +4,7 @@ Definitions of stuff needed for creating/using the efficiency reweighter
 """
 import sys
 import pathlib
+import numpy as np
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_fitter"))
 
@@ -17,12 +18,13 @@ REWEIGHTER_DIR = pathlib.Path(__file__).resolve().parents[1] / "reweighter"
 MIN_TIME = definitions.TIME_BINS[2]
 
 # Absolute efficiencies from particle gun
-RS_EFF = 2.291
-RS_ERR = 0.003
-WS_EFF = 2.247
-WS_ERR = 0.003
-FALSE_EFF = 2.267
-FALSE_ERR = 0.007
+# Deprecated;
+RS_EFF = 2.291 * np.nan
+RS_ERR = 0.003 * np.nan
+WS_EFF = 2.247 * np.nan
+WS_ERR = 0.003 * np.nan
+FALSE_EFF = 2.267 * np.nan
+FALSE_ERR = 0.007 * np.nan
 
 
 def reweighter_path(

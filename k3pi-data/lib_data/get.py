@@ -44,7 +44,7 @@ def particle_gun(sign: str, show_progress: bool = False) -> pd.DataFrame:
 
     """
     dfs = []
-    paths = glob.glob(str(definitions.pgun_dir(sign) / "*"))
+    paths = glob.glob(str(definitions.pgun_dir(sign) / "*.pkl"))
 
     progress_fcn = tqdm if show_progress else lambda x: x
 
@@ -61,6 +61,37 @@ def particle_gun(sign: str, show_progress: bool = False) -> pd.DataFrame:
             raise err
 
     return pd.concat(dfs)
+
+
+def pgun_n_gen_file(sign: str) -> pathlib.Path:
+    """
+    Text file holding information about how many evts
+    were generated for each particle gun dataframe
+
+    :param sign: "cf" or "dcs"
+    :returns: path object
+
+    """
+    return definitions.pgun_dir(sign) / "n_gen.txt"
+
+
+def pgun_n_generated(sign: str) -> int:
+    """
+    Number of events generated when creating particle gun dataframes
+
+    Run `create_pgun.py` first for this to work!
+
+    :param sign: "cf" or "dcs"
+    :returns: total number of events that were generated when reconstructing the events
+              in the pgun dataframes
+
+    """
+    n_tot = 0
+    with open(str(pgun_n_gen_file(sign)), "r") as gen_f:
+        for line in gen_f:
+            n_tot += int(line.strip())
+
+    return n_tot
 
 
 def false_sign(show_progress: bool = False) -> pd.DataFrame:

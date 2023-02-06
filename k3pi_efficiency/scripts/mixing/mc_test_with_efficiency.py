@@ -23,7 +23,7 @@ import mixing_helpers
 from lib_efficiency import efficiency_util, mixing
 from lib_efficiency.amplitude_models import amplitudes
 from lib_efficiency.get import reweighter_dump as get_reweighter
-from lib_efficiency.efficiency_definitions import RS_EFF, WS_EFF
+from lib_efficiency.efficiency_definitions import MIN_TIME
 from lib_time_fit import util as fit_util
 from lib_data import get, definitions, stats
 from lib_data import util as data_util
@@ -87,7 +87,7 @@ def _ratio_err(
         cf_eff_wt, dcs_eff_wt = (
             arr[0]
             for arr in efficiency_util.scale_weights(
-                [cf_eff_wt], [dcs_eff_wt], WS_EFF / RS_EFF
+                [cf_eff_wt], [dcs_eff_wt], 0.98  # from particle gun
             )
         )
     else:
@@ -107,8 +107,7 @@ def _time_cut(dataframe: pd.DataFrame, max_time: float) -> pd.DataFrame:
     Do the time cut on a dataframe
 
     """
-    max_time = 7
-    keep = (0 < dataframe["time"]) & (dataframe["time"] < max_time)
+    keep = (MIN_TIME < dataframe["time"]) & (dataframe["time"] < max_time)
 
     return dataframe.loc[keep]
 

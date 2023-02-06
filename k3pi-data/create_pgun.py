@@ -18,6 +18,7 @@ from lib_data import definitions
 from lib_data import cuts
 from lib_data import training_vars
 from lib_data import util
+from lib_data import get
 
 
 def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataFrame:
@@ -60,6 +61,11 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataF
 
 def main(sign: str, n_files: int) -> None:
     """Create a DataFrame holding AmpGen momenta"""
+    # Check if this exists first, to avoid confusion
+    # In case we resume generating later + accidentally overwrite the file
+    n_gen_file = get.pgun_n_gen_file(sign)
+    assert not n_gen_file.is_file()
+
     # If the dir doesnt exist, create it
     if not definitions.PGUN_DIR.is_dir():
         os.mkdir(definitions.PGUN_DIR)
@@ -118,7 +124,7 @@ def main(sign: str, n_files: int) -> None:
         )
 
     print("writing info about n gen to file")
-    with open(str(definitions.pgun_dir(sign) / "n_gen.txt"), "w") as gen_f:
+    with open(str(n_gen_file), "w") as gen_f:
         gen_f.write("\n".join(str(n) for n in generated))
 
 

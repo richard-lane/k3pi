@@ -5,6 +5,9 @@ Choose to find these from particle gun, as we have the truth information
 readily available
 
 """
+raise NotImplementedError(
+    "this whole script is deprecated since we can get the number generated from the text files"
+)
 import sys
 import pathlib
 import argparse
