@@ -46,7 +46,7 @@ def _toy_fit(alt_bkg):
 
     # Perform fits
     sig_frac = true_params[0]
-    bins = definitions.mass_bins(200)
+    bins = definitions.mass_bins(100)
     counts, errs = stats.counts(combined, bins)
     binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 

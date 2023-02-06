@@ -45,7 +45,7 @@ def binned_fit(
     chi2 = pdfs.BinnedChi2(counts, bins, errors)
 
     n_tot = np.sum(counts)
-    m = Minuit(
+    fitter = Minuit(
         chi2,
         n_sig=signal_frac_guess * n_tot,
         n_bkg=(1 - signal_frac_guess) * n_tot,
@@ -58,9 +58,9 @@ def binned_fit(
         a=a,
         b=b,
     )
-    m.limits = (
-        (None, None),  # N sig
-        (None, None),  # N bkg
+    fitter.limits = (
+        (0, n_tot),  # N sig
+        (0, n_tot),  # N bkg
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
@@ -71,11 +71,10 @@ def binned_fit(
         (None, None),  # Background b
     )
 
-    m.fixed["beta"] = True
+    fitter.fixed["beta"] = True
+    fitter.migrad()
 
-    m.migrad()
-
-    return m
+    return fitter
 
 
 def binned_fit_reduced(
@@ -127,8 +126,8 @@ def binned_fit_reduced(
         b=b,
     )
     m.limits = (
-        (None, None),  # N sig
-        (None, None),  # N bkg
+        (0, n_tot),  # N sig
+        (0, n_tot),  # N bkg
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
@@ -192,6 +191,10 @@ def binned_simultaneous_fit(
         a=a,
         b=b,
     )
+    m.limits["rs_n_sig"] = (0.0, n_rs)
+    m.limits["ws_n_sig"] = (0.0, n_ws)
+    m.limits["rs_n_bkg"] = (0.0, n_rs)
+    m.limits["ws_n_bkg"] = (0.0, n_ws)
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
@@ -315,8 +318,8 @@ def alt_bkg_fit(
         a_2=a_2,
     )
     m.limits = (
-        (None, None),  # N sig
-        (None, None),  # N bkg
+        (0, n_tot),  # N sig
+        (0, n_tot),  # N bkg
         (144.0, 147.0),  # Centre
         (0.1, 1.0),  # width L
         (0.1, 1.0),  # width R
@@ -396,6 +399,10 @@ def alt_simultaneous_fit(
         ws_a_1=a_1,
         ws_a_2=a_2,
     )
+    m.limits["rs_n_sig"] = (0, n_rs)
+    m.limits["ws_n_sig"] = (0, n_ws)
+    m.limits["rs_n_bkg"] = (0.0, n_rs)
+    m.limits["ws_n_bkg"] = (0.0, n_ws)
     m.limits["centre"] = (144.0, 147.0)
     m.limits["width_l"] = (0.1, 1.0)
     m.limits["width_r"] = (0.1, 1.0)
