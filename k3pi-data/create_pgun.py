@@ -20,7 +20,7 @@ from lib_data import training_vars
 from lib_data import util
 
 
-def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
+def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataFrame:
     """
     Populate a pandas dataframe with momenta, time and other arrays from the provided trees
 
@@ -54,7 +54,8 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
 
     util.add_train_column(gen, dataframe)
 
-    return dataframe
+    # Also find how many generated events there are + return
+    return dataframe, mc_tree.num_entries
 
 
 def main(sign: str, n_files: int) -> None:
@@ -77,6 +78,8 @@ def main(sign: str, n_files: int) -> None:
     # Generator for train/test RNG
     gen = np.random.default_rng()
 
+    generated = []
+
     # Iterate over input files
     for folder in tqdm(tuple(source_dir.glob("*"))[:n_files]):
         # If the dump already exists, do nothing
@@ -91,15 +94,20 @@ def main(sign: str, n_files: int) -> None:
             with uproot.open(data_path) as data_f, uproot.open(hlt_path) as hlt_f:
                 data_tree = data_f["Dstp2D0pi/DecayTree"]
                 hlt_tree = hlt_f["DecayTree"]
+                mc_tree = data_f["MCDstp2D0pi/MCDecayTree"]
 
                 # Create the dataframe
-                dataframe = _pgun_df(gen, data_tree, hlt_tree)
+                dataframe, n_gen = _pgun_df(gen, data_tree, hlt_tree, mc_tree)
+
+                generated.append(n_gen)
+                print(n_gen)
 
             # Dump it
             with open(dump_path, "wb") as dump_f:
                 pickle.dump(dataframe, dump_f)
 
         except FileNotFoundError:
+            print(str(folder), "broke")
             broken_folders.append(str(folder))
             continue
 
@@ -108,6 +116,10 @@ def main(sign: str, n_files: int) -> None:
         print(
             "This may be expected, e.g. there may be already merged files also in the dir"
         )
+
+    print("writing info about n gen to file")
+    with open(str(definitions.pgun_dir(sign) / "n_gen.txt"), "w") as gen_f:
+        gen_f.write("\n".join(str(n) for n in generated))
 
 
 if __name__ == "__main__":
