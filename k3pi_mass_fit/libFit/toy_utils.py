@@ -73,6 +73,7 @@ def _gen_bkg(
 
     """
     if n_bins is not None:
+        gen_kw = {}
         if verbose:
             print("Generating toy points with the estimated bkg model")
         assert len(params) == 3
@@ -97,19 +98,19 @@ def _gen_bkg(
         assert n_bins is None
         assert sign is None
 
-        if not reduced:
-
-            def bkg_pdf(x: np.ndarray) -> np.ndarray:
-                return pdfs.background(x, *params)
-
-            gen_kw = {}
-
-        else:
+        if reduced:
 
             def bkg_pdf(x: np.ndarray) -> np.ndarray:
                 return pdfs.normalised_bkg_reduced(x, *params)
 
             gen_kw = {"pdf_domain": pdfs.reduced_domain()}
+
+        else:
+
+            def bkg_pdf(x: np.ndarray) -> np.ndarray:
+                return pdfs.background(x, *params)
+
+            gen_kw = {}
 
     return _gen(
         rng,
@@ -130,14 +131,7 @@ def _gen_sig(
     """
     centre, width, alpha, beta = params
 
-    if not reduced:
-
-        def signal_pdf(x: np.ndarray) -> np.ndarray:
-            return pdfs.signal(x, centre, width, width, alpha, alpha, beta)
-
-        gen_kw = {}
-
-    else:
+    if reduced:
 
         def signal_pdf(x: np.ndarray) -> np.ndarray:
             return pdfs.normalised_signal_reduced(
@@ -145,6 +139,13 @@ def _gen_sig(
             )
 
         gen_kw = {"pdf_domain": pdfs.reduced_domain()}
+
+    else:
+
+        def signal_pdf(x: np.ndarray) -> np.ndarray:
+            return pdfs.signal(x, centre, width, width, alpha, alpha, beta)
+
+        gen_kw = {}
 
     return _gen(
         rng,
