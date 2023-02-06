@@ -176,7 +176,6 @@ def scale_weights(
 ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """
     Scale lists of RS and WS weights to have the right dcs/cf ratio
-
     Does not scale the CF weights
 
     :param rs_wts: list of arrays of efficiency weights for a RS sample
@@ -198,14 +197,14 @@ def scale_weights(
     n_ws = _total_length(ws_wts)
 
     # Find the average of each type of weight
-    rs_avg = np.sum(rs_wts) / n_rs
-    ws_avg = np.sum(ws_wts) / n_ws
+    rs_avg_wt = np.sum(rs_wts) / n_rs
+    ws_avg_wt = np.sum(ws_wts) / n_ws
 
     # We want sum of WS wts to equal N WS generated evts,
     # which is equivalent to N WS reco evts / avg eff
     # Scaling factor for WS works out to this, leaving
     # RS unscaled
-    scale_factor = n_ws * rs_avg / (n_rs * ws_avg * avg_eff_ratio)
+    scale_factor = n_ws * rs_avg_wt / (n_rs * ws_avg_wt * avg_eff_ratio)
     print(f"Scaling weights by {scale_factor}")
     scaled_ws_wts = [arr * scale_factor for arr in ws_wts]
 

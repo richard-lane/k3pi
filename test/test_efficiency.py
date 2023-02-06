@@ -123,23 +123,24 @@ def test_scale_wts():
         np.array((4, 5, 6)),
         np.array((2, 4, 6)),
     ]  # sum = 33
+
+    # Ratio of efficiencies - this means for every 9 DCS evts
+    # we reconstruct, we reconstruct 13.5 CF evts
+    # This means we expect to scale the weights by 44/(33*1.5) = 8/9
     dcs_cf_ratio = 1.5
 
-    # Scale them
-    cf_wts, dcs_wts = scale_weights(cf_wts, dcs_wts, dcs_cf_ratio)
-
+    # These are unchanged
     expected_cf = [
         np.array((2.0, 4.0, 8.0)),
         np.array((3.0, 4.0, 5.0)),
         np.array((6.0, 6.0, 6.0)),
     ]
-    expected_dcs = [
-        np.array((2.0, 4.0, 6.0)),
-        np.array((8.0, 10.0, 12.0)),
-        np.array((4.0, 8.0, 12.0)),
-    ]
 
-    # Check we have the right average scale
+    expected_dcs = [8 * arr / 9 for arr in dcs_wts]
+
+    # Scale the weights
+    cf_wts, dcs_wts = scale_weights(cf_wts, dcs_wts, dcs_cf_ratio)
+
     assert np.allclose(cf_wts[0], expected_cf[0])
     assert np.allclose(cf_wts[1], expected_cf[1])
     assert np.allclose(cf_wts[2], expected_cf[2])
@@ -148,4 +149,9 @@ def test_scale_wts():
     assert np.allclose(dcs_wts[1], expected_dcs[1])
     assert np.allclose(dcs_wts[2], expected_dcs[2])
 
-    assert np.isclose(np.sum(dcs_wts) / np.sum(cf_wts), dcs_cf_ratio)
+    # Since we want the ratio of sums of weights to be
+    # equal to the ratio of N generated evts,
+    # this should be equal to the reciprocal of the ratio
+    # of the efficiencies
+    # (because N_gen = N_reco / eff)
+    assert np.isclose(np.sum(dcs_wts) / np.sum(cf_wts), 1 / dcs_cf_ratio)
