@@ -167,11 +167,11 @@ def main():
     centres = (bins[1:] + bins[:-1]) / 2
 
     # For the histograms
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    fig, axes = plt.subplots(2, 1, figsize=(5, 10))
     dcs_count_nocut, cf_count_nocut = _plot_nocut_hists(axes, year, magnetisation, bins)
 
     # For the efficiencies
-    eff_fig, eff_axes = plt.subplots(1, 2, figsize=(10, 5))
+    eff_fig, eff_axes = plt.subplots(2, 1, figsize=(5, 10))
 
     for threshhold, colour in tqdm(
         zip(
@@ -202,6 +202,7 @@ def main():
 
     for figure in fig, eff_fig:
         figure.tight_layout()
+        figure.subplots_adjust(top=0.92)
     fig.suptitle(r"D0 IP$\chi^2$")
     eff_fig.suptitle(r"D0 IP$\chi^2$ BDT cut efficiency")
 
