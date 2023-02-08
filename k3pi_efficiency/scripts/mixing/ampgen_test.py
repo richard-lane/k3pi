@@ -75,13 +75,13 @@ def _ratio_err(
     )
 
     # Scale
-    if correct_efficiency:
-        cf_eff_wt, dcs_eff_wt = (
-            arr[0]
-            for arr in efficiency_util.scale_weights(
-                [cf_eff_wt], [dcs_eff_wt], abs_eff_ratio
-            )
-        )
+    # if correct_efficiency:
+    #     cf_eff_wt, dcs_eff_wt = (
+    #         arr[0]
+    #         for arr in efficiency_util.scale_weights(
+    #             [cf_eff_wt], [dcs_eff_wt], abs_eff_ratio
+    #         )
+    #     )
 
     cf_counts, cf_errs = stats.counts(cf_df["time"], bins=bins, weights=cf_eff_wt)
     dcs_counts, dcs_errs = stats.counts(
@@ -91,12 +91,23 @@ def _ratio_err(
     return fit_util.ratio_err(dcs_counts, cf_counts, dcs_errs, cf_errs)
 
 
-def _abs_eff(dataframe: pd.DataFrame) -> float:
+def _abs_eff(dataframe: pd.DataFrame, wts: np.ndarray = None) -> float:
     """
     Absolute efficiency
 
     """
-    return np.sum(dataframe["accepted"]) / len(dataframe)
+    accepted = dataframe["accepted"]
+    if wts is None:
+        accepted = np.sum(accepted)
+        total = len(dataframe)
+
+    else:
+        accepted = np.sum(wts[accepted])
+        total = np.sum(wts)
+
+    efficiency = accepted / total
+    print(f"{accepted=}\t{total=}\t{efficiency=}")
+    return efficiency
 
 
 def main(args):
@@ -114,25 +125,17 @@ def main(args):
     cf_df = efficiency_util.ampgen_df("cf", k_sign, train=None)
     dcs_df = efficiency_util.ampgen_df("dcs", k_sign, train=None)
 
+    # Potentially throw some stuff away
+    if args.scale is not None:
+        print(f"cf scale {args.scale}")
+        cf_df = cf_df[: int(len(cf_df) * args.scale)]
+
     # Time cut
     max_time = TIME_BINS[-2]
     cf_keep = (MIN_TIME < cf_df["time"]) & (cf_df["time"] < max_time)
     dcs_keep = (MIN_TIME < dcs_df["time"]) & (dcs_df["time"] < max_time)
     cf_df = cf_df[cf_keep]
     dcs_df = dcs_df[dcs_keep]
-
-    # Find the absolute efficiencies from the dataframes after
-    # the time cuts
-    if args.correct_efficiency:
-        dcs_abs_eff = _abs_eff(dcs_df)
-        cf_abs_eff = _abs_eff(cf_df)
-
-    # Apply the efficiency via the boolean mask
-    if args.apply_efficiency:
-        cf_df = cf_df[cf_df["accepted"]]
-        dcs_df = dcs_df[dcs_df["accepted"]]
-
-    print(f"{len(cf_df)=}\t{len(dcs_df)=}")
 
     # Parameters determining mixing
     r_d = np.sqrt(0.003025)
@@ -148,6 +151,21 @@ def main(args):
     mixing_weights = mixing_helpers.mixing_weights(
         cf_df, dcs_df, r_d, params, k_sign, q_p
     )
+
+    # Find the absolute efficiencies from the dataframes after
+    # the time cuts
+    if args.correct_efficiency:
+        dcs_abs_eff = _abs_eff(dcs_df, mixing_weights)
+        cf_abs_eff = _abs_eff(cf_df)
+
+    # Apply the efficiency via the boolean mask
+    if args.apply_efficiency:
+        cf_df = cf_df[cf_df["accepted"]]
+
+        mixing_weights = mixing_weights[dcs_df["accepted"]]
+        dcs_df = dcs_df[dcs_df["accepted"]]
+
+    print(f"{len(cf_df)=}\t{len(dcs_df)=}")
 
     # Find mixed ratio and error
     bins = TIME_BINS[2:-1]
@@ -199,6 +217,13 @@ if __name__ == "__main__":
         "--correct_efficiency",
         help="whether to correct for the efficiency",
         action="store_true",
+    )
+
+    parser.add_argument(
+        "-s",
+        "--scale",
+        help="tells us how much of the cf df to throw away",
+        type=float,
     )
 
     main(parser.parse_args())
