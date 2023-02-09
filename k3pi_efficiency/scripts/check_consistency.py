@@ -7,7 +7,9 @@ Plots the derived time ratio after the reweighting for each of these reweighters
 the respective training sample and the testing sample
 
 """
+import os
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Tuple
@@ -53,10 +55,10 @@ def _train_reweighter(
     pgun = _points(pgun_df)
 
     train_kwargs = {
-        "n_estimators": 200,
+        "n_estimators": 250,
         "max_depth": 3,
-        # "learning_rate": 0.7,
-        # "min_samples_leaf": 1800,
+        "learning_rate": 0.1,
+        "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(
         ampgen, pgun, fit=False, min_t=MIN_TIME, **train_kwargs
@@ -144,6 +146,11 @@ def main(num_trained: int):
     Train the reweighters (in parallel) on the chunks; bring them back together and plot the ratio
 
     """
+    # Create a dir for storing stuff
+    dump_dir = pathlib.Path(__file__).resolve().parents[2] / "consistency"
+    if not dump_dir.is_dir():
+        os.mkdir(dump_dir)
+
     # Get the pgun and ampgen dataframes
     rs_pgun_df = get.particle_gun("cf")
     ws_pgun_df = get.particle_gun("dcs")
@@ -167,6 +174,10 @@ def main(num_trained: int):
 
     _add_train_indices(rng, rs_ampgen_df, num_trained)
     _add_train_indices(rng, ws_ampgen_df, num_trained)
+
+    # Dump these to the dump dir
+    with open(str(dump_dir / "dataframes.pkl"), "wb") as dump_f:
+        pickle.dump((rs_pgun_df, ws_pgun_df, rs_ampgen_df, ws_ampgen_df), dump_f)
 
     # Train reweighters on each of the splits
     manager = Manager()
@@ -207,6 +218,12 @@ def main(num_trained: int):
         proc.join()
     for proc in rs_procs:
         proc.join()
+
+    # Pickle the reweighters
+    with open(str(dump_dir / "rs_reweighters.pkl"), "wb") as dump_f:
+        pickle.dump(dict(rs_reweighters), dump_f)
+    with open(str(dump_dir / "ws_reweighters.pkl"), "wb") as dump_f:
+        pickle.dump(dict(ws_reweighters), dump_f)
 
     # Plot unweighted ratio
     fig, axis = plt.subplots()
