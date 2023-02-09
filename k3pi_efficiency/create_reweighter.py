@@ -85,10 +85,10 @@ def main(args: argparse.Namespace):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 200,
+        "n_estimators": 250,
         "max_depth": 3,
-        # "learning_rate": 0.7,
-        # "min_samples_leaf": 1800,
+        "learning_rate": 0.1,
+        "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(
         ag_pts, mc_pts, args.fit, efficiency_definitions.MIN_TIME, **train_kwargs

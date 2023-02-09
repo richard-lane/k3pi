@@ -100,7 +100,7 @@ def main(args: argparse.Namespace):
     rs_ag_t, rs_mc_t, rs_wt = _times_and_weights(
         args.year,
         args.magnetisation,
-        "false",
+        "cf",
         args.data_k_charge,
         args.weighter_k_charge,
         args.fit,
