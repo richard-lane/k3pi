@@ -169,7 +169,8 @@ def binned_simultaneous_fit(
     centre, width_l, alpha_l, beta = pdfs.signal_defaults(time_bin)
     width_r, alpha_r = width_l, alpha_l
 
-    a, b = pdfs.background_defaults("cf")
+    rs_a, rs_b = pdfs.background_defaults("cf")
+    ws_a, ws_b = pdfs.background_defaults("dcs")
 
     chi2 = pdfs.SimultaneousBinnedChi2(rs_counts, ws_counts, bins, rs_errors, ws_errors)
 
@@ -188,8 +189,10 @@ def binned_simultaneous_fit(
         alpha_l=alpha_l,
         alpha_r=alpha_r,
         beta=beta,
-        a=a,
-        b=b,
+        rs_a=rs_a,
+        rs_b=rs_b,
+        ws_a=ws_a,
+        ws_b=ws_b,
     )
     m.limits["rs_n_sig"] = (0.0, n_rs)
     m.limits["ws_n_sig"] = (0.0, n_ws)

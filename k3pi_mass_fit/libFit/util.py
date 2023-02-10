@@ -70,8 +70,8 @@ def rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
     Find RS and WS params from binned simultaneous fitter params
 
     """
-    rs_params = (*params[:2], *params[4:])
-    ws_params = tuple(params[2:])
+    rs_params = (*params[:2], *params[4:-2])
+    ws_params = (*params[2:-4], *params[-2:])
 
     return rs_params, ws_params
 

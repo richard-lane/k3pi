@@ -372,8 +372,10 @@ class SimultaneousBinnedChi2:
                 "alpha_l",
                 "alpha_r",
                 "beta",
-                "a",
-                "b",
+                "rs_a",
+                "rs_b",
+                "ws_a",
+                "ws_b",
             ]
         )
         self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
@@ -391,8 +393,10 @@ class SimultaneousBinnedChi2:
         alpha_l: float,
         alpha_r: float,
         beta: float,
-        a: float,
-        b: float,
+        rs_a: float,
+        rs_b: float,
+        ws_a: float,
+        ws_b: float,
     ) -> float:
         """
         Objective function
@@ -407,8 +411,8 @@ class SimultaneousBinnedChi2:
             alpha_l,
             alpha_r,
             beta,
-            a,
-            b,
+            rs_a,
+            rs_b,
         ) + self.ws_chi2(
             ws_n_sig,
             ws_n_bkg,
@@ -418,8 +422,8 @@ class SimultaneousBinnedChi2:
             alpha_l,
             alpha_r,
             beta,
-            a,
-            b,
+            ws_a,
+            ws_b,
         )
 
 
