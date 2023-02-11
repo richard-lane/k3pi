@@ -210,7 +210,7 @@ def _do_pull_study():
     time_bin = 5
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
-    n_rs_sig, n_ws_sig, n_bkg = 18_000_000, 55000, 50000
+    n_rs_sig, n_ws_sig, n_bkg = 5_600_000, 15000, 50000
 
     manager = Manager()
     out_list = manager.list()
@@ -220,7 +220,7 @@ def _do_pull_study():
     fig, axes = plt.subplot_mosaic("AAAA\nAAAA\nAAAA\nCCDD\nCCDD", figsize=(8, 10))
 
     n_procs = 6
-    n_experiments = 10
+    n_experiments = 35
     procs = [
         Process(
             target=_pull_study,

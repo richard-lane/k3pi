@@ -145,7 +145,35 @@ def _gen_sig(
         def signal_pdf(x: np.ndarray) -> np.ndarray:
             return pdfs.signal(x, centre, width, width, alpha, alpha, beta)
 
-        gen_kw = {}
+        # Choose regions for the generation
+        low, high = pdfs.domain()
+        a, b = 144.0, 148.0
+        h = 0.1
+
+        area_low = h * (a - low)
+        area_mid = b - a
+        area_high = h * (high - b)
+
+        # num to generate low + high is based on their areas
+        n_low = int(n_sig * area_low / area_mid)
+        n_high = int(n_sig * area_high / area_mid)
+
+        # Generate
+        x_low = low + (a - low) * rng.random(n_low)
+        x_mid = a + (b - a) * rng.random(n_sig)
+        x_high = b + (high - b) * rng.random(n_high)
+
+        y_low = 0.1 * rng.random(n_low)
+        y_mid = rng.random(n_sig)
+        y_high = 0.1 * rng.random(n_high)
+
+        return np.concatenate(
+            (
+                x_low[y_low < signal_pdf(x_low)],
+                x_mid[y_mid < signal_pdf(x_mid)],
+                x_high[y_high < signal_pdf(x_high)],
+            )
+        )
 
     return _gen(
         rng,
