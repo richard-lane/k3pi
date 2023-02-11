@@ -76,6 +76,20 @@ def rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
     return rs_params, ws_params
 
 
+def fit_params(rs_params: ValueView, ws_params: ValueView) -> Tuple:
+    """
+    Find fitter parameters from RS and WS params
+
+    i.e. the inverse of the above
+
+    """
+    # Check the RS and WS signal params are the same
+    for i in range(2, 7):
+        assert rs_params[i] == ws_params[i]
+
+    return (*rs_params[:2], *ws_params[:2], *rs_params[2:], *ws_params[-2:])
+
+
 def alt_rs_ws_params(params: ValueView) -> Tuple[Tuple, Tuple]:
     """
     Find RS and WS params from binned simultaneous fitter params

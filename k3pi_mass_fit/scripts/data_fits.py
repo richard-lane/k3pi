@@ -123,7 +123,7 @@ def _fit(
     print(f"{params[-2]} +- {fitter.errors[-2]}", end="\t")
     print(f"{params[-1]} +- {fitter.errors[-1]}")
 
-    fig, _ = (
+    fig, axes = (
         plotting.alt_bkg_simul(
             rs_count,
             rs_err,
@@ -145,16 +145,24 @@ def _fit(
         )
     )
 
-    print(fitter.values)
-    fig.suptitle(
+    axes["A"].set_title(
+        f"Nsig={fitter.values[0]:.4f}"
+        r"$\pm$"
+        f"{fitter.errors[0]:.4f}"
+        f"\tNbkg={fitter.values[1]:.4f}"
+        r"$\pm$"
+        f"{fitter.errors[1]:.4f}"
+    )
+    axes["B"].set_title(
         f"Nsig={fitter.values[2]:.4f}"
         r"$\pm$"
         f"{fitter.errors[2]:.4f}"
         f"\tNbkg={fitter.values[3]:.4f}"
         r"$\pm$"
         f"{fitter.errors[3]:.4f}"
-        f"\t{fitter.valid=}"
     )
+    fig.suptitle(f"{fitter.valid=}")
+    fig.tight_layout()
     fig.tight_layout()
 
     bkg_str = "_alt_bkg" if alt_bkg else ""
