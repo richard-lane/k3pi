@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
-from libFit import pdfs, fit, toy_utils, definitions, util
+from libFit import pdfs, fit, toy_utils, util, plotting
 from lib_data import stats
 
 
@@ -32,27 +32,31 @@ def _bins():
     For fitting + plotting
 
     """
-    return definitions.mass_bins(300)
+    bins = np.unique(
+        np.concatenate(
+            (
+                np.linspace(pdfs.domain()[0], 144.0, 50),
+                np.linspace(144.0, 148.0, 100),
+                np.linspace(148.0, pdfs.domain()[1], 50),
+            )
+        )
+    )
+    return bins
 
 
-def _plot_fit(fit_params, rs_combined, ws_combined, fit_axes):
+def _plot_fit(fit_params, rs_combined, ws_combined, rs_fit_axes, ws_fit_axes):
     """
     Plot fit on an axis
 
     """
-    for axis, data, params in zip(
-        fit_axes, (rs_combined, ws_combined), util.rs_ws_params(fit_params)
+    bins = _bins()
+
+    for axes, data, params in zip(
+        (rs_fit_axes, ws_fit_axes),
+        (rs_combined, ws_combined),
+        util.rs_ws_params(fit_params),
     ):
-
-        def fitted_pdf(x: np.ndarray) -> np.ndarray:
-            return pdfs.model(x, *params)
-
-        pts = _bins()
-        centres = (pts[1:] + pts[:-1]) / 2
-        widths = pts[1:] - pts[:-1]
-
-        axis.plot(centres, widths * fitted_pdf(centres), "r--")
-        axis.hist(data, bins=pts)
+        plotting.mass_fit(axes, *stats.counts(data, bins), bins, params)
 
 
 def _pull(
@@ -217,10 +221,12 @@ def _do_pull_study():
     out_dict = manager.dict()
 
     # For plotting pulls
-    fig, axes = plt.subplot_mosaic("AAAA\nAAAA\nAAAA\nCCDD\nCCDD", figsize=(8, 10))
+    fig, axes = plt.subplot_mosaic(
+        "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
+    )
 
     n_procs = 6
-    n_experiments = 35
+    n_experiments = 50
     procs = [
         Process(
             target=_pull_study,
@@ -258,7 +264,8 @@ def _do_pull_study():
         out_dict["fit_params"],
         out_dict["rs_combined"],
         out_dict["ws_combined"],
-        (axes["C"], axes["D"]),
+        (axes["C"], axes["E"]),
+        (axes["D"], axes["F"]),
     )
     for axis in (axes["C"], axes["D"]):
         axis.set_title("Example fit")
