@@ -32,7 +32,7 @@ def _bins():
     For fitting + plotting
 
     """
-    return definitions.mass_bins(200)
+    return definitions.mass_bins(300)
 
 
 def _plot_fit(fit_params, rs_combined, ws_combined, fit_axes):
@@ -264,7 +264,8 @@ def _do_pull_study():
         axis.set_title("Example fit")
     fig.tight_layout()
 
-    path = f"simul_pulls_{n_procs=}_{n_experiments=}.png"
+    n_bins = len(_bins()) - 1
+    path = f"simul_pulls_{n_procs=}_{n_experiments=}_{n_bins=}.png"
     print(f"plotting {path}")
     fig.savefig(path)
 
