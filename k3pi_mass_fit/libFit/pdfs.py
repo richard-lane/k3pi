@@ -99,8 +99,10 @@ def normalised_sig_base(
     return signal_base(x, *args) / area
 
 
+# Might be dead code
 def _norm_sig_base_integral(x_domain: Tuple[float, float], args: Tuple) -> float:
     """Normalised integral of the signal model"""
+    raise NotImplementedError
     return quad(normalised_sig_base, *x_domain, args=args)[0]
 
 
@@ -128,6 +130,7 @@ def signal(
     return retval
 
 
+# might be dead code
 def _signal_integral(
     x_domain: Tuple[float, float],
     centre: float,
@@ -138,6 +141,7 @@ def _signal_integral(
     beta: float,
 ) -> float:
     """Integral of the normalised signal PDF between two points"""
+    raise NotImplementedError
     assert x_domain[0] <= x_domain[1]
     left_args = (centre, width_l, alpha_l, beta)
     right_args = (centre, width_r, alpha_r, beta)

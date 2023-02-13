@@ -23,8 +23,6 @@ def mass_fit(
     """
     Plot the mass fit and pulls on an axis
 
-    Assumes the bins have equal widths
-
     :param axes: tuple of (histogram axis, pull axis)
     :param counts: counts in each bin
     :param errs: errors on the counts in each bin
@@ -39,18 +37,23 @@ def mass_fit(
     err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
     axes[0].errorbar(
         centres,
-        counts,
-        yerr=errs,
+        counts / bin_widths,
+        xerr=bin_widths / 2,
+        yerr=errs / bin_widths,
         **err_kw,
     )
 
-    predicted = stats.areas(bins, pdfs.model(bins, *fit_params))
+    predicted = stats.areas(bins, pdfs.model(bins, *fit_params)) / bin_widths
 
-    predicted_signal = fit_params[0] * stats.areas(
-        bins, pdfs.normalised_signal(bins, *fit_params[2:-2])
+    predicted_signal = (
+        fit_params[0]
+        * stats.areas(bins, pdfs.normalised_signal(bins, *fit_params[2:-2]))
+        / bin_widths
     )
-    predicted_bkg = fit_params[1] * stats.areas(
-        bins, pdfs.normalised_bkg(bins, *fit_params[-2:])
+    predicted_bkg = (
+        fit_params[1]
+        * stats.areas(bins, pdfs.normalised_bkg(bins, *fit_params[-2:]))
+        / bin_widths
     )
 
     axes[0].plot(centres, predicted)
@@ -66,12 +69,12 @@ def mass_fit(
     )
 
     # Plot pull
-    diff = counts - predicted
+    diff = (counts / bin_widths) - predicted
     axes[1].plot(pdfs.domain(), [1, 1], "r-")
     axes[1].errorbar(
         centres,
         diff,
-        yerr=errs,
+        yerr=errs / bin_widths,
         **err_kw,
     )
 

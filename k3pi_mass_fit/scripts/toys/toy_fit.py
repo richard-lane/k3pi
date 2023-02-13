@@ -46,7 +46,16 @@ def _toy_fit(alt_bkg):
 
     # Perform fits
     sig_frac = true_params[0]
-    bins = definitions.mass_bins(100)
+    bins = definitions.mass_bins(200)
+    bins = np.unique(
+        np.concatenate(
+            (
+                np.linspace(pdfs.domain()[0], 145.0, 30),
+                np.linspace(145.0, 147.0, 50),
+                np.linspace(147.0, pdfs.domain()[1], 30),
+            )
+        )
+    )
     counts, errs = stats.counts(combined, bins)
     binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
 
