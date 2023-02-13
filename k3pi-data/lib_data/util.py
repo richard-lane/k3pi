@@ -108,6 +108,27 @@ def momentum_order(
     return new_pi1, new_pi2
 
 
+def k_3pi(
+    dataframe: pd.DataFrame,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Get the kaon and 3 pions as 4xN numpy arrays of (px, py, pz, E)
+
+    """
+    particles = [
+        definitions.MOMENTUM_COLUMNS[0:4],
+        definitions.MOMENTUM_COLUMNS[4:8],
+        definitions.MOMENTUM_COLUMNS[8:12],
+        definitions.MOMENTUM_COLUMNS[12:16],
+    ]
+    k, pi1, pi2, pi3 = (
+        np.row_stack([dataframe[x] for x in labels]) for labels in particles
+    )
+    pi1, pi2 = momentum_order(k, pi1, pi2)
+
+    return k, pi1, pi2, pi3
+
+
 def add_train_column(
     gen: np.random.Generator, dataframe: pd.DataFrame, train_fraction: float = 0.5
 ) -> None:

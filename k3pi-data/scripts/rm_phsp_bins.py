@@ -3,6 +3,7 @@ Remove phase space bin indices from dataframes
 
 """
 import sys
+import glob
 import pickle
 import pathlib
 import argparse
@@ -18,10 +19,9 @@ def main(args: argparse.Namespace) -> None:
     """Delete phsp bin columns from dataframes"""
     year, sign, magnetisation = args.year, args.sign, args.magnetisation
 
-    dump_paths = [
-        definitions.data_dump(path, year, sign, magnetisation)
-        for path in definitions.data_files(year, magnetisation)
-    ]
+    dump_paths = glob.glob(
+        str(definitions.data_dir(year, sign, magnetisation) / "*pkl")
+    )
 
     col_header = "phsp bin"
 

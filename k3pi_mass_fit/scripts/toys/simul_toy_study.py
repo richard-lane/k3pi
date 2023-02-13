@@ -35,9 +35,9 @@ def _bins():
     bins = np.unique(
         np.concatenate(
             (
-                np.linspace(pdfs.domain()[0], 144.0, 50),
-                np.linspace(144.0, 148.0, 100),
-                np.linspace(148.0, pdfs.domain()[1], 50),
+                np.linspace(pdfs.domain()[0], 144.0, 75),
+                np.linspace(144.0, 148.0, 175),
+                np.linspace(148.0, pdfs.domain()[1], 75),
             )
         )
     )
@@ -225,8 +225,8 @@ def _do_pull_study():
         "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
     )
 
-    n_procs = 6
-    n_experiments = 50
+    n_procs = 7
+    n_experiments = 200
     procs = [
         Process(
             target=_pull_study,

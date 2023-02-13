@@ -3,6 +3,7 @@ Utility functions for efficiency stuff
 
 """
 import sys
+import logging
 import pathlib
 from typing import Tuple, List
 import numpy as np
@@ -21,6 +22,10 @@ def k_3pi(
     Get the kaon and 3 pions as 4xN numpy arrays of (px, py, pz, E)
 
     """
+    logging.warning(
+        "Use the k3pi fcn in lib_data.util instead", exc_info=DeprecationWarning()
+    )
+
     particles = [
         definitions.MOMENTUM_COLUMNS[0:4],
         definitions.MOMENTUM_COLUMNS[4:8],
