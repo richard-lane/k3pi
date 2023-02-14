@@ -55,9 +55,9 @@ def _train_reweighter(
     pgun = _points(pgun_df)
 
     train_kwargs = {
-        "n_estimators": 250,
+        "n_estimators": 350,
         "max_depth": 3,
-        "learning_rate": 0.1,
+        "learning_rate": 0.08,
         "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(
