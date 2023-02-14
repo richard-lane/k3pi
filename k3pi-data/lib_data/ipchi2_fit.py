@@ -25,7 +25,7 @@ def domain() -> Tuple[float, float]:
     Domain for PDF
 
     """
-    return -15.0, 15.0
+    return -18.0, 18.0
 
 
 def norm_peak(
@@ -201,7 +201,7 @@ def fit(
 
     # Limits
     sig_limits = {
-        "centre_sig": (-0.5, 0.5),
+        "centre_sig": (-1.5, 1.5),
         "width_l_sig": (0.5, 3.0),
         "width_r_sig": (0.5, 3.0),
         "alpha_l_sig": (0.0, 2.0),
@@ -220,6 +220,19 @@ def fit(
     for lims in sig_limits, bkg_limits:
         for name, vals in lims.items():
             fitter.limits[name] = vals
+
+    fitter.fixed["beta_sig"] = True
+    fitter.fixed["beta_bkg"] = True
+    # fitter.fixed["centre_sig"] = True
+    # fitter.fixed["centre_bkg"] = True
+    fitter.fixed["alpha_l_sig"] = True
+    fitter.fixed["alpha_l_bkg"] = True
+    fitter.fixed["alpha_r_sig"] = True
+    fitter.fixed["alpha_r_bkg"] = True
+    fitter.fixed["width_l_sig"] = True
+    fitter.fixed["width_l_bkg"] = True
+    fitter.fixed["width_r_sig"] = True
+    fitter.fixed["width_r_bkg"] = True
 
     fitter.migrad()
 
@@ -252,8 +265,14 @@ def plot(
 
     predicted = stats.areas(bins, model(bins, *fit_params)) / bin_widths
 
-    predicted_sig = fit_params[0] * stats.areas(bins, norm_peak(bins, *fit_params[2:8]))
-    predicted_bkg = fit_params[1] * stats.areas(bins, norm_peak(bins, *fit_params[8:]))
+    predicted_sig = (
+        fit_params[0]
+        * stats.areas(bins, norm_peak(bins, *fit_params[2:8]))
+        / bin_widths
+    )
+    predicted_bkg = (
+        fit_params[1] * stats.areas(bins, norm_peak(bins, *fit_params[8:])) / bin_widths
+    )
 
     axes[0].plot(centres, predicted)
     axes[0].plot(

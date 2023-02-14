@@ -40,8 +40,6 @@ def main():
 
     """
     rng = np.random.default_rng()
-    sig_params = (0.0, 1.0, 1.05, 0.09, 0.08, 0.0)
-    bkg_params = (7.0, 1.5, 1.6, 0.1, 0.1, 0.0)
     sig_defaults = {
         "centre_sig": 0.0,
         "width_l_sig": 1.5,
