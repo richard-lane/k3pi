@@ -69,14 +69,20 @@ def mass_fit(
     )
 
     # Plot pull
-    diff = (counts / bin_widths) - predicted
-    axes[1].plot(pdfs.domain(), [1, 1], "r-")
+    diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
+    axes[1].axhline(0, color="k")
+    for pos in (-1, 1):
+        axes[1].axhline(pos, color="r", alpha=0.5)
+
     axes[1].errorbar(
         centres,
         diff,
-        yerr=errs / bin_widths,
+        yerr=1.0,
         **err_kw,
     )
+    axes[0].set_ylabel("N/MeV")
+    axes[1].set_ylabel(r"$\sigma$")
+    axes[1].set_xlabel(r"$\Delta M$ /MeV")
 
 
 def simul_fits(
@@ -111,9 +117,6 @@ def simul_fits(
     mass_fit((axes["B"], axes["D"]), ws_counts, ws_errs, bins, ws_params)
 
     axes["A"].legend()
-
-    axes["C"].plot(pdfs.domain(), [1, 1], "r-")
-    axes["D"].plot(pdfs.domain(), [1, 1], "r-")
 
     fig.tight_layout()
 
@@ -311,7 +314,7 @@ def mass_fit_reduced(
 
     # Plot pull
     diff = counts - predicted
-    axes[1].plot(pdfs.domain(), [1, 1], "r-")
+    axes[1].plot(pdfs.domain(), [0, 0], "r-")
     axes[1].errorbar(
         centres,
         diff,

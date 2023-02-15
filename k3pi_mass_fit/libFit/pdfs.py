@@ -302,8 +302,8 @@ class BinnedChi2:
 
         # Check for zeros since this breaks stuff
         assert not np.any(counts == 0.0), f"{counts=}"
-        if errors is not None:
-            assert not np.any(error == 0.0), f"{errors=}"
+        if error is not None:
+            assert not np.any(error == 0.0), f"{error=}"
 
         self.counts, self.error = counts, error
         self.bins = bins

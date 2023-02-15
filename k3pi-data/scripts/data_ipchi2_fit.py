@@ -20,7 +20,7 @@ def main():
     """
     low, high = ipchi2_fit.domain()
     bins = np.concatenate(
-        ([-np.inf], np.linspace(low, high * 0.9, 100), [high, np.inf])
+        ([-np.inf], np.linspace(low, high * 0.9, 150), [high, np.inf])
     )
 
     # Get counts in the bins

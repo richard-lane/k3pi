@@ -290,11 +290,17 @@ def plot(
     )
 
     # Plot pull
-    diff = (counts / bin_widths) - predicted
-    axes[1].plot(domain(), [1, 1], "r-")
+    diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
+    axes[1].axhline(0, color="k")
+    for pos in (-1, 1):
+        axes[1].axhline(pos, color="r", alpha=0.5)
     axes[1].errorbar(
         centres,
         diff,
-        yerr=errs / bin_widths,
+        yerr=1.0,
         **err_kw,
     )
+
+    axes[0].set_ylabel("N/bin width")
+    axes[1].set_xlabel(r"D0 IP$\chi^2$")
+    axes[1].set_ylabel(r"$\sigma$")
