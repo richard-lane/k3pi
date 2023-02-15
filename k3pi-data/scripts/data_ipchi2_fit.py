@@ -18,14 +18,9 @@ def main():
     Fit to them + plot
 
     """
-    bins = np.unique(
-        np.concatenate(
-            (
-                np.linspace(ipchi2_fit.domain()[0], -5, 4),
-                np.linspace(-5, 9, 100),
-                np.linspace(9, ipchi2_fit.domain()[1], 4),
-            )
-        )
+    low, high = ipchi2_fit.domain()
+    bins = np.concatenate(
+        ([-np.inf], np.linspace(low, high * 0.9, 100), [high, np.inf])
     )
 
     # Get counts in the bins
@@ -36,6 +31,10 @@ def main():
         ),
         bins,
     )
+    # Remove the first and last counts and bins
+    bins = bins[1:-1]
+    counts = counts[1:-1]
+    errs = errs[1:-1]
 
     # fit
     sig_defaults = {
@@ -55,7 +54,9 @@ def main():
         "beta_bkg": 0.0,
     }
     sig_fraction = 0.85
-    fitter = ipchi2_fit.fit(counts, bins, sig_fraction, sig_defaults, bkg_defaults, errors=errs)
+    fitter = ipchi2_fit.fit(
+        counts, bins, sig_fraction, sig_defaults, bkg_defaults, errors=errs
+    )
     print(fitter)
 
     # plot

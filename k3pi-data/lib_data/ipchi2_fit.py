@@ -25,7 +25,7 @@ def domain() -> Tuple[float, float]:
     Domain for PDF
 
     """
-    return -18.0, 18.0
+    return -8.0, 12.0
 
 
 def norm_peak(
@@ -46,9 +46,12 @@ def norm_peak(
     low, high = domain()
 
     area = (
-        quad(pdfs.signal_base, low, centre, args=left_args)[0]
-        + quad(pdfs.signal_base, centre, high, args=right_args)[0]
+        quad(pdfs.signal_base, low, centre, args=left_args, points=(centre,))[0]
+        + quad(pdfs.signal_base, centre, high, args=right_args, points=(centre,))[0]
     )
+
+    if np.isnan(area):
+        print(centre, width_l, width_r, alpha_l, alpha_r, beta)
 
     return pdfs.signal(x, centre, width_l, width_r, alpha_l, alpha_r, beta) / area
 
@@ -174,6 +177,8 @@ def fit(
     """
     Perform a binned fit, return the fitter
 
+    Beta params are fixed to the values passed in
+
     :param counts: array of log D0IPCHI2
     :param bins: binning used
     :param signal_frac_guess: initial guess at the signal fraction
@@ -189,6 +194,11 @@ def fit(
         raise ValueError(f"{len(errors)=}\t{len(counts)=}")
 
     assert 0.0 <= signal_frac_guess <= 1.0
+
+    # Check for zeros since this breaks stuff
+    assert not np.any(counts == 0.0), f"{counts=}"
+    if errors is not None:
+        assert not np.any(errors == 0.0), f"{errors=}"
 
     # Defaults
     total = np.sum(counts)
@@ -209,7 +219,7 @@ def fit(
         "beta_sig": (None, None),
     }
     bkg_limits = {
-        "centre_bkg": (3.0, 8.0),
+        "centre_bkg": (2.5, 8.0),
         "width_l_bkg": (0.5, 4.0),
         "width_r_bkg": (0.5, 4.0),
         "alpha_l_bkg": (0.0, 2.0),
@@ -221,18 +231,11 @@ def fit(
         for name, vals in lims.items():
             fitter.limits[name] = vals
 
+    fitter.limits["n_sig"] = (0.0, total)
+    fitter.limits["n_bkg"] = (0.0, total)
+
     fitter.fixed["beta_sig"] = True
     fitter.fixed["beta_bkg"] = True
-    # fitter.fixed["centre_sig"] = True
-    # fitter.fixed["centre_bkg"] = True
-    fitter.fixed["alpha_l_sig"] = True
-    fitter.fixed["alpha_l_bkg"] = True
-    fitter.fixed["alpha_r_sig"] = True
-    fitter.fixed["alpha_r_bkg"] = True
-    fitter.fixed["width_l_sig"] = True
-    fitter.fixed["width_l_bkg"] = True
-    fitter.fixed["width_r_sig"] = True
-    fitter.fixed["width_r_bkg"] = True
 
     fitter.migrad()
 

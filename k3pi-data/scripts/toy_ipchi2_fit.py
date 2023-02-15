@@ -63,13 +63,13 @@ def main():
         np.concatenate(
             (
                 np.linspace(ipchi2_fit.domain()[0], -5, 10),
-                np.linspace(-5, 12, 50),
+                np.linspace(-5, 12, 100),
                 np.linspace(12, ipchi2_fit.domain()[1], 10),
             )
         )
     )
     centres = (bins[1:] + bins[:-1]) / 2
-    bin_widths = (bins[1:] - bins[:-1]) / 2
+    bin_widths = bins[1:] - bins[:-1]
 
     sig_counts, _ = stats.counts(sig, bins)
     bkg_counts, _ = stats.counts(bkg, bins)
@@ -84,11 +84,25 @@ def main():
     )
 
     axes["A"].errorbar(
-        centres, sig_counts, xerr=bin_widths, yerr=np.sqrt(sig_counts), fmt="r."
+        centres,
+        sig_counts / bin_widths,
+        xerr=0.5 * bin_widths,
+        yerr=np.sqrt(sig_counts),
+        fmt="b.",
+        label="Signal Counts",
     )
     axes["A"].errorbar(
-        centres, bkg_counts, xerr=bin_widths, yerr=np.sqrt(bkg_counts), fmt="r."
+        centres,
+        bkg_counts / bin_widths,
+        xerr=0.5 * bin_widths,
+        yerr=np.sqrt(bkg_counts),
+        fmt="r.",
+        label="Bkg Counts",
     )
+    axes["A"].legend()
+    axes["A"].set_ylabel("Count / bin width")
+    axes["A"].set_xlabel("IPCHI2")
+    axes["A"].set_title("Toy")
 
     plt.tight_layout()
     plt.savefig("toy_ipchi2_fit.png")
