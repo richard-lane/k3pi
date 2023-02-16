@@ -233,13 +233,13 @@ def _ratio_err(
     # If we're correcting for the efficiency, might want to adjust the
     # DCS counts (and their errors) to account for the absolute
     # efficiency
-    # eff_ratio = WS_EFF / RS_EFF
-    # eff_ratio_err = eff_ratio * np.sqrt((RS_ERR / RS_EFF) ** 2 + (WS_ERR / WS_EFF) ** 2)
+    # TODO it properly
+    dcs_avg_eff, cf_avg_eff = 0.02033, 0.02064
+    dcs_counts = [lst / dcs_avg_eff for lst in dcs_counts]
+    dcs_mass_errs = [lst / dcs_avg_eff for lst in dcs_mass_errs]
 
-    # dcs_counts *= eff_ratio
-    # dcs_mass_errs = dcs_counts * np.sqrt(
-    #     (dcs_mass_errs / dcs_counts) ** 2 + (eff_ratio_err / eff_ratio) ** 2
-    # )
+    cf_counts = [lst / cf_avg_eff for lst in cf_counts]
+    cf_mass_errs = [lst / cf_avg_eff for lst in cf_mass_errs]
 
     # Don't want the first or last bins since they're
     # the overflows (down to -inf; up to + inf)
@@ -293,15 +293,15 @@ def _make_scans(
     Plot all 3 kinds of scans in the right phase space bins
 
     """
-    # _plot_scan(
-    #     year,
-    #     magnetisation,
-    #     time_bins,
-    #     mass_bins,
-    #     bdt_cut=False,
-    #     correct_efficiency=False,
-    #     phsp_bin=phsp_bin,
-    # )
+    _plot_scan(
+        year,
+        magnetisation,
+        time_bins,
+        mass_bins,
+        bdt_cut=False,
+        correct_efficiency=False,
+        phsp_bin=phsp_bin,
+    )
 
     _plot_scan(
         year,
@@ -313,15 +313,15 @@ def _make_scans(
         phsp_bin=phsp_bin,
     )
 
-    # _plot_scan(
-    #     year,
-    #     magnetisation,
-    #     time_bins,
-    #     mass_bins,
-    #     bdt_cut=True,
-    #     correct_efficiency=True,
-    #     phsp_bin=phsp_bin,
-    # )
+    _plot_scan(
+        year,
+        magnetisation,
+        time_bins,
+        mass_bins,
+        bdt_cut=True,
+        correct_efficiency=True,
+        phsp_bin=phsp_bin,
+    )
 
 
 def main():
