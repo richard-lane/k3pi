@@ -15,9 +15,10 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
 
 from lib_data import stats, get
+from lib_data.util import k_3pi
 from lib_cuts.get import cut_dfs, classifier as get_clf
 from lib_efficiency.get import reweighter_dump as get_reweighter
-from lib_efficiency.efficiency_util import k_3pi, points
+from lib_efficiency.efficiency_util import points
 
 
 def delta_m(dataframe: pd.DataFrame) -> pd.Series:

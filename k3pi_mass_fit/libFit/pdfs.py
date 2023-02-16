@@ -13,6 +13,10 @@ from iminuit.util import make_func_code
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 from lib_data import stats
 
+class ZeroCountsError(Exception):
+    def __init__(self, msg: str):
+        """ If there are 0s in the counts """
+        super().__init__(msg)
 
 def domain() -> Tuple[float, float]:
     """Edges of the delta M range"""
@@ -301,9 +305,8 @@ class BinnedChi2:
             error = np.sqrt(counts)
 
         # Check for zeros since this breaks stuff
-        assert not np.any(counts == 0.0), f"{counts=}"
-        if error is not None:
-            assert not np.any(error == 0.0), f"{error=}"
+        if np.any(counts == 0.0) or np.any(error == 0.0):
+            raise ZeroCountsError(f"{counts=}\t{error=}")
 
         self.counts, self.error = counts, error
         self.bins = bins

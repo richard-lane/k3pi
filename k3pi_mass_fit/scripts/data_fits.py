@@ -31,22 +31,26 @@ def _separate_fit(
     Plot separate fits
 
     """
-    fitter = (
-        fit.alt_bkg_fit(
-            count,
-            bins,
-            sign,
-            bin_number,
-            0.9 if sign == "cf" else 0.05,
-            errors=err,
-            bdt_cut=bdt_cut,
-            efficiency=efficiency,
+    try:
+        fitter = (
+            fit.alt_bkg_fit(
+                count,
+                bins,
+                sign,
+                bin_number,
+                0.9 if sign == "cf" else 0.05,
+                errors=err,
+                bdt_cut=bdt_cut,
+                efficiency=efficiency,
+            )
+            if alt_bkg
+            else fit.binned_fit(
+                count, bins, sign, bin_number, 0.9 if sign == "cf" else 0.05, errors=err
+            )
         )
-        if alt_bkg
-        else fit.binned_fit(
-            count, bins, sign, bin_number, 0.9 if sign == "cf" else 0.05, errors=err
-        )
-    )
+    except pdfs.ZeroCountsError as err:
+        print("time bin:", bin_number, repr(err))
+        return
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(6, 8))
 
@@ -69,12 +73,12 @@ def _separate_fit(
     axes["B"].plot(pdfs.domain(), [1, 1], "r-")
 
     fig.suptitle(
-        f"Nsig={fitter.values[0]:.4f}"
+        f"Nsig={fitter.values[0]:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[0]:.4f}"
-        f"\tNbkg={fitter.values[1]:.4f}"
+        f"{fitter.errors[0]:,.2f}"
+        f"\tNbkg={fitter.values[1]:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[1]:.4f}"
+        f"{fitter.errors[1]:,.2f}"
         f"\t{fitter.valid=}"
     )
     fig.tight_layout()
@@ -102,22 +106,27 @@ def _fit(
     Plot the fit
 
     """
-    fitter = (
-        fit.alt_simultaneous_fit(
-            rs_count,
-            ws_count,
-            bins,
-            bin_number,
-            rs_err,
-            ws_err,
-            bdt_cut=bdt_cut,
-            efficiency=efficiency,
+    try:
+        fitter = (
+            fit.alt_simultaneous_fit(
+                rs_count,
+                ws_count,
+                bins,
+                bin_number,
+                rs_err,
+                ws_err,
+                bdt_cut=bdt_cut,
+                efficiency=efficiency,
+            )
+            if alt_bkg
+            else fit.binned_simultaneous_fit(
+                rs_count, ws_count, bins, bin_number, rs_err, ws_err
+            )
         )
-        if alt_bkg
-        else fit.binned_simultaneous_fit(
-            rs_count, ws_count, bins, bin_number, rs_err, ws_err
-        )
-    )
+    except pdfs.ZeroCountsError as err:
+        print("time bin:", bin_number, repr(err))
+        return
+
     params = fitter.values
     print(f"{fitter.valid=}", end="\t")
     print(f"{params[-2]} +- {fitter.errors[-2]}", end="\t")
@@ -146,20 +155,20 @@ def _fit(
     )
 
     axes["A"].set_title(
-        f"Nsig={fitter.values[0]:.4f}"
+        f"Nsig={fitter.values[0]:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[0]:.4f}"
-        f"\tNbkg={fitter.values[1]:.4f}"
+        f"{fitter.errors[0]:,.2f}"
+        f"\tNbkg={fitter.values[1]:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[1]:.4f}"
+        f"{fitter.errors[1]:,.2f}"
     )
     axes["B"].set_title(
-        f"Nsig={fitter.values[2]:.4f}"
+        f"Nsig={fitter.values[2]:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[2]:.4f}"
-        f"\tNbkg={fitter.values[3]:.4f}"
+        f"{fitter.errors[2]:,.2f}"
+        f"\tNbkg={fitter.values[3]:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[3]:.4f}"
+        f"{fitter.errors[3]:,.2f}"
     )
     fig.suptitle(f"{fitter.valid=}")
     fig.tight_layout()
@@ -181,8 +190,8 @@ def main(args: argparse.Namespace):
     if args.efficiency:
         assert args.bdt_cut
 
-    bins = definitions.mass_bins(100)
-    time_bins = np.array((-np.inf, *TIME_BINS[1:], np.inf))
+    bins = definitions.nonuniform_mass_bins((144.0, 148.0), (50, 100, 50))
+    time_bins = np.array((-np.inf, *TIME_BINS[2:], np.inf))
 
     year, magnetisation = args.year, args.magnetisation
 
