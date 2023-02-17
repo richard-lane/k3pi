@@ -2,6 +2,8 @@
 Statistical or related things
 
 """
+import logging
+import traceback
 import itertools
 from typing import List, Tuple, Iterable
 import numpy as np
@@ -171,6 +173,11 @@ def time_binned_counts(
     :returns: list of arrays of errors in each bin
 
     """
+    logging.warning(
+        "Build generators of dataframes in the right time bin with `lib_data:util.time_bin_generator`",
+        exc_info=DeprecationWarning(),
+    )
+    traceback.print_stack()
     # So we can zip arrays + weights even if weights
     # is not provided
     if weights is None:

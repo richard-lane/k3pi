@@ -7,7 +7,7 @@ import sys
 import glob
 import pickle
 import pathlib
-from typing import Generator
+from typing import Generator, Iterable
 import pandas as pd
 from tqdm import tqdm
 
@@ -211,3 +211,26 @@ def binned_generator(
     """
     for dataframe in generator:
         yield dataframe[dataframe["phsp bin"] == phsp_bin]
+
+
+def time_binned_generator(
+    dataframes: Iterable[pd.DataFrame], low_t: float, high_t: float
+) -> Iterable[pd.DataFrame]:
+    """
+    Generator of dataframes, selecting events between the provided times
+
+    :parameter dataframes: Iterable (can be a generator) of dataframes
+    :parameter low_t: low time for bin (exclusive)
+    :parameter high_t: low time for bin (exclusive)
+
+    :returns: generator of dataframes, sliced such that only times we want are kept
+
+    """
+    assert low_t < high_t
+
+    for dataframe in dataframes:
+        times = dataframe["time"]
+
+        keep = (low_t < times) & (times < high_t)
+
+        yield dataframe[keep]

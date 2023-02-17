@@ -5,14 +5,16 @@ Utility functions for efficiency stuff
 import sys
 import logging
 import pathlib
-from typing import Tuple, List
+import traceback
+from typing import Tuple, List, Iterable
 import numpy as np
 import pandas as pd
 from fourbody.param import helicity_param
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
-from lib_data import definitions, util, get
+from lib_data import util, get
+from .reweighter import EfficiencyWeighter
 
 
 def k_3pi(
@@ -25,19 +27,8 @@ def k_3pi(
     logging.warning(
         "Use the k3pi fcn in lib_data.util instead", exc_info=DeprecationWarning()
     )
-
-    particles = [
-        definitions.MOMENTUM_COLUMNS[0:4],
-        definitions.MOMENTUM_COLUMNS[4:8],
-        definitions.MOMENTUM_COLUMNS[8:12],
-        definitions.MOMENTUM_COLUMNS[12:16],
-    ]
-    k, pi1, pi2, pi3 = (
-        np.row_stack([dataframe[x] for x in labels]) for labels in particles
-    )
-    pi1, pi2 = util.momentum_order(k, pi1, pi2)
-
-    return k, pi1, pi2, pi3
+    traceback.print_stack()
+    return util.k_3pi(dataframe)
 
 
 def points(
@@ -214,3 +205,19 @@ def scale_weights(
     scaled_ws_wts = [arr * scale_factor for arr in ws_wts]
 
     return rs_wts, scaled_ws_wts
+
+
+def wts_generator(
+    dataframes: Iterable[pd.DataFrame], weighter: EfficiencyWeighter
+) -> Iterable[np.ndarray]:
+    """
+    Get a generator of weights from an iterable of dataframes
+
+    :param dataframes: dataframes
+    :param weighter: efficiency weighter
+
+    :returns: generator of weights
+
+    """
+    for dataframe in dataframes:
+        yield weighter.weights(points(*util.k_3pi(dataframe), dataframe["time"]))

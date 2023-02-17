@@ -2,7 +2,7 @@
 Utility functions that may be useful
 
 """
-from typing import Tuple, List
+from typing import Tuple, List, Iterable, Any
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -271,3 +271,11 @@ def inv_mass(*particles: np.ndarray) -> np.ndarray:
     return np.sqrt(
         combined[-1] ** 2 - combined[0] ** 2 - combined[1] ** 2 - combined[2] ** 2
     )
+
+
+def no_op(var: Any) -> Any:
+    """
+    Nothing, 1 arg
+
+    """
+    return var
