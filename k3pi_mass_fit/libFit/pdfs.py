@@ -13,10 +13,14 @@ from iminuit.util import make_func_code
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 from lib_data import stats
 
+
 class ZeroCountsError(Exception):
+    """So we can catch this specific error"""
+
     def __init__(self, msg: str):
-        """ If there are 0s in the counts """
+        """If there are 0s in the counts"""
         super().__init__(msg)
+
 
 def domain() -> Tuple[float, float]:
     """Edges of the delta M range"""
@@ -25,7 +29,7 @@ def domain() -> Tuple[float, float]:
 
 def reduced_domain() -> Tuple[float, float]:
     """Edges of the delta M range for the smaller region fit"""
-    return 140.0, 152.0
+    return 140.0, domain()[1]
 
 
 def background(x: np.ndarray, a: float, b: float) -> np.ndarray:
@@ -48,29 +52,15 @@ def _bkg_integral_dispatcher(x: float, a: float, b: float) -> float:
     return 2 * tmp**3 / 3 + 2 * a * tmp**5 / 5 + 2 * b * tmp**7 / 7
 
 
-# Maybe dead code
-# def _bkg_integral(low: float, high: float, a: float, b: float) -> float:
-#     """Normalised integral"""
-#     raise NotImplementedError
-#     return (
-#         _bkg_integral_dispatcher(high, a, b) - _bkg_integral_dispatcher(low, a, b)
-#     ) / _bkg_integral_dispatcher(domain()[1], a, b)
+def normalised_bkg(x: np.ndarray, a: float, b: float, pdf_domain: Tuple) -> np.ndarray:
+    """
+    Normalised bkg PDF; normalised in pdf_domain
 
+    """
+    low, high = pdf_domain
+    area = _bkg_integral_dispatcher(high, a, b) - _bkg_integral_dispatcher(low, a, b)
 
-def normalised_bkg(x: np.ndarray, a: float, b: float) -> np.ndarray:
-    """Normalised bkg PDF"""
-    # The integral across the whole domain is equal to the integral evaluated at the
-    # high limit
-    return background(x, a, b) / _bkg_integral_dispatcher(domain()[1], a, b)
-
-
-def normalised_bkg_reduced(x: np.ndarray, a: float, b: float) -> np.ndarray:
-    """Normalised bkg PDF across smaller fit region"""
-    # Integral now is slightly harder, but not much
-    low, high = reduced_domain()
-    return background(x, a, b) / (
-        _bkg_integral_dispatcher(high, a, b) - _bkg_integral_dispatcher(low, a, b)
-    )
+    return background(x, a, b) / area
 
 
 def signal_base(
@@ -85,31 +75,6 @@ def signal_base(
     return np.exp(-numerator / denominator)
 
 
-def _signal_base_integral(x_domain: Tuple[float, float], args: Tuple) -> float:
-    """Non-normalised integral of the signal model"""
-    return quad(signal_base, *x_domain, args=args)[0]
-
-
-def normalised_sig_base(
-    x: np.ndarray, centre: float, width: float, alpha: float, beta: float
-) -> np.ndarray:
-    """
-    Signal shape, normalised
-
-    """
-    args = (centre, width, alpha, beta)
-    area = _signal_base_integral(domain(), args)
-
-    return signal_base(x, *args) / area
-
-
-# Might be dead code
-def _norm_sig_base_integral(x_domain: Tuple[float, float], args: Tuple) -> float:
-    """Normalised integral of the signal model"""
-    raise NotImplementedError
-    return quad(normalised_sig_base, *x_domain, args=args)[0]
-
-
 def signal(
     x: np.ndarray,
     centre: float,
@@ -120,7 +85,7 @@ def signal(
     beta: float,
 ) -> np.ndarray:
     """
-    Signal model for delta M distribution, with different left/right widths
+    Signal model for delta M distribution, with different left/right widths + alpha
 
     """
     retval = np.empty(len(x))
@@ -134,36 +99,6 @@ def signal(
     return retval
 
 
-# might be dead code
-def _signal_integral(
-    x_domain: Tuple[float, float],
-    centre: float,
-    width_l: float,
-    width_r: float,
-    alpha_l: float,
-    alpha_r: float,
-    beta: float,
-) -> float:
-    """Integral of the normalised signal PDF between two points"""
-    raise NotImplementedError
-    assert x_domain[0] <= x_domain[1]
-    left_args = (centre, width_l, alpha_l, beta)
-    right_args = (centre, width_r, alpha_r, beta)
-
-    # Entire range above the centre
-    if x_domain[0] > centre:
-        return _norm_sig_base_integral(x_domain, args=right_args)
-
-    # Entire range below the centre
-    if x_domain[1] < centre:
-        return _norm_sig_base_integral(x_domain, args=left_args)
-
-    # Range crosses the centre
-    return _norm_sig_base_integral(
-        (x_domain[0], centre), args=left_args
-    ) + _norm_sig_base_integral((centre, x_domain[1]), args=left_args)
-
-
 def normalised_signal(
     x: np.ndarray,
     centre: float,
@@ -172,33 +107,12 @@ def normalised_signal(
     alpha_l: float,
     alpha_r: float,
     beta: float,
+    pdf_domain: Tuple,
 ):
     """Normalised signal PDF"""
     left_args = (centre, width_l, alpha_l, beta)
     right_args = (centre, width_r, alpha_r, beta)
-    low, high = domain()
-
-    area = (
-        quad(signal_base, low, centre, args=left_args)[0]
-        + quad(signal_base, centre, high, args=right_args)[0]
-    )
-
-    return signal(x, centre, width_l, width_r, alpha_l, alpha_r, beta) / area
-
-
-def normalised_signal_reduced(
-    x: np.ndarray,
-    centre: float,
-    width_l: float,
-    width_r: float,
-    alpha_l: float,
-    alpha_r: float,
-    beta: float,
-):
-    """Normalised signal PDF with reduced fit region"""
-    left_args = (centre, width_l, alpha_l, beta)
-    right_args = (centre, width_r, alpha_r, beta)
-    low, high = reduced_domain()
+    low, high = pdf_domain
 
     area = (
         quad(signal_base, low, centre, args=left_args)[0]
@@ -220,49 +134,15 @@ def model(
     beta: float,
     a: float,
     b: float,
+    pdf_domain: Tuple,
 ) -> np.ndarray:
     """
     Fit model including the right number of signal and background events
 
     """
     return n_sig * normalised_signal(
-        x,
-        centre,
-        width_l,
-        width_r,
-        alpha_l,
-        alpha_r,
-        beta,
-    ) + n_bkg * normalised_bkg(x, a, b)
-
-
-def model_reduced(
-    x: np.ndarray,
-    n_sig: float,
-    n_bkg: float,
-    centre: float,
-    width_l: float,
-    width_r: float,
-    alpha_l: float,
-    alpha_r: float,
-    beta: float,
-    a: float,
-    b: float,
-) -> np.ndarray:
-    """
-    Fit model including the right number of signal and background events
-    with reduced domain
-
-    """
-    return n_sig * normalised_signal_reduced(
-        x,
-        centre,
-        width_l,
-        width_r,
-        alpha_l,
-        alpha_r,
-        beta,
-    ) + n_bkg * normalised_bkg_reduced(x, a, b)
+        x, centre, width_l, width_r, alpha_l, alpha_r, beta, pdf_domain
+    ) + n_bkg * normalised_bkg(x, a, b, pdf_domain)
 
 
 class BinnedChi2:
@@ -277,6 +157,7 @@ class BinnedChi2:
         self,
         counts: np.ndarray,
         bins: np.ndarray,
+        pdf_domain: Tuple[float, float],
         error: np.ndarray = None,
     ):
         """
@@ -308,8 +189,9 @@ class BinnedChi2:
         if np.any(counts == 0.0) or np.any(error == 0.0):
             raise ZeroCountsError(f"{counts=}\t{error=}")
 
-        self.counts, self.error = counts, error
-        self.bins = bins
+        self._counts, self._error = counts, error
+        self._bins = bins
+        self._domain = pdf_domain
 
     def __call__(
         self,
@@ -331,9 +213,9 @@ class BinnedChi2:
         # In each bin [a, b] the predicted number
         # is int_a^b f(x) dx where f(x) is our model fcn
         predicted = stats.areas(
-            self.bins,
+            self._bins,
             model(
-                self.bins,
+                self._bins,
                 n_sig,
                 n_bkg,
                 centre,
@@ -344,10 +226,11 @@ class BinnedChi2:
                 beta,
                 a,
                 b,
+                self._domain,
             ),
         )
 
-        return np.sum((self.counts - predicted) ** 2 / self.error**2)
+        return np.sum((self._counts - predicted) ** 2 / self._error**2)
 
 
 class SimultaneousBinnedChi2:
@@ -364,6 +247,7 @@ class SimultaneousBinnedChi2:
         rs_counts: np.ndarray,
         ws_counts: np.ndarray,
         bins: np.ndarray,
+        pdf_domain: Tuple[float, float],
         rs_error: np.ndarray = None,
         ws_error: np.ndarray = None,
     ):
@@ -390,8 +274,8 @@ class SimultaneousBinnedChi2:
                 "ws_b",
             ]
         )
-        self.rs_chi2 = BinnedChi2(rs_counts, bins, rs_error)
-        self.ws_chi2 = BinnedChi2(ws_counts, bins, ws_error)
+        self.rs_chi2 = BinnedChi2(rs_counts, bins, pdf_domain, rs_error)
+        self.ws_chi2 = BinnedChi2(ws_counts, bins, pdf_domain, ws_error)
 
     def __call__(
         self,
@@ -707,85 +591,3 @@ class SimulAltBkg:
             ws_a_1,
             ws_a_2,
         )
-
-
-class BinnedChi2Reduced:
-    """
-    Cost function for binned mass fit
-    with reduced domain
-
-    """
-
-    errordef = Minuit.LEAST_SQUARES
-
-    def __init__(
-        self,
-        counts: np.ndarray,
-        bins: np.ndarray,
-        error: np.ndarray = None,
-    ):
-        """
-        Set things we need for the fit
-
-        If error not provided, Poisson errors assumed
-
-        """
-        # We need to tell Minuit what our function signature is explicitly
-        self.func_code = make_func_code(
-            [
-                "n_sig",
-                "n_bkg",
-                "centre",
-                "width_l",
-                "width_r",
-                "alpha_l",
-                "alpha_r",
-                "beta",
-                "a",
-                "b",
-            ]
-        )
-
-        if error is None:
-            error = np.sqrt(counts)
-
-        self.counts, self.error = counts, error
-        self.bins = bins
-
-    def __call__(
-        self,
-        n_sig: float,
-        n_bkg: float,
-        centre: float,
-        width_l: float,
-        width_r: float,
-        alpha_l: float,
-        alpha_r: float,
-        beta: float,
-        a: float,
-        b: float,
-    ) -> float:
-        """
-        Objective function
-
-        """
-        # In each bin [a, b] the predicted number
-        # is int_a^b f(x) dx where f(x) is our model fcn
-        predicted = stats.areas(
-            self.bins,
-            model_reduced(
-                self.bins,
-                n_sig,
-                n_bkg,
-                centre,
-                width_l,
-                width_r,
-                alpha_l,
-                alpha_r,
-                beta,
-                a,
-                b,
-            ),
-        )
-
-        return np.sum((self.counts - predicted) ** 2 / self.error**2)

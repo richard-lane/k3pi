@@ -1,5 +1,4 @@
 """
-from multiprocessing import Process, Manager
 Generate some points with accept/reject, fit to them and show the fit
 
 """
@@ -17,19 +16,17 @@ from libFit import pdfs, fit, toy_utils, plotting, definitions
 from lib_data import stats
 
 
-def _toy_fit(alt_bkg):
+def _toy_fit():
     """
     Generate some stuff, do a fit to it
 
     """
     sign, time_bin = "cf", 5
 
-    bkg_params = (0, 0, 0) if alt_bkg else pdfs.background_defaults(sign)
-    bkg_kw = (
-        {"n_bins": 100, "sign": sign, "bdt_cut": False, "efficiency": False}
-        if alt_bkg
-        else {}
-    )
+    bkg_params = pdfs.background_defaults(sign)
+
+    # Generate points along the whole range
+    (gen_low, gen_high) = pdfs.domain()
 
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
@@ -38,67 +35,80 @@ def _toy_fit(alt_bkg):
         np.random.default_rng(),
         n_sig,
         n_bkg,
+        (gen_low, gen_high),
+        bkg_params=bkg_params,
+        verbose=True,
+    )
+
+    # Perform fits to the restricted range
+    fit_low, _ = pdfs.reduced_domain()
+    sig_frac = true_params[0] / len(combined)
+    n_underflow = 3
+    bins = definitions.nonuniform_mass_bins(
+        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
+    )
+
+    counts, errs = stats.counts(combined, bins)
+
+    # We don't want to fit to the stuff in the underflow bins
+    binned_fitter = fit.binned_fit(
+        counts[n_underflow:],
+        bins[n_underflow:],
         sign,
         time_bin,
-        bkg_params,
-        bkg_kw,
+        sig_frac,
+        (fit_low, gen_high),
     )
 
-    # Perform fits
-    sig_frac = true_params[0]
-    bins = definitions.mass_bins(200)
-    bins = np.unique(
-        np.concatenate(
-            (
-                np.linspace(pdfs.domain()[0], 145.0, 30),
-                np.linspace(145.0, 147.0, 50),
-                np.linspace(147.0, pdfs.domain()[1], 30),
-            )
-        )
+    fig, axes = plt.subplot_mosaic(
+        "AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(18, 12), sharex=True
     )
-    counts, errs = stats.counts(combined, bins)
-    binned_fitter = fit.binned_fit(counts, bins, sign, time_bin, sig_frac)
-
-    fig, axes = plt.subplot_mosaic("AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(12, 8))
-    plotting.mass_fit((axes["A"], axes["C"]), counts, errs, bins, binned_fitter.values)
+    plotting.mass_fit(
+        (axes["A"], axes["C"]),
+        counts,
+        errs,
+        bins,
+        (fit_low, gen_high),
+        binned_fitter.values,
+    )
 
     try:
-        alt_fitter = fit.alt_bkg_fit(
-            counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
-        )
-        plotting.alt_bkg_fit(
-            (axes["B"], axes["D"]),
-            counts,
-            errs,
-            bins,
-            alt_fitter.values,
-            sign=sign,
-            bdt_cut=False,
-            efficiency=False,
-        )
-        axes["B"].set_title("Alt bkg fit")
+        # Removed for now
+        # alt_fitter = fit.alt_bkg_fit(
+        #     counts, bins, sign, time_bin, sig_frac, bdt_cut=False, efficiency=False
+        # )
+        # plotting.alt_bkg_fit(
+        #     (axes["B"], axes["D"]),
+        #     counts,
+        #     errs,
+        #     bins,
+        #     alt_fitter.values,
+        #     sign=sign,
+        #     bdt_cut=False,
+        #     efficiency=False,
+        # )
+        # axes["B"].set_title("Alt bkg fit")
+        axes["B"].set_title("Alt bkg fit (removed)")
     except FileNotFoundError:
         axes["B"].set_title("Alt bkg not possible; pickle dump not created")
 
     axes["A"].set_title("Sqrt bkg fit")
 
-    fig.suptitle(f"toy data{' alt bkg' if alt_bkg else ''}")
+    fig.suptitle("toy data")
     fig.tight_layout()
 
-    plt.savefig(f"toy_mass_fit{'_altbkg' if alt_bkg else ''}.png")
+    plt.savefig("toy_mass_fit.png")
 
 
-def main(args):
+def main():
     """
     just do 1 fit
 
     """
-    alt_bkg = args.alt_bkg
-    _toy_fit(alt_bkg)
+    _toy_fit()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--alt_bkg", action="store_true")
+    parser = argparse.ArgumentParser(description="Toy fit; sqrt model only for now")
 
-    main(parser.parse_args())
+    main(**vars(parser.parse_args()))

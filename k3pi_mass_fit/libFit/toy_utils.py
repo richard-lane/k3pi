@@ -14,8 +14,8 @@ def _gen(
     pdf: Callable[[np.ndarray], np.ndarray],
     n_gen: int,
     pdf_max: float,
+    pdf_domain: Tuple[float, float],
     plot=False,
-    pdf_domain=pdfs.domain(),
 ) -> np.ndarray:
     """
     Generate samples from a pdf
@@ -33,12 +33,12 @@ def _gen(
     keep = y < f_eval
 
     if plot:
-        _, ax = plt.subplots()
+        _, axis = plt.subplots()
 
         pts = np.linspace(*pdf_domain, 1000)
-        ax.plot(pts, pdf(pts))
-        ax.scatter(x[keep], y[keep], c="k", marker=".")
-        ax.scatter(x[~keep], y[~keep], c="r", alpha=0.4, marker=".")
+        axis.plot(pts, pdf(pts))
+        axis.scatter(x[keep], y[keep], c="k", marker=".")
+        axis.scatter(x[~keep], y[~keep], c="r", alpha=0.4, marker=".")
         plt.show()
 
     return x[keep]
@@ -56,74 +56,68 @@ def _max(pdf: Callable, domain: Tuple[float, float]) -> float:
     return 1.1 * np.max(pdf(np.linspace(*domain, 100)[:-1]))
 
 
-def _gen_bkg(
+def _gen_bkg_sqrt(
     rng: np.random.Generator,
     n_bkg: int,
-    params: Tuple = None,
-    *,
-    n_bins: int = None,
-    sign: str = None,
-    bdt_cut: bool = False,
-    efficiency: bool = False,
-    verbose: bool = True,
-    reduced: bool = False,
-) -> np.ndarray:
+    pdf_domain: Tuple[float, float],
+    params: Tuple[float, float],
+):
     """
-    Generate background points; returns an array
+    Generate background points using the sqrt model
 
     """
-    if n_bins is not None:
-        gen_kw = {}
-        if verbose:
-            print("Generating toy points with the estimated bkg model")
-        assert len(params) == 3
+    assert len(params) == 2
 
-        estimated_bkg = lib_bkg.pdf(
-            n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency
-        )
-
-        def bkg_pdf(x):
-            return pdfs.estimated_bkg(x, estimated_bkg, *params)
-
-    else:
-        # Using the sqrt model thing
-        if verbose:
-            print("Generating toy points with the sqrt bkg model")
-
-        assert len(params) == 2
-
-        # These shouldn't be specified
-        assert bdt_cut is False
-        assert efficiency is False
-        assert n_bins is None
-        assert sign is None
-
-        if reduced:
-
-            def bkg_pdf(x: np.ndarray) -> np.ndarray:
-                return pdfs.normalised_bkg_reduced(x, *params)
-
-            gen_kw = {"pdf_domain": pdfs.reduced_domain()}
-
-        else:
-
-            def bkg_pdf(x: np.ndarray) -> np.ndarray:
-                return pdfs.background(x, *params)
-
-            gen_kw = {}
+    def bkg_pdf(x: np.ndarray) -> np.ndarray:
+        return pdfs.normalised_bkg(x, *params, pdf_domain)
 
     return _gen(
         rng,
         bkg_pdf,
         n_bkg,
-        _max(bkg_pdf, pdfs.domain()),
+        _max(bkg_pdf, pdf_domain),
+        pdf_domain=pdf_domain,
         plot=False,
-        **gen_kw,
+    )
+
+
+def _gen_bkg_empirical(
+    rng: np.random.Generator,
+    n_bkg: int,
+    pdf_domain: Tuple[float, float],
+    params: Tuple[float, float, float],
+    *,
+    n_bins: int,
+    sign: str,
+    bdt_cut: bool,
+    efficiency: bool,
+):
+    """
+    Generate background points using the estimated model
+
+    """
+    assert len(params) == 3
+
+    estimated_bkg = lib_bkg.pdf(n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency)
+
+    def bkg_pdf(x):
+        return pdfs.estimated_bkg(x, estimated_bkg, *params)
+
+    return _gen(
+        rng,
+        bkg_pdf,
+        n_bkg,
+        _max(bkg_pdf, pdf_domain),
+        pdf_domain=pdf_domain,
+        plot=False,
     )
 
 
 def _gen_sig(
-    rng: np.random.Generator, n_sig: int, params: Tuple, *, reduced: bool = False
+    rng: np.random.Generator,
+    n_sig: int,
+    pdf_domain: Tuple[float, float],
+    params: Tuple,
 ) -> np.ndarray:
     """
     Generate signal points
@@ -131,57 +125,49 @@ def _gen_sig(
     """
     centre, width, alpha, beta = params
 
-    if reduced:
-
-        def signal_pdf(x: np.ndarray) -> np.ndarray:
-            return pdfs.normalised_signal_reduced(
-                x, centre, width, width, alpha, alpha, beta
-            )
-
-        gen_kw = {"pdf_domain": pdfs.reduced_domain()}
-
-    else:
-
-        def signal_pdf(x: np.ndarray) -> np.ndarray:
-            return pdfs.signal(x, centre, width, width, alpha, alpha, beta)
-
-        # Choose regions for the generation
-        low, high = pdfs.domain()
-        a, b = 144.0, 148.0
-        h = 0.1
-
-        area_low = h * (a - low)
-        area_mid = b - a
-        area_high = h * (high - b)
-
-        # num to generate low + high is based on their areas
-        n_low = int(n_sig * area_low / area_mid)
-        n_high = int(n_sig * area_high / area_mid)
-
-        # Generate
-        x_low = low + (a - low) * rng.random(n_low)
-        x_mid = a + (b - a) * rng.random(n_sig)
-        x_high = b + (high - b) * rng.random(n_high)
-
-        y_low = 0.1 * rng.random(n_low)
-        y_mid = rng.random(n_sig)
-        y_high = 0.1 * rng.random(n_high)
-
-        return np.concatenate(
-            (
-                x_low[y_low < signal_pdf(x_low)],
-                x_mid[y_mid < signal_pdf(x_mid)],
-                x_high[y_high < signal_pdf(x_high)],
-            )
+    def signal_pdf(x: np.ndarray) -> np.ndarray:
+        return pdfs.normalised_signal(
+            x, centre, width, width, alpha, alpha, beta, pdf_domain
         )
+
+        # Removed because it barely makes it faster
+        # Choose regions for the generation
+        # low, high = pdfs.domain()
+        # a, b = 144.0, 148.0
+        # h = 0.1
+
+        # area_low = h * (a - low)
+        # area_mid = b - a
+        # area_high = h * (high - b)
+
+        # # num to generate low + high is based on their areas
+        # n_low = int(n_sig * area_low / area_mid)
+        # n_high = int(n_sig * area_high / area_mid)
+
+        # # Generate
+        # x_low = low + (a - low) * rng.random(n_low)
+        # x_mid = a + (b - a) * rng.random(n_sig)
+        # x_high = b + (high - b) * rng.random(n_high)
+
+        # y_low = 0.1 * rng.random(n_low)
+        # y_mid = rng.random(n_sig)
+        # y_high = 0.1 * rng.random(n_high)
+
+        # return np.concatenate(
+        #     (
+        #         x_low[y_low < signal_pdf(x_low)],
+        #         x_mid[y_mid < signal_pdf(x_mid)],
+        #         x_high[y_high < signal_pdf(x_high)],
+        #     )
+        # )
 
     return _gen(
         rng,
         signal_pdf,
         n_sig,
-        _max(signal_pdf, pdfs.domain()),
+        _max(signal_pdf, pdf_domain),
+        pdf_domain,
         plot=False,
-        **gen_kw,
     )
 
 
@@ -189,66 +175,47 @@ def gen_points(
     rng: np.random.Generator,
     n_sig: int,
     n_bkg: int,
-    sign: str,
-    time_bin: int,
-    bkg_params: Tuple,
-    bkg_kw: dict = None,
+    pdf_domain: Tuple[float, float],
+    *,
+    bkg_params: Tuple[float, float] = (0, 0),
     verbose: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate n_sig and n_bkg points; see which are kept using accept-reject; return an array of both
 
-    bkg_kw is a dict of args to pass to gen_bkg fcn,
-    in case we want to pass info like n_bins for finding the
-    estimated bkg fcn from a pickle dump
+    Generates bkg using the sqrt model
 
     Also returns true fit params (n_sig, n_bkg, centre, width, alpha, beta, *bkg_params)
 
     """
-    bkg_kw = {} if bkg_kw is None else bkg_kw
-    bkg = _gen_bkg(rng, int(n_bkg), bkg_params, **bkg_kw, verbose=verbose)
+    bkg = _gen_bkg_sqrt(rng, int(n_bkg), pdf_domain, bkg_params)
+    if verbose:
+        print(f"{bkg_params=}")
+        print(f"{len(bkg)=}")
 
-    centre, width, alpha, beta = pdfs.signal_defaults(time_bin)
+    centre, width, alpha, beta = pdfs.signal_defaults(time_bin=5)
     sig = _gen_sig(
         rng,
         int(n_sig),
+        pdf_domain,
         (centre, width, alpha, beta),
     )
     if verbose:
-        print(f"{len(sig)=}\t{len(bkg)=}")
+        print(f"{len(sig)=}")
 
-    return np.concatenate((sig, bkg)), np.array(
+    true_params = np.array(
         (len(sig), len(bkg), centre, width, width, alpha, alpha, beta, *bkg_params)
     )
 
+    return np.concatenate((sig, bkg)), true_params
 
-def gen_points_reduced(
+
+def gen_points_alt_bkg(
     rng: np.random.Generator,
     n_sig: int,
     n_bkg: int,
-    sign: str,
-    time_bin: int,
-    bkg_params: Tuple,
+    pdf_domain: Tuple[float, float],
     verbose: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Generate n_sig and n_bkg points; see which are kept using accept-reject; return an array of both
-
-    Also returns true fit params (n_sig, n_bkg, centre, width, alpha, beta, *bkg_params)
-
-    """
-    bkg = _gen_bkg(rng, int(n_bkg), bkg_params, verbose=verbose, reduced=True)
-
-    centre, width, alpha, beta = pdfs.signal_defaults(time_bin)
-    sig = _gen_sig(
-        rng,
-        int(n_sig),
-        (centre, width, alpha, beta),
-        reduced=True,
-    )
-    if verbose:
-        print(f"{len(sig)=}\t{len(bkg)=}")
-
-    return np.concatenate((sig, bkg)), np.array(
-        (len(sig), len(bkg), centre, width, width, alpha, alpha, beta, *bkg_params)
-    )
+    """ """
+    raise NotImplementedError

@@ -18,6 +18,7 @@ def mass_fit(
     counts: np.ndarray,
     errs: np.ndarray,
     bins: np.ndarray,
+    fit_range: Tuple[float, float],
     fit_params: Tuple,
 ) -> None:
     """
@@ -27,46 +28,62 @@ def mass_fit(
     :param counts: counts in each bin
     :param errs: errors on the counts in each bin
     :param bins: mass bins
+    :param fit_range: domain used in the fit.
     :param fit_params: fit parameters; (sig frac, bkg frac, other params)
 
     """
     centres = (bins[1:] + bins[:-1]) / 2
     bin_widths = bins[1:] - bins[:-1]
 
+    # Which points are in the fit region
+    # Assumes the fit range covers all the points but the lowest
+    # ones
+    fit = centres > fit_range[0]
+
     # Plot histogram
     err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
     axes[0].errorbar(
         centres,
         counts / bin_widths,
-        xerr=bin_widths / 2,
+        xerr=bin_widths / 2,  # Error bar is half width
         yerr=errs / bin_widths,
         **err_kw,
     )
 
-    predicted = stats.areas(bins, pdfs.model(bins, *fit_params)) / bin_widths
+    predicted = stats.areas(bins, pdfs.model(bins, *fit_params, fit_range)) / bin_widths
 
     predicted_signal = (
         fit_params[0]
-        * stats.areas(bins, pdfs.normalised_signal(bins, *fit_params[2:-2]))
+        * stats.areas(bins, pdfs.normalised_signal(bins, *fit_params[2:-2], fit_range))
         / bin_widths
     )
     predicted_bkg = (
         fit_params[1]
-        * stats.areas(bins, pdfs.normalised_bkg(bins, *fit_params[-2:]))
+        * stats.areas(bins, pdfs.normalised_bkg(bins, *fit_params[-2:], fit_range))
         / bin_widths
     )
 
-    axes[0].plot(centres, predicted)
+    # Plot in the fit region
+    axes[0].plot(centres[fit], predicted[fit], color="b")
+    axes[0].plot(centres[fit], predicted_signal[fit], label="signal", color="orange")
+    axes[0].plot(centres[fit], predicted_bkg[fit], label="bkg", color="green")
+
+    # Plot the whole region
+    axes[0].plot(centres, predicted, color="b", linestyle="--")
     axes[0].plot(
         centres,
         predicted_signal,
-        label="signal",
+        color="orange",
+        linestyle="--",
     )
     axes[0].plot(
         centres,
         predicted_bkg,
-        label="bkg",
+        color="green",
+        linestyle="--",
     )
+
+    axes[0].legend()
 
     # Plot pull
     diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
@@ -74,9 +91,10 @@ def mass_fit(
     for pos in (-1, 1):
         axes[1].axhline(pos, color="r", alpha=0.5)
 
+    # Only plot pull for the fit values
     axes[1].errorbar(
-        centres,
-        diff,
+        centres[fit],
+        diff[fit],
         yerr=1.0,
         **err_kw,
     )
@@ -91,6 +109,7 @@ def simul_fits(
     ws_counts: np.ndarray,
     ws_errs: np.ndarray,
     bins: np.ndarray,
+    fit_range: Tuple[float, float],
     fit_params: Tuple,
 ) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
     """
@@ -113,8 +132,8 @@ def simul_fits(
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", sharex=True, figsize=(12, 8)
     )
-    mass_fit((axes["A"], axes["C"]), rs_counts, rs_errs, bins, rs_params)
-    mass_fit((axes["B"], axes["D"]), ws_counts, ws_errs, bins, ws_params)
+    mass_fit((axes["A"], axes["C"]), rs_counts, rs_errs, bins, fit_range, rs_params)
+    mass_fit((axes["B"], axes["D"]), ws_counts, ws_errs, bins, fit_range, ws_params)
 
     axes["A"].legend()
 
@@ -258,66 +277,3 @@ def alt_bkg_simul(
     fig.tight_layout()
 
     return fig, axes
-
-
-def mass_fit_reduced(
-    axes: Tuple[plt.Axes, plt.Axes],
-    counts: np.ndarray,
-    errs: np.ndarray,
-    bins: np.ndarray,
-    fit_params: Tuple,
-) -> None:
-    """
-    Plot the mass fit with reduced domain and pulls on an axis
-
-    Assumes the bins have equal widths
-
-    :param axes: tuple of (histogram axis, pull axis)
-    :param counts: counts in each bin
-    :param errs: errors on the counts in each bin
-    :param bins: mass bins
-    :param fit_params: fit parameters; (sig frac, bkg frac, other params)
-
-    """
-    centres = (bins[1:] + bins[:-1]) / 2
-    bin_widths = bins[1:] - bins[:-1]
-
-    # Plot histogram
-    err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
-    axes[0].errorbar(
-        centres,
-        counts,
-        yerr=errs,
-        **err_kw,
-    )
-
-    predicted = stats.areas(bins, pdfs.model_reduced(bins, *fit_params))
-
-    predicted_signal = fit_params[0] * stats.areas(
-        bins, pdfs.normalised_signal_reduced(bins, *fit_params[2:-2])
-    )
-    predicted_bkg = fit_params[1] * stats.areas(
-        bins, pdfs.normalised_bkg_reduced(bins, *fit_params[-2:])
-    )
-
-    axes[0].plot(centres, predicted)
-    axes[0].plot(
-        centres,
-        predicted_signal,
-        label="signal",
-    )
-    axes[0].plot(
-        centres,
-        predicted_bkg,
-        label="bkg",
-    )
-
-    # Plot pull
-    diff = counts - predicted
-    axes[1].plot(pdfs.domain(), [0, 0], "r-")
-    axes[1].errorbar(
-        centres,
-        diff,
-        yerr=errs,
-        **err_kw,
-    )
