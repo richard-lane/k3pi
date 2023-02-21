@@ -24,11 +24,47 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_fitter"))
 
-from lib_efficiency import efficiency_util
+from lib_data import get, util, stats
 from lib_efficiency.reweighter import EfficiencyWeighter
 from lib_efficiency.efficiency_definitions import MIN_TIME
-from lib_data import get, util, stats
+from lib_efficiency import efficiency_util
+from lib_efficiency.plotting import phsp_labels
 from lib_time_fit.util import ratio_err
+
+
+def _bins(max_time: float) -> np.ndarray:
+    """Time bins"""
+    return np.linspace(MIN_TIME, max_time, 15)
+
+
+class Reweighter:
+    """
+    In case i want to do a naive, time-only reweighting
+
+    """
+
+    def __init__(self, bins: np.ndarray, target: np.ndarray, original: np.ndarray):
+        """
+        Init histograms of target + original distributions
+
+        """
+        self._bins = bins
+        target_count, _ = np.histogram(target, bins=self._bins)
+        orig_count, _ = np.histogram(original, bins=self._bins)
+
+        self._ratio = target_count / orig_count
+
+    def weights(self, points: np.ndarray) -> np.ndarray:
+        """
+        Weights to correct efficiency
+
+        """
+        points = points[:, -1]
+        indices = np.digitize(points, self._bins) - 1
+        assert -1 not in indices
+        assert len(self._bins) not in indices
+
+        return np.take(self._ratio, indices)
 
 
 def _points(dataframe: pd.DataFrame) -> np.ndarray:
@@ -36,7 +72,7 @@ def _points(dataframe: pd.DataFrame) -> np.ndarray:
     Phase space, time points
 
     """
-    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    k, pi1, pi2, pi3 = util.k_3pi(dataframe)
 
     # Momentum order
     pi1, pi2 = util.momentum_order(k, pi1, pi2)
@@ -53,9 +89,10 @@ def _train_reweighter(
     """
     ampgen = _points(ampgen_df)
     pgun = _points(pgun_df)
+    print(f"{len(ampgen)=}\n{len(pgun)=}")
 
     train_kwargs = {
-        "n_estimators": 350,
+        "n_estimators": 50,
         "max_depth": 3,
         "learning_rate": 0.08,
         "min_samples_leaf": 1800,
@@ -63,7 +100,9 @@ def _train_reweighter(
     reweighter = EfficiencyWeighter(
         ampgen, pgun, fit=False, min_t=MIN_TIME, **train_kwargs
     )
+    # reweighter = Reweighter(_bins(10), ampgen[:, -1], pgun[:, -1])
 
+    print(key)
     out_dict[key] = reweighter
 
 
@@ -75,11 +114,6 @@ def _add_train_indices(
 
     """
     dataframe["train"] = rng.integers(0, num_trained + 1, len(dataframe))
-
-
-def _bins(max_time: float) -> np.ndarray:
-    """Time bins"""
-    return np.linspace(MIN_TIME, max_time, 15)
 
 
 def _ratio_err(
@@ -139,6 +173,40 @@ def _time_cut(dataframe: pd.DataFrame, max_time: float) -> pd.DataFrame:
     return dataframe[keep]
 
 
+def _split_plots(dataframe: pd.DataFrame, path: str) -> None:
+    """
+    Make plots of phsp and time projections for each
+
+    """
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8), sharey=False)
+
+    kws = {"histtype": "step"}
+    bins = [
+        np.linspace(min_, max_, 100)
+        for (min_, max_) in zip(
+            [600, 200, -1.0, -1.0, -np.pi, 0.0], [1600, 1200, 1.0, 1.0, np.pi, 10.0]
+        )
+    ]
+
+    for index in np.unique(dataframe["train"]):
+        sliced_df = dataframe[dataframe["train"] == index]
+
+        for axis, data, bins_ in zip(axes.ravel(), _points(sliced_df).T, bins):
+            axis.hist(
+                data, **kws, bins=bins_, label=f"train {index}" if index else "test"
+            )
+
+    for axis, label in zip(axes.ravel(), phsp_labels()):
+        axis.set_xlabel(label)
+
+    axes.ravel()[-1].legend()
+
+    fig.tight_layout()
+
+    print(f"saving {path}")
+    fig.savefig(path)
+
+
 def main(num_trained: int):
     """
     Get the pgun and ampgen data, split it into the right number of chunks
@@ -155,8 +223,8 @@ def main(num_trained: int):
     rs_pgun_df = get.particle_gun("cf")
     ws_pgun_df = get.particle_gun("dcs")
 
-    rs_ampgen_df = get.ampgen("cf")
-    ws_ampgen_df = get.ampgen("dcs")
+    rs_ampgen_df = efficiency_util.ampgen_df("cf", "both", None)
+    ws_ampgen_df = efficiency_util.ampgen_df("dcs", "both", None)
 
     # Time cuts
     max_time = 10.0
@@ -174,6 +242,12 @@ def main(num_trained: int):
 
     _add_train_indices(rng, rs_ampgen_df, num_trained)
     _add_train_indices(rng, ws_ampgen_df, num_trained)
+
+    # Make plots of the projections
+    # _split_plots(rs_pgun_df, "consistency_rs_mc.png")
+    # _split_plots(ws_pgun_df, "consistency_ws_mc.png")
+    # _split_plots(rs_ampgen_df, "consistency_rs_ampgen.png")
+    # _split_plots(ws_ampgen_df, "consistency_ws_ampgen.png")
 
     # Dump these to the dump dir
     with open(str(dump_dir / "dataframes.pkl"), "wb") as dump_f:
@@ -225,8 +299,9 @@ def main(num_trained: int):
     with open(str(dump_dir / "ws_reweighters.pkl"), "wb") as dump_f:
         pickle.dump(dict(ws_reweighters), dump_f)
 
-    # Plot unweighted ratio
+    # Plot time ratios for training samples
     fig, axis = plt.subplots()
+    # Unweighted
     _plot_time_ratio(
         axis,
         max_time,
@@ -237,7 +312,7 @@ def main(num_trained: int):
         "Unweighted (all)",
     )
 
-    # Plot time ratios for training samples
+    # Weighted
     for i in range(1, num_trained + 1):
         _plot_time_ratio(
             axis,
@@ -259,6 +334,7 @@ def main(num_trained: int):
 
     # Plot time ratios for the testing samples
     fig, axis = plt.subplots()
+    # Unweighted
     _plot_time_ratio(
         axis,
         max_time,
@@ -269,7 +345,7 @@ def main(num_trained: int):
         "Unweighted (test)",
     )
 
-    # Plot time ratios for testing sample
+    # Weighted
     for i in range(1, num_trained + 1):
         _plot_time_ratio(
             axis,

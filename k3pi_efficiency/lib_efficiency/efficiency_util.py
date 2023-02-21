@@ -67,7 +67,8 @@ def k_sign_cut(dataframe: pd.DataFrame, k_sign: str) -> pd.DataFrame:
 
 def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     """
-    AmpGen dataframe
+    AmpGen dataframe, slicing test/train if desired and randomly
+    flipping 3 momenta to simulate K+ and K- type events
 
     :param decay_type: "dcs", "cf" or "false"
     :param k_charge: "k_plus", "k_minus" or "both"
