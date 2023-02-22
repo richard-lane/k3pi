@@ -44,7 +44,9 @@ def _bins():
     return bins
 
 
-def _plot_fit(fit_params, rs_combined, ws_combined, rs_fit_axes, ws_fit_axes):
+def _plot_fit(
+    fit_params, rs_combined, ws_combined, rs_fit_axes, ws_fit_axes, fit_range
+):
     """
     Plot fit on an axis
 
@@ -56,7 +58,7 @@ def _plot_fit(fit_params, rs_combined, ws_combined, rs_fit_axes, ws_fit_axes):
         (rs_combined, ws_combined),
         util.rs_ws_params(fit_params),
     ):
-        plotting.mass_fit(axes, *stats.counts(data, bins), bins, params)
+        plotting.mass_fit(axes, *stats.counts(data, bins), bins, fit_range, params)
 
 
 def _pull(
@@ -65,6 +67,7 @@ def _pull(
     ws_n_sig: int,
     n_bkg: int,
     time_bin: int,
+    fit_range: Tuple[float, float],
     out_dict: dict,
 ) -> np.ndarray:
     """
@@ -78,18 +81,16 @@ def _pull(
         rng,
         rs_n_sig,
         n_bkg,
-        "cf",
-        time_bin,
-        pdfs.background_defaults("cf"),
+        pdfs.domain(),
+        bkg_params=pdfs.background_defaults("cf"),
         verbose=False,
     )
     ws_combined, ws_true_params = toy_utils.gen_points(
         rng,
         ws_n_sig,
         n_bkg,
-        "dcs",
-        time_bin,
-        pdfs.background_defaults("dcs"),
+        pdfs.domain(),
+        bkg_params=pdfs.background_defaults("dcs"),
         verbose=False,
     )
 
@@ -99,7 +100,9 @@ def _pull(
     rs_counts, _ = stats.counts(rs_combined, bins)
     ws_counts, _ = stats.counts(ws_combined, bins)
 
-    fitter = fit.binned_simultaneous_fit(rs_counts, ws_counts, bins, time_bin)
+    fitter = fit.binned_simultaneous_fit(
+        rs_counts, ws_counts, bins, time_bin, fit_range
+    )
     if not fitter.valid:
         raise InvalidFitError
 
@@ -131,6 +134,7 @@ def _pull_study(
     n_experiments: int,
     n_evts: Tuple[int, int],
     time_bin: int,
+    fit_range: Tuple[float, float],
     out_list: list,
     out_dict: dict,
 ) -> None:
@@ -157,6 +161,7 @@ def _pull_study(
                     n_ws_sig,
                     n_bkg,
                     time_bin,
+                    fit_range,
                     out_dict,
                 )
                 break
@@ -182,17 +187,52 @@ def _plot_pulls(
 
     """
     positions = tuple(range(1, len(labels) + 1))
-    pull_axis.violinplot(
-        list(pulls),
+
+    # Need to do this for the violin plot
+    pulls = list(pulls)
+
+    # Find quartiles
+    medians = np.median(pulls, axis=1)
+
+    stds = np.std(pulls, axis=1)
+    means = np.mean(pulls, axis=1)
+    low_sig = means - stds
+    high_sig = means + stds
+
+    pull_axis.scatter(
+        medians,
+        positions,
+        marker="o",
+        s=30,
+        zorder=3,
+        label="Median",
+        edgecolors="k",
+        facecolors="w",
+    )
+    pull_axis.hlines(
+        positions,
+        low_sig,
+        high_sig,
+        color="k",
+        linestyle="-",
+        lw=3,
+        label=r"$\mu \pm \sigma$",
+    )
+
+    parts = pull_axis.violinplot(
+        pulls,
         positions,
         vert=False,
-        showmeans=True,
+        showmedians=True,
         points=500,
-        showextrema=True,
+        showextrema=False,
     )
+    for part in parts["bodies"]:
+        part.set_edgecolor("black")
+
     pull_axis.set_yticks(positions)
-    means = np.mean(pulls, axis=1)
-    stds = np.std(pulls, axis=1)
+
+    pull_axis.legend()
 
     ylabels = [
         f"{label}\n{mean:.3f}" + r"$\pm$" + f"{std:.3f}"
@@ -202,6 +242,8 @@ def _plot_pulls(
     pull_axis.set_yticklabels(ylabels)
 
     pull_axis.axvline(0.0, color="k")
+    for val in (-1.0, 1.0):
+        pull_axis.axvline(val, color="k", alpha=0.5, linestyle="--")
 
     fig.suptitle(f"{n_experiments=}")
 
@@ -215,6 +257,7 @@ def _do_pull_study():
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
     n_rs_sig, n_ws_sig, n_bkg = 5_600_000, 15000, 50000
+    fit_range = pdfs.reduced_domain()
 
     manager = Manager()
     out_list = manager.list()
@@ -225,7 +268,7 @@ def _do_pull_study():
         "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
     )
 
-    n_procs = 7
+    n_procs = 6
     n_experiments = 200
     procs = [
         Process(
@@ -234,6 +277,7 @@ def _do_pull_study():
                 n_experiments,
                 (n_rs_sig, n_ws_sig, n_bkg),
                 time_bin,
+                fit_range,
                 out_list,
                 out_dict,
             ),
@@ -266,6 +310,7 @@ def _do_pull_study():
         out_dict["ws_combined"],
         (axes["C"], axes["E"]),
         (axes["D"], axes["F"]),
+        fit_range,
     )
     for axis in (axes["C"], axes["D"]):
         axis.set_title("Example fit")
