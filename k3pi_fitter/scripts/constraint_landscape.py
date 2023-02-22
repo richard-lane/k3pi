@@ -41,8 +41,8 @@ def main():
         "DAAAAB\nDAAAAB\nDAAAAB\nDAAAAB\n.CCCC.", figsize=(6, 5)
     )
     # Want some of the axes to be shared
-    axis["D"].get_shared_y_axes().join(axis["D"], axis["A"])
-    axis["C"].get_shared_x_axes().join(axis["C"], axis["A"])
+    axis["C"].sharex(axis["A"])
+    axis["D"].sharey(axis["A"])
 
     # Plot 2d chi2 landscape
     n_levels = 5

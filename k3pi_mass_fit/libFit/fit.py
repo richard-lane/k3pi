@@ -106,7 +106,9 @@ def binned_simultaneous_fit(
     rs_a, rs_b = pdfs.background_defaults("cf")
     ws_a, ws_b = pdfs.background_defaults("dcs")
 
-    chi2 = pdfs.SimultaneousBinnedChi2(rs_counts, ws_counts, bins, pdf_domain, rs_errors, ws_errors)
+    chi2 = pdfs.SimultaneousBinnedChi2(
+        rs_counts, ws_counts, bins, pdf_domain, rs_errors, ws_errors
+    )
 
     n_rs = np.sum(rs_counts)
     n_ws = np.sum(ws_counts)

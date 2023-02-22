@@ -53,6 +53,10 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataF
     util.add_k_id(dataframe, data_tree, keep)
     util.add_masses(dataframe, data_tree, keep)
 
+    # MC correction stuff
+    util.add_d0_momentum(dataframe, data_tree, keep)
+    util.add_d0_eta(dataframe, data_tree, keep)
+
     util.add_train_column(gen, dataframe)
 
     # Also find how many generated events there are + return

@@ -42,8 +42,10 @@ def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     util.add_k_id(dataframe, tree, keep)
     util.add_masses(dataframe, tree, keep)
 
-    # track/SPD for event multiplicity reweighting
+    # MC correction stuff
     corrections.add_multiplicity_columns(tree, dataframe, keep)
+    util.add_d0_momentum(dataframe, tree, keep)
+    util.add_d0_eta(dataframe, tree, keep)
 
     # Train test
     util.add_train_column(gen, dataframe)

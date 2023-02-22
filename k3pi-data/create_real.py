@@ -49,8 +49,10 @@ def _real_df(tree) -> pd.DataFrame:
     # D0 IPCHI2 for secondary study
     util.add_d0_ipchi2(dataframe, tree, keep)
 
-    # track/SPD for event multiplicity reweighting
+    # MC correction stuff
     corrections.add_multiplicity_columns(tree, dataframe, keep)
+    util.add_d0_momentum(dataframe, tree, keep)
+    util.add_d0_eta(dataframe, tree, keep)
 
     return dataframe
 

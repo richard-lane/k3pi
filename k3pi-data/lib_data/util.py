@@ -2,7 +2,7 @@
 Utility functions that may be useful
 
 """
-from typing import Tuple, List, Iterable, Any
+from typing import Tuple, List, Any
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -251,12 +251,29 @@ def add_d0_ipchi2(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     dataframe["D0 ipchi2"] = tree["D0_IPCHI2_OWNPV"].array(library="np")[keep]
 
 
+def add_d0_momentum(dataframe, tree, keep: np.ndarray) -> None:
+    """
+    Add D0 scalar momentum
+
+    """
+    dataframe["D0 P"] = tree["D0_P"].array(library="np")[keep]
+
+
 def eta(p_x: np.ndarray, p_y: np.ndarray, p_z: np.ndarray) -> np.ndarray:
     """
     Pseudorapidity
 
     """
     return np.arctanh(p_z / np.sqrt(p_x**2 + p_y**2 + p_z**2))
+
+
+def add_d0_eta(dataframe, tree, keep: np.ndarray) -> None:
+    """
+    Add D0 eta from its momenta
+
+    """
+    eta_ = eta(*[tree[f"D0_P{var}"].array(library="np") for var in ("X", "Y", "Z")])
+    dataframe["D0 eta"] = eta_[keep]
 
 
 def inv_mass(*particles: np.ndarray) -> np.ndarray:
