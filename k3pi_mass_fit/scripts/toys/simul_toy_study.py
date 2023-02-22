@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
-from libFit import pdfs, fit, toy_utils, util, plotting
+from libFit import pdfs, fit, toy_utils, util, plotting, definitions
 from lib_data import stats
 
 
@@ -32,16 +32,9 @@ def _bins():
     For fitting + plotting
 
     """
-    bins = np.unique(
-        np.concatenate(
-            (
-                np.linspace(pdfs.domain()[0], 144.0, 75),
-                np.linspace(144.0, 148.0, 175),
-                np.linspace(148.0, pdfs.domain()[1], 75),
-            )
-        )
-    )
-    return bins
+    low, high = pdfs.domain()
+
+    return definitions.nonuniform_mass_bins((low, 144.0, 148.0, high), (75, 175, 75))
 
 
 def _plot_fit(
@@ -223,7 +216,7 @@ def _plot_pulls(
         pulls,
         positions,
         vert=False,
-        showmedians=True,
+        showmeans=True,
         points=500,
         showextrema=False,
     )

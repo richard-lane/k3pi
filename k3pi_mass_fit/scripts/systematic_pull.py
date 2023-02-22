@@ -57,28 +57,11 @@ class GaussKDE:
         return retval
 
 
-def _bkg_pdf(sign: str, n_bins: int) -> Callable:
-    """
-    Open pickle dump, return histogram of bkg counts
-    after the BDT cut
-
-    Gaussian smooths the counts as well TODO
-
-    """
-    bins = definitions.mass_bins(n_bins)
-    centres = (bins[1:] + bins[:-1]) / 2
-
-    # TODO BDT cut should be false, but it's very jagged
-    counts, _ = get_dump(n_bins, sign, bdt_cut=False, efficiency=False)
-
-    return UnivariateSpline(centres, counts, k=4, s=5.0)
-
-
 def _sig_counts(
     year: str, sign: str, magnetisation: str, bins: np.ndarray
 ) -> np.ndarray:
     """
-    Randomly choose a subset of the MC
+    binned MC counts
 
     :returns: array of signal delta masses
 
@@ -100,15 +83,17 @@ def _sig_counts(
 
 
 def _bkg(
-    rng, bkg_pdf: np.ndarray, n_gen: int, bins: np.ndarray
+    rng: np.random.Generator, n_gen: int, bins: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Background counts with Poisson errors
+    Background counts with Poisson errors from the PDF
 
     """
     # Accept reject sample
     low, high = pdfs.domain()
-    max_ = 0.11
+    max_ = 0.125
+
+    bkg_pdf = lambda x: pdfs.normalised_bkg(x, 0.0, 0.0, (low, high))
 
     x = low + (high - low) * rng.random(n_gen)
     y = max_ * rng.random(n_gen)
@@ -136,10 +121,10 @@ def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.nda
 def _pull_study(
     out_list: list,
     out_dict: dict,
-    bkg_pdf: int,
     rs_signal_counts: np.ndarray,
     ws_signal_counts: np.ndarray,
     bins: np.ndarray,
+    fit_range: Tuple[float, float],
 ):
     """
     Generate bkg using accept-reject
@@ -152,14 +137,16 @@ def _pull_study(
     n_rs_sig = 800_000
     n_ws_sig = 2_200
 
-    n_experiments = 25
+    n_experiments = 15
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
+
+        # Keep trying until a fit converges
         while True:
             # Generate bkg
-            rs_bkg = _bkg(rng, bkg_pdf, 45_000, bins=bins)
-            ws_bkg = _bkg(rng, bkg_pdf, 45_000, bins=bins)
+            rs_bkg = _bkg(rng, 45_000, bins=bins)
+            ws_bkg = _bkg(rng, 45_000, bins=bins)
 
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
@@ -175,6 +162,7 @@ def _pull_study(
                 ws_counts,
                 bins,
                 5,
+                fit_range,
             )
             if not binned_fitter.valid:
                 print("fit not valid")
@@ -206,7 +194,9 @@ def _pull_study(
     out_list.append(np.array(pulls))
 
 
-def _plot_fit(fit_params, rs_count, ws_count, rs_fit_axes, ws_fit_axes, bins):
+def _plot_fit(
+    fit_params, rs_count, ws_count, rs_fit_axes, ws_fit_axes, bins, fit_range
+):
     """
     Plot fit on an axis
 
@@ -216,7 +206,7 @@ def _plot_fit(fit_params, rs_count, ws_count, rs_fit_axes, ws_fit_axes, bins):
         (rs_count, ws_count),
         mass_util.rs_ws_params(fit_params),
     ):
-        plotting.mass_fit(axes, counts, np.sqrt(counts), bins, params)
+        plotting.mass_fit(axes, counts, np.sqrt(counts), bins, fit_range, params)
 
 
 def _plot_pulls(
@@ -231,17 +221,50 @@ def _plot_pulls(
 
     """
     positions = tuple(range(1, len(labels) + 1))
-    pull_axis.violinplot(
+
+    # Need to do this for the violin plot
+    pulls = list(pulls)
+
+    # Find quartiles
+    medians = np.median(pulls, axis=1)
+
+    stds = np.std(pulls, axis=1)
+    means = np.mean(pulls, axis=1)
+    low_sig = means - stds
+    high_sig = means + stds
+
+    pull_axis.scatter(
+        medians,
+        positions,
+        marker="o",
+        s=30,
+        zorder=3,
+        label="Median",
+        edgecolors="k",
+        facecolors="w",
+    )
+    pull_axis.hlines(
+        positions,
+        low_sig,
+        high_sig,
+        color="k",
+        linestyle="-",
+        lw=3,
+        label=r"$\mu \pm \sigma$",
+    )
+
+    parts = pull_axis.violinplot(
         list(pulls),
         positions,
         vert=False,
         showmeans=True,
         points=500,
-        showextrema=True,
+        showextrema=False,
     )
+    for part in parts["bodies"]:
+        part.set_edgecolor("black")
+
     pull_axis.set_yticks(positions)
-    means = np.mean(pulls, axis=1)
-    stds = np.std(pulls, axis=1)
 
     ylabels = [
         f"{label}\n{mean:.3f}" + r"$\pm$" + f"{std:.3f}"
@@ -251,8 +274,9 @@ def _plot_pulls(
     pull_axis.set_yticklabels(ylabels)
 
     pull_axis.axvline(0.0, color="k")
-
-    pull_axis.set_xlim(-10.0, 10.0)
+    for val in (-1.0, 1.0):
+        pull_axis.axvline(val, color="k", alpha=0.5, linestyle="--")
+    pull_axis.set_xlim(-5.0, 5.0)
 
     fig.suptitle(f"{n_experiments=}")
 
@@ -270,20 +294,11 @@ def main():
     Finally, fit and see if we can extract the right numbers of signal and background events
 
     """
-    # Get background PDF from the pickle dump
-    bkg_pdf = _bkg_pdf("dcs", n_bins=100)
-
     # Get MC counts from the dataframes
     year, magnetisation = "2018", "magdown"
-    bins = np.unique(
-        np.concatenate(
-            (
-                np.linspace(pdfs.domain()[0], 144.5, 75),
-                np.linspace(144.5, 146.5, 175),
-                np.linspace(146.5, pdfs.domain()[1], 75),
-            )
-        )
-    )
+    low, high = pdfs.domain()
+    fit_range = pdfs.reduced_domain()
+    bins = definitions.nonuniform_mass_bins((low, 144.5, 146.5, high), (75, 175, 75))
 
     rs_count = _sig_counts(year, "cf", magnetisation, bins)
     ws_count = _sig_counts(year, "dcs", magnetisation, bins)
@@ -295,7 +310,7 @@ def main():
     procs = [
         Process(
             target=_pull_study,
-            args=(out_list, out_dict, bkg_pdf, rs_count, ws_count, bins),
+            args=(out_list, out_dict, rs_count, ws_count, bins, fit_range),
         )
         for _ in range(n_procs)
     ]
@@ -318,6 +333,7 @@ def main():
         (axes["C"], axes["E"]),
         (axes["D"], axes["F"]),
         bins,
+        fit_range,
     )
     _plot_pulls(
         fig,
