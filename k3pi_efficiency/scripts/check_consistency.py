@@ -31,10 +31,12 @@ from lib_efficiency import efficiency_util
 from lib_efficiency.plotting import phsp_labels
 from lib_time_fit.util import ratio_err
 
+MAX_TIME = 10.0
 
-def _bins(max_time: float) -> np.ndarray:
+
+def _bins() -> np.ndarray:
     """Time bins"""
-    return np.linspace(MIN_TIME, max_time, 15)
+    return np.linspace(MIN_TIME, MAX_TIME, 15)
 
 
 class Reweighter:
@@ -43,12 +45,12 @@ class Reweighter:
 
     """
 
-    def __init__(self, bins: np.ndarray, target: np.ndarray, original: np.ndarray):
+    def __init__(self, target: np.ndarray, original: np.ndarray):
         """
         Init histograms of target + original distributions
 
         """
-        self._bins = bins
+        self._bins = _bins()
         target_count, _ = np.histogram(target, bins=self._bins)
         orig_count, _ = np.histogram(original, bins=self._bins)
 
@@ -100,9 +102,8 @@ def _train_reweighter(
     reweighter = EfficiencyWeighter(
         ampgen, pgun, fit=False, min_t=MIN_TIME, **train_kwargs
     )
-    # reweighter = Reweighter(_bins(10), ampgen[:, -1], pgun[:, -1])
+    # reweighter = Reweighter(ampgen[:, -1], pgun[:, -1])
 
-    print(key)
     out_dict[key] = reweighter
 
 
@@ -117,7 +118,6 @@ def _add_train_indices(
 
 
 def _ratio_err(
-    max_time: float,
     rs_df: pd.DataFrame,
     ws_df: pd.DataFrame,
     rs_wts: np.ndarray,
@@ -127,7 +127,7 @@ def _ratio_err(
     Ratio and error for plotting
 
     """
-    bins = _bins(max_time)
+    bins = _bins()
     rs_counts, rs_err = stats.counts(rs_df["time"], bins, weights=rs_wts)
     ws_counts, ws_err = stats.counts(ws_df["time"], bins, weights=ws_wts)
 
@@ -136,7 +136,6 @@ def _ratio_err(
 
 def _plot_time_ratio(
     axis: plt.Axes,
-    max_time: float,
     rs_df: pd.DataFrame,
     ws_df: pd.DataFrame,
     rs_weighter: EfficiencyWeighter,
@@ -150,9 +149,9 @@ def _plot_time_ratio(
     rs_wts = rs_weighter.weights(_points(rs_df)) if rs_weighter is not None else None
     ws_wts = ws_weighter.weights(_points(ws_df)) if ws_weighter is not None else None
 
-    ratio, err = _ratio_err(max_time, rs_df, ws_df, rs_wts, ws_wts)
+    ratio, err = _ratio_err(rs_df, ws_df, rs_wts, ws_wts)
 
-    time_bins = _bins(max_time)
+    time_bins = _bins()
     centres = (time_bins[1:] + time_bins[:-1]) / 2
     widths = (time_bins[1:] - time_bins[:-1]) / 2
 
@@ -163,12 +162,12 @@ def _plot_time_ratio(
     axis.plot(centres, ratio, "+", color=line.get_color(), label=label)
 
 
-def _time_cut(dataframe: pd.DataFrame, max_time: float) -> pd.DataFrame:
+def _time_cut(dataframe: pd.DataFrame) -> pd.DataFrame:
     """
     Cut out times below MIN_TIME and above max_time
 
     """
-    keep = (MIN_TIME < dataframe["time"]) & (dataframe["time"] < max_time)
+    keep = (MIN_TIME < dataframe["time"]) & (dataframe["time"] < MAX_TIME)
 
     return dataframe[keep]
 
@@ -227,11 +226,10 @@ def main(num_trained: int):
     ws_ampgen_df = efficiency_util.ampgen_df("dcs", "both", None)
 
     # Time cuts
-    max_time = 10.0
-    rs_pgun_df = _time_cut(rs_pgun_df, max_time)
-    ws_pgun_df = _time_cut(ws_pgun_df, max_time)
-    rs_ampgen_df = _time_cut(rs_ampgen_df, max_time)
-    ws_ampgen_df = _time_cut(ws_ampgen_df, max_time)
+    rs_pgun_df = _time_cut(rs_pgun_df)
+    ws_pgun_df = _time_cut(ws_pgun_df)
+    rs_ampgen_df = _time_cut(rs_ampgen_df)
+    ws_ampgen_df = _time_cut(ws_ampgen_df)
 
     # Assign random numbers to the dataframes
     # 0 is for testing; training split otherwise
@@ -304,7 +302,6 @@ def main(num_trained: int):
     # Unweighted
     _plot_time_ratio(
         axis,
-        max_time,
         rs_pgun_df,
         ws_pgun_df,
         None,
@@ -316,7 +313,6 @@ def main(num_trained: int):
     for i in range(1, num_trained + 1):
         _plot_time_ratio(
             axis,
-            max_time,
             rs_pgun_df[rs_pgun_df["train"] == i],
             ws_pgun_df[ws_pgun_df["train"] == i],
             rs_reweighters[i],
@@ -337,7 +333,6 @@ def main(num_trained: int):
     # Unweighted
     _plot_time_ratio(
         axis,
-        max_time,
         rs_pgun_df[rs_pgun_df["train"] == 0],
         ws_pgun_df[ws_pgun_df["train"] == 0],
         None,
@@ -349,7 +344,6 @@ def main(num_trained: int):
     for i in range(1, num_trained + 1):
         _plot_time_ratio(
             axis,
-            max_time,
             rs_pgun_df[rs_pgun_df["train"] == 0],
             ws_pgun_df[ws_pgun_df["train"] == 0],
             rs_reweighters[i],
