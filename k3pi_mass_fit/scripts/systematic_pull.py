@@ -7,13 +7,13 @@ import sys
 import time
 import pathlib
 from multiprocessing import Process, Manager
-from typing import Callable, Tuple
+from typing import Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.stats import norm
-from scipy.interpolate import UnivariateSpline
+from scipy.integrate import quad
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
@@ -24,7 +24,6 @@ from lib_data import get, training_vars
 from lib_cuts.get import classifier as get_clf
 from lib_cuts.definitions import THRESHOLD
 from libFit import util as mass_util, fit, plotting, pdfs, definitions
-from libFit.bkg import get_dump
 
 
 class GaussKDE:
@@ -67,7 +66,7 @@ def _sig_counts(
 
     """
     # Read the right dataframe
-    mc_df = get.mc(year, sign, magnetisation)
+    mc_df = get.particle_gun(sign)
 
     # Perform BDT cut
     clf = get_clf(year, "dcs", magnetisation)
@@ -78,8 +77,26 @@ def _sig_counts(
     mc_df = mc_df[sig_predictions]
 
     count, _ = stats.counts(mass_util.delta_m(mc_df), bins)
+    print(np.sum(count))
 
     return count
+
+
+def _bkg_gen_region() -> Tuple[float, float, float]:
+    """
+    y_max, x_min, x_max
+
+    """
+    return 0.125, *pdfs.domain()
+
+
+def _bkg_pdf(pts: np.ndarray) -> np.ndarray:
+    """
+    Unary bkg pdf
+
+    """
+    _, low, high = _bkg_gen_region()
+    return pdfs.normalised_bkg(pts, 0.0, 0.0, (low, high))
 
 
 def _bkg(
@@ -90,20 +107,31 @@ def _bkg(
 
     """
     # Accept reject sample
-    low, high = pdfs.domain()
-    max_ = 0.125
-
-    bkg_pdf = lambda x: pdfs.normalised_bkg(x, 0.0, 0.0, (low, high))
+    max_, low, high = _bkg_gen_region()
 
     x = low + (high - low) * rng.random(n_gen)
     y = max_ * rng.random(n_gen)
 
-    assert (bkg_pdf(x) < max_).all()
+    assert (_bkg_pdf(x) < max_).all()
 
-    points = x[y < bkg_pdf(x)]
+    points = x[y < _bkg_pdf(x)]
 
     counts, _ = stats.counts(points, bins)
+
     return counts
+
+
+def _n_bkg_expected(n_gen: int) -> float:
+    """
+    The number of bkg events we expect to accept, given a number generated
+
+    """
+    max_, low, high = _bkg_gen_region()
+
+    bkg_area, _ = quad(_bkg_pdf, low, high)
+    total_area = max_ * (high - low)
+
+    return n_gen * bkg_area / total_area
 
 
 def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.ndarray:
@@ -112,7 +140,9 @@ def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.nda
 
     """
     # Scale such that we have the right counts
-    counts = sig_counts * n_tot / np.sum(sig_counts)
+    scale_factor = n_tot / np.sum(sig_counts)
+    # print(f"{scale_factor=}")
+    counts = sig_counts * scale_factor
 
     # Apply Poisson fluctuations
     return rng.poisson(lam=counts).astype(np.float64)
@@ -134,10 +164,19 @@ def _pull_study(
     """
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
+    # we want the signal counts to add up to these
     n_rs_sig = 800_000
     n_ws_sig = 2_200
 
-    n_experiments = 15
+    # number to generate for the bkg
+    rs_n_bkg_gen = 45_000
+    ws_n_bkg_gen = 45_000
+
+    # Find the expected number of bkg events from the acceptance area / generating area
+    rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen)
+    ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen)
+
+    n_experiments = 5
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
@@ -145,8 +184,8 @@ def _pull_study(
         # Keep trying until a fit converges
         while True:
             # Generate bkg
-            rs_bkg = _bkg(rng, 45_000, bins=bins)
-            ws_bkg = _bkg(rng, 45_000, bins=bins)
+            rs_bkg = _bkg(rng, rs_n_bkg_gen, bins=bins)
+            ws_bkg = _bkg(rng, ws_n_bkg_gen, bins=bins)
 
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
@@ -171,10 +210,11 @@ def _pull_study(
             # Find the pulls
             fit_vals = binned_fitter.values
             fit_errs = binned_fitter.errors
+            print(fit_vals[0:4])
             rs_sig_pull = (fit_vals[0] - n_rs_sig) / fit_errs[0]
-            rs_bkg_pull = (fit_vals[1] - np.sum(rs_bkg)) / fit_errs[1]
+            rs_bkg_pull = (fit_vals[1] - rs_n_bkg_expected) / fit_errs[1]
             ws_sig_pull = (fit_vals[2] - n_ws_sig) / fit_errs[2]
-            ws_bkg_pull = (fit_vals[3] - np.sum(ws_bkg)) / fit_errs[3]
+            ws_bkg_pull = (fit_vals[3] - ws_n_bkg_expected) / fit_errs[3]
 
             pulls[0][i] = rs_sig_pull
             pulls[1][i] = rs_bkg_pull
@@ -265,6 +305,7 @@ def _plot_pulls(
         part.set_edgecolor("black")
 
     pull_axis.set_yticks(positions)
+    pull_axis.legend()
 
     ylabels = [
         f"{label}\n{mean:.3f}" + r"$\pm$" + f"{std:.3f}"
@@ -298,7 +339,7 @@ def main():
     year, magnetisation = "2018", "magdown"
     low, high = pdfs.domain()
     fit_range = pdfs.reduced_domain()
-    bins = definitions.nonuniform_mass_bins((low, 144.5, 146.5, high), (75, 175, 75))
+    bins = definitions.nonuniform_mass_bins((low, 144.5, 146.5, high), (50, 100, 50))
 
     rs_count = _sig_counts(year, "cf", magnetisation, bins)
     ws_count = _sig_counts(year, "dcs", magnetisation, bins)
