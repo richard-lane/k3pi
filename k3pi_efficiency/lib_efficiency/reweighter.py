@@ -82,9 +82,7 @@ class TimeFitReweighter:
 
 class TimeWeighter:
     """
-    The time reweighter
-
-    Or via a histogram division
+    The time reweighter, via a histogram division or a fit
 
     Basically this class just holds either a BinsReweighter or TimeFitReweighter
     object, and uses this to perform the time weighting
@@ -112,19 +110,17 @@ class TimeWeighter:
         ampgen times arg is unused if we're doing a fit
 
         """
-        # Reweight AmpGen to MC to avoid getting huge weights
-        # If we're doing a histogram division, only use times above the minimum
         if isinstance(self.fitter, BinsReweighter):
-            ag_t = ampgen_times[ampgen_times > self.min_t]
-            mc_t = mc_times[mc_times > self.min_t]
             print(
                 f"{self.fitter.n_bins} bins\n"
-                f"{len(ag_t)}, {len(mc_t)} times above minimum.\n"
-                f"Avg of {len(ag_t) / self.fitter.n_bins}, "
-                f"{len(mc_t) / self.fitter.n_bins} per bin"
+                f"{len(ampgen_times)}, {len(mc_times)} times above minimum.\n"
+                f"Avg of {len(ampgen_times) / self.fitter.n_bins}, "
+                f"{len(mc_times) / self.fitter.n_bins} per bin"
             )
-            self.fitter.fit(ag_t, mc_t)
-        # If we're fitting fit all the times; not just the ones above the min time
+
+            # Reweight AmpGen to MC to avoid getting huge weights
+            self.fitter.fit(ampgen_times, mc_times)
+
         else:
             print(
                 f"Performing fit to {len(mc_times):,} times from "
@@ -136,6 +132,8 @@ class TimeWeighter:
         """
         Predict weights to apply the efficiency
 
+        set to 0 below the min time
+
         """
         above_min = times > self.min_t
         retval = np.zeros_like(times)
@@ -146,6 +144,8 @@ class TimeWeighter:
     def correct_efficiency(self, times):
         """
         Weights to correct for the efficiency
+
+        set to 0 below the min time
 
         """
         above_min = times > self.min_t
@@ -192,17 +192,26 @@ class EfficiencyWeighter:
         :param train_kwargs: kwargs passed to GBReweighter when training
 
         """
+        orig_t = original[:, 5]
+        target_t = target[:, 5]
+
         self._time_weighter = TimeWeighter(min_t, fit, n_bins, n_neighs)
         self._time_weighter.fit(original[:, 5], target[:, 5])
 
         self._phsp_weighter = GBReweighter(**train_kwargs)
 
-        # Overall we will eight original -> target
+        # Select the points above the min time for training the phsp weighter
+        orig_above_min = orig_t > min_t
+        target_above_min = target_t > min_t
+
+        # Overall we will weight original -> target
         # but here weight the target such that it looks like original to prevent huge weights
         self._phsp_weighter.fit(
-            original=original,
-            target=target,
-            target_weight=self._time_weighter.apply_efficiency(target[:, 5]),
+            original=original[orig_above_min],
+            target=target[target_above_min],
+            target_weight=self._time_weighter.apply_efficiency(
+                target_t[target_above_min]
+            ),
         )
 
     def time_weights(self, times: np.ndarray) -> np.ndarray:
@@ -222,6 +231,8 @@ class EfficiencyWeighter:
     def weights(self, points):
         """
         Weights needed to take mc -> ampgen
+
+        Weights below min time set to 0
 
         """
         return self.phsp_weights(points) * self.time_weights(points[:, 5])

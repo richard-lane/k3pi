@@ -42,8 +42,8 @@ def main(args):
         pgun_df = pgun_df[mask]
 
     # Just pass the arrays into the efficiency function and it should find the right weights
-    ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
-    mc_k, mc_pi1, mc_pi2, mc_pi3 = efficiency_util.k_3pi(pgun_df)
+    ag_k, ag_pi1, ag_pi2, ag_pi3 = util.k_3pi(ampgen_df)
+    mc_k, mc_pi1, mc_pi2, mc_pi3 = util.k_3pi(pgun_df)
 
     ag_t, mc_t = ampgen_df["time"], pgun_df["time"]
 

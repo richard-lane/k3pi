@@ -25,14 +25,13 @@ def _points(
     bdt_cut: bool,
     year: str = None,
     magnetisation: str = None,
-    sign: str = None,
 ) -> np.ndarray:
     """
     Phsp points used in parameterisation
 
     """
     # Get the right arrays
-    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    k, pi1, pi2, pi3 = util.k_3pi(dataframe)
 
     # Momentum order
     pi1, pi2 = util.momentum_order(k, pi1, pi2)
@@ -72,7 +71,6 @@ def main(args: argparse.Namespace):
         bdt_cut=args.cut,
         year=args.year,
         magnetisation=args.magnetisation,
-        sign=args.sign,
     )
 
     # Just to check stuff let's plot some projections
