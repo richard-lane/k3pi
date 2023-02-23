@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
+from hep_ml.reweight import BinsReweighter
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
@@ -25,8 +26,7 @@ class D0EtaPWeighter:
         self,
         target: np.ndarray,
         original: np.ndarray,
-        eta_bins: np.ndarray,
-        p_bins: np.ndarray,
+        **weighter_kw,
     ):
         """
         Build histograms
@@ -35,60 +35,180 @@ class D0EtaPWeighter:
         :param original: (2, N) shape array of (eta, P)
 
         """
-        self._eta_bins = eta_bins
-        self._p_bins = p_bins
+        self._target = target
+        self._orig = original
 
-        self._target_counts, _, _ = np.histogram2d(
-            *target, bins=(eta_bins, p_bins), density=True
-        )
-        self._orig_counts, _, _ = np.histogram2d(
-            *original, bins=(eta_bins, p_bins), density=True
-        )
-
-        # Pad with 0s to deal with over/underflow
-        self._ratio = np.pad(
-            self._target_counts / self._orig_counts, 1, mode="constant"
-        )
-
-        # Infs set to nan
-        self._ratio[np.isinf(self._ratio)] = np.nan
+        self._reweighter = BinsReweighter(**weighter_kw)
+        self._reweighter.fit(original.T, target.T)
 
     def weights(self, points: np.ndarray) -> np.ndarray:
         """
         Weights for an array of points
 
-        """
-        eta_indices = np.digitize(points[0], self._eta_bins)
-        p_indices = np.digitize(points[1], self._p_bins)
-
-        weights = self._ratio[eta_indices, p_indices]
-
-        return weights
-
-    def plot(self) -> Tuple[plt.Figure, np.ndarray]:
-        """
-        Plot the 2d histograms and their ratio
+        :param points: (2, N) shape array of (eta, P)
 
         """
-        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-        extent = [*self._p_bins[[0, -1]], *self._eta_bins[[0, -1]]]
+        return self._reweighter.predict_weights(points.T)
 
-        for axis, data, title in zip(
-            axes,
-            (self._orig_counts, self._target_counts, self._ratio),
-            ("Target", "Original", "Ratio"),
-        ):
-            axis.matshow(
-                data, norm=LogNorm(), extent=extent, aspect="auto", origin="lower"
-            )
-            axis.set_title(title)
+    @staticmethod
+    def _fig_ax() -> Tuple[plt.Figure, np.ndarray]:
+        """Figure + axes for 2d plot with projections"""
+        return plt.subplot_mosaic(
+            "DAAAAB\nDAAAAB\nDAAAAB\nDAAAAB\n.CCCC.", figsize=(6, 5)
+        )
 
-        return fig, axes
+    @staticmethod
+    def _proj_plots(
+        axes: Tuple[plt.Axes, plt.Axes],
+        points: Tuple[np.ndarray, np.ndarray],
+        *,
+        eta_kw: dict = None,
+        p_kw: dict = None,
+    ) -> None:
+        """
+        Make projections of eta and p projections on axes
+
+        :param axes: (eta axis, p axis)
+        :param points: (eta, p)
+
+        """
+        if eta_kw is None:
+            eta_kw = {}
+        if p_kw is None:
+            p_kw = {}
+
+        hist_kw = {"histtype": "step"}
+
+        eta_axis, p_axis = axes
+        eta, momm = points
+
+        eta_axis.hist(eta, **eta_kw, **hist_kw, orientation="horizontal")
+
+        # Manually scale y axis otherwise it breaks
+        counts, _, _ = p_axis.hist(momm, **p_kw, **hist_kw)
+        new_lim = 1.1 * np.max(counts[np.isfinite(counts)])
+        p_axis.set_ylim(0.0, new_lim)
+
+    @staticmethod
+    def _format(fig: plt.Figure, axes: dict) -> None:
+        """
+        Format a figure and axes so it looks nice
+
+        """
+        axes["A"].set_xticks([])
+        axes["A"].set_yticks([])
+
+        axes["D"].set_xticks([])
+        axes["C"].set_yticks([])
+
+        axes["D"].set_ylabel(r"$\eta$", rotation=0)
+        axes["C"].set_xlabel("P")
+
+        fig.tight_layout()
+
+    @staticmethod
+    def _plot(
+        points: np.ndarray, bins: Tuple[np.ndarray, np.ndarray], path: str
+    ) -> None:
+        """
+        Make 2d + 1d plots of eta/phi
+
+        :param points: (2, N) array of eta, phi
+        :param path: where to save to
+
+        """
+        eta, momm = points
+        fig, axes = D0EtaPWeighter._fig_ax()
+
+        # 2d plot
+        eta_bins, p_bins = bins
+
+        _, _, _, image = axes["A"].hist2d(
+            momm, eta, bins=(p_bins, eta_bins), norm=LogNorm()
+        )
+
+        D0EtaPWeighter._proj_plots(
+            (axes["D"], axes["C"]),
+            (eta, momm),
+            eta_kw={"bins": eta_bins},
+            p_kw={"bins": p_bins},
+        )
+
+        fig.colorbar(image, cax=axes["B"])
+
+        fig.suptitle(path)
+        D0EtaPWeighter._format(fig, axes)
+
+        print(f"saving {path}")
+        plt.savefig(path)
+        plt.close(fig)
+
+    def plot_distribution(
+        self, distribution: str, bins: Tuple[np.ndarray, np.ndarray], path: str
+    ) -> None:
+        """
+        Plot a 2d histograms and their projections
+
+        :param distribution: "target" or "original"
+        :param path: where to save figure
+
+        """
+        assert distribution in {"target", "original"}
+
+        data = self._target if distribution == "target" else self._orig
+
+        D0EtaPWeighter._plot(data, bins, path)
+
+    def plot_ratio(self, bins: Tuple[np.ndarray, np.ndarray], path: str) -> None:
+        """
+        Plot the ratio of two distributions and the 1d projections of ratio
+
+        """
+        fig, axes = D0EtaPWeighter._fig_ax()
+        eta_bins, p_bins = bins
+
+        # 2d plot
+        target_count_2d, _, _ = np.histogram2d(
+            *self._target, bins=(eta_bins, p_bins), density=True
+        )
+        orig_count_2d, _, _ = np.histogram2d(
+            *self._orig, bins=(eta_bins, p_bins), density=True
+        )
+        ratio_2d = orig_count_2d / target_count_2d
+
+        extent = [*p_bins[[0, -1]], *eta_bins[[0, -1]]]
+        image = axes["A"].matshow(
+            ratio_2d, norm=LogNorm(), extent=extent, aspect="auto", origin="lower"
+        )
+
+        # 1d hists
+        D0EtaPWeighter._proj_plots(
+            (axes["D"], axes["C"]),
+            self._target,
+            eta_kw={"bins": eta_bins, "density": True},
+            p_kw={"bins": p_bins, "label": "Target", "density": True},
+        )
+        D0EtaPWeighter._proj_plots(
+            (axes["D"], axes["C"]),
+            self._orig,
+            eta_kw={"bins": eta_bins, "density": True},
+            p_kw={"bins": p_bins, "label": "Original", "density": True},
+        )
+
+        fig.colorbar(image, cax=axes["B"])
+
+        fig.suptitle(path)
+        axes["C"].legend()
+        D0EtaPWeighter._format(fig, axes)
+
+        print(f"saving {path}")
+        plt.savefig(path)
+        plt.close(fig)
 
 
-def _plot(dfs: Union[Iterable[pd.DataFrame], pd.DataFrame], path: str) -> None:
+def _points(dfs: Union[Iterable[pd.DataFrame], pd.DataFrame]) -> np.ndarray:
     """
-    Make 2d + 1d plots of eta/phi
+    Eta, phi arrays from either a dataframe or a generator of dataframes
 
     """
     if isinstance(dfs, pd.DataFrame):
@@ -96,49 +216,18 @@ def _plot(dfs: Union[Iterable[pd.DataFrame], pd.DataFrame], path: str) -> None:
         d0_eta = dfs["D0 eta"]
         d0_p = dfs["D0 P"]
 
+        retval = np.row_stack((d0_eta, d0_p))
+
     else:
         # real data - passed a generator
-        arrs = [(dataframe["D0 eta"], dataframe["D0 P"]) for dataframe in dfs]
+        arrs = [
+            tuple(dataframe[label].to_numpy() for label in ("D0 eta", "D0 P"))
+            for dataframe in dfs
+        ]
 
-        d0_eta = np.concatenate([arr[0] for arr in arrs])
-        d0_p = np.concatenate([arr[1] for arr in arrs])
+        retval = np.concatenate(arrs, axis=1)
 
-    fig, axes = plt.subplot_mosaic(
-        "DAAAAB\nDAAAAB\nDAAAAB\nDAAAAB\n.CCCC.", figsize=(6, 5)
-    )
-
-    # 2d plot
-    eta_bins = np.linspace(1.5, 5.5, 30)
-    p_bins = np.linspace(0.0, 500000, 30)
-
-    _, _, _, image = axes["A"].hist2d(
-        d0_p, d0_eta, bins=(p_bins, eta_bins), norm=LogNorm()
-    )
-
-    hist_kw = {"histtype": "step"}
-    axes["D"].hist(d0_eta, bins=eta_bins, **hist_kw, orientation="horizontal")
-
-    # Otherwise the yscale breaks
-    p_counts, _, _ = axes["C"].hist(d0_p, bins=p_bins, **hist_kw)
-    axes["C"].set_ylim(0, 1.05 * np.max(p_counts))
-
-    fig.colorbar(image, cax=axes["B"])
-
-    axes["A"].set_xticks([])
-    axes["A"].set_yticks([])
-
-    axes["D"].set_xticks([])
-    axes["C"].set_yticks([])
-
-    axes["D"].set_ylabel(r"$\eta$", rotation=0)
-    axes["C"].set_xlabel("P")
-
-    fig.suptitle(path)
-    fig.tight_layout()
-
-    print(f"saving {path}")
-    plt.savefig(path)
-    plt.close(fig)
+    return retval
 
 
 def main(*, year: str, magnetisation: str, sign: str):
@@ -148,48 +237,52 @@ def main(*, year: str, magnetisation: str, sign: str):
     Plot and show them
 
     """
-    pgun = get.particle_gun(sign)
-    mc = get.mc(year, sign, magnetisation)
+    pgun_pts = _points(get.particle_gun(sign))
+    mc_pts = _points(get.mc(year, sign, magnetisation))
+    data_pts = _points(get.data(year, sign, magnetisation))
 
-    _plot(pgun, f"d0_eta_p_pgun_{year}_{magnetisation}_{sign}.png")
-    _plot(mc, f"d0_eta_p_mc_{year}_{magnetisation}_{sign}.png")
-    _plot(
-        get.data(year, sign, magnetisation),
-        f"d0_eta_p_data_{year}_{magnetisation}_{sign}.png",
-    )
+    # Bins for plotting
+    # The reweighter doesn't use these bins, it finds its own
+    bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
 
-    eta_bins = np.linspace(1.5, 5.5, 100)
-    p_bins = np.linspace(0.0, 700000, 100)
-    mc_pts = np.row_stack([mc[label] for label in ("D0 eta", "D0 P")])
-    pgun_pts = np.row_stack([pgun[label] for label in ("D0 eta", "D0 P")])
-
-    # Weight MC -> Pgun as a test
+    # Weight pgun -> data as a test
     weighter = D0EtaPWeighter(
-        mc_pts,
+        data_pts,
         pgun_pts,
-        eta_bins,
-        p_bins,
+        n_bins=100,
+        n_neighs=0.5,
     )
-    weighter.plot()
-    plt.show()
-    plt.close(plt.gcf())
 
-    weights = weighter.weights(mc_pts)
-    weights[np.isnan(weights)] = 0
+    weighter.plot_distribution("target", bins, "d0_correction_data.png")
+    weighter.plot_distribution("original", bins, "d0_correction_pgun.png")
+    weighter.plot_ratio(bins, "d0_correction_data_pgun_ratio.png")
 
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    # Make plots showing the reweighting
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     kw = {"histtype": "step", "density": True}
-    ax[0].hist(mc_pts[0], bins=eta_bins, label="MC", **kw)
-    ax[0].hist(pgun_pts[0], bins=eta_bins, label="pgun", **kw)
-    ax[0].hist(mc_pts[0], bins=eta_bins, label="weighted", weights=weights, **kw)
+    axes[0].hist(mc_pts[0], bins=bins[0], label="mc", **kw)
+    axes[0].hist(data_pts[0], bins=bins[0], label="data", **kw)
+    axes[0].hist(
+        mc_pts[0],
+        bins=bins[0],
+        label="weighted",
+        weights=weighter.weights(mc_pts),
+        **kw,
+    )
 
-    ax[1].hist(mc_pts[1], bins=p_bins, label="MC", **kw)
-    ax[1].hist(pgun_pts[1], bins=p_bins, label="pgun", **kw)
-    ax[1].hist(mc_pts[1], bins=p_bins, label="weighted", weights=weights, **kw)
+    axes[1].hist(mc_pts[1], bins=bins[1], label="mc", **kw)
+    counts, _, _ = axes[1].hist(data_pts[1], bins=bins[1], label="data", **kw)
+    axes[1].hist(
+        mc_pts[1],
+        bins=bins[1],
+        label="weighted",
+        weights=weighter.weights(mc_pts),
+        **kw,
+    )
+    axes[1].set_ylim(0.0, 1.2 * np.max(counts))
+    axes[0].legend()
 
-    ax[0].legend()
-
-    plt.show()
+    fig.savefig("d0_correction_data_to_pgun.png")
 
 
 if __name__ == "__main__":
