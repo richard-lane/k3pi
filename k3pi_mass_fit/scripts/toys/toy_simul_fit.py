@@ -11,33 +11,42 @@ import numpy as np
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
-from libFit import fit, toy_utils, plotting, definitions, pdfs
+from libFit import fit, toy_utils, plotting, definitions, pdfs, util
 from lib_data import stats
 
 
-def _toy_fit():
+def _gen(n_sig: int, n_bkg: int, sign: str):
     """
-    Generate some stuff, do a fit to it
+    Generate points
+
+    Same signal model, slightly different bkg models
 
     """
-    bkg_params = pdfs.background_defaults("cf")
+    time_bin = 5
 
-    # Generate points along the whole range
-    (gen_low, gen_high) = pdfs.domain()
-
-    # NB these are the total number generated BEFORE we do the accept reject
-    # The bkg acc-rej is MUCH more efficient than the signal!
-    n_rs_sig, n_ws_sig, n_bkg = 20_000_000, 100_000, 300_000
     rng = np.random.default_rng()
-    rs_masses, _ = toy_utils.gen_points(
-        rng, n_rs_sig, n_bkg, (gen_low, gen_high), bkg_params=bkg_params, verbose=True
+    sig = toy_utils.gen_sig(rng, n_sig, util.signal_param_guess(time_bin), verbose=True)
+    bkg = toy_utils.gen_bkg_sqrt(
+        rng, n_bkg, util.sqrt_bkg_param_guess(sign), verbose=True
     )
-    ws_masses, _ = toy_utils.gen_points(
-        rng, n_ws_sig, n_bkg, (gen_low, gen_high), bkg_params=bkg_params, verbose=True
-    )
+
+    return np.concatenate((sig, bkg))
+
+
+def main():
+    """
+    just do 1 fit
+
+    """
+    n_rs_sig, n_ws_sig, n_bkg = 20_000_000, 100_000, 300_000
+
+    rs_masses = _gen(n_rs_sig, n_bkg, "cf")
+    ws_masses = _gen(n_ws_sig, n_bkg, "dcs")
 
     # Perform fit
     fit_low, _ = pdfs.reduced_domain()
+    gen_low, gen_high = pdfs.domain()
+
     n_underflow = 3
     bins = definitions.nonuniform_mass_bins(
         (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
@@ -46,13 +55,11 @@ def _toy_fit():
     rs_counts, rs_errs = stats.counts(rs_masses, bins)
     ws_counts, ws_errs = stats.counts(ws_masses, bins)
 
-    # This is the one it gets generated with, probably
-    time_bin = 5
     binned_fitter = fit.binned_simultaneous_fit(
         rs_counts,
         ws_counts,
         bins,
-        time_bin,
+        5,
         (fit_low, gen_high),
         rs_errs,
         ws_errs,
@@ -67,21 +74,12 @@ def _toy_fit():
         (fit_low, gen_high),
         binned_fitter.values,
     )
-    model_str = "sqrt model"
-    fig.suptitle(f"{model_str}; sqrt fit")
+    fig.suptitle("sqrt model; sqrt fit")
     fig.tight_layout()
 
-    path = f"simul_{model_str.replace(' ', '_')}_sqrt_fit.png"
+    path = "simul_sqrt_model_sqrt_fit.png"
     print(f"saving {path}")
     fig.savefig(path)
-
-
-def main():
-    """
-    just do 1 fit
-
-    """
-    _toy_fit()
 
 
 if __name__ == "__main__":

@@ -14,18 +14,20 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 from libFit import pdfs, definitions
 
 
-def _bkg(
-    points: np.ndarray, points2: np.ndarray, args: argparse.Namespace
-) -> np.ndarray:
+def _reduced_domain():
+    return 140, pdfs.domain()[1]
+
+
+def _bkg(points: np.ndarray, points2: np.ndarray, alt_bkg: bool) -> np.ndarray:
     """
     Background evaluated at some points
 
     """
-    if not args.alt_bkg:
+    if not alt_bkg:
         bkg_params = pdfs.background_defaults("cf")
         return (
-            pdfs.normalised_bkg(points, *bkg_params),
-            pdfs.normalised_bkg_reduced(points2, *bkg_params),
+            pdfs.normalised_bkg(points, *bkg_params, pdfs.domain()),
+            pdfs.normalised_bkg(points2, *bkg_params, _reduced_domain()),
             bkg_params,
         )
 
@@ -39,7 +41,7 @@ def _bkg(
     return pdfs.estimated_bkg(points, *bkg_params), bkg_params
 
 
-def _pdf(points: np.ndarray, args: argparse.Namespace, params: Tuple) -> np.ndarray:
+def _pdf(points: np.ndarray, alt_bkg: bool, params: Tuple) -> np.ndarray:
     """
     Combined sig + bkg pdf evaluated at some points
 
@@ -47,16 +49,18 @@ def _pdf(points: np.ndarray, args: argparse.Namespace, params: Tuple) -> np.ndar
     n_sig = 0.2
     n_bkg = 1 - n_sig
 
-    if not args.alt_bkg:
-        return pdfs.model(points, n_sig, n_bkg, *params)
+    if not alt_bkg:
+        return pdfs.model(points, n_sig, n_bkg, *params, pdfs.domain())
 
     return pdfs.model_alt_bkg(points, n_sig, n_bkg, *params)
 
 
-def main(args):
+def main(alt_bkg: bool):
     """Make and show a plot"""
-    centres = definitions.mass_bins(1000)
-    reduced_centres = definitions.reduced_mass_bins(1000)
+    assert not alt_bkg
+
+    centres = np.linspace(*pdfs.domain(), 1000)
+    reduced_centres = np.linspace(*_reduced_domain(), 1000)
 
     (
         centre,
@@ -75,8 +79,9 @@ def main(args):
         alpha_l,
         alpha_r,
         beta,
+        pdfs.domain(),
     )
-    reduced_sig = pdfs.normalised_signal_reduced(
+    reduced_sig = pdfs.normalised_signal(
         reduced_centres,
         centre,
         width_l,
@@ -84,12 +89,13 @@ def main(args):
         alpha_l,
         alpha_r,
         beta,
+        _reduced_domain(),
     )
 
-    bkg, reduced_bkg, bkg_params = _bkg(centres, reduced_centres, args)
+    bkg, reduced_bkg, bkg_params = _bkg(centres, reduced_centres, alt_bkg)
     pdf = _pdf(
         centres,
-        args,
+        alt_bkg,
         (centre, width_l, width_r, alpha_l, alpha_r, beta, *bkg_params),
     )
 
@@ -104,7 +110,7 @@ def main(args):
 
     ax[1].plot(centres, pdf)
 
-    title = "Alternative Bkg" if args.alt_bkg else "Signal + Bkg"
+    title = "Alternative Bkg" if alt_bkg else "Signal + Bkg"
     fig.suptitle(title)
     fig.tight_layout()
     plt.show()
@@ -118,4 +124,4 @@ if __name__ == "__main__":
         help="Plot the alt bkg model with the D-pi combination. I think I broke this when I added the reduced domain",
     )
 
-    main(parser.parse_args())
+    main(**vars(parser.parse_args()))

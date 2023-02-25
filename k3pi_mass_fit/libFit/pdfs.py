@@ -4,6 +4,8 @@ PDFs, CDF, integrals etc. for mass fit signal and background shapes
 """
 import sys
 import pathlib
+import logging
+import traceback
 from typing import Tuple, Callable
 import numpy as np
 from scipy.integrate import quad
@@ -325,6 +327,8 @@ class SimultaneousBinnedChi2:
 
 def default_centre() -> float:
     """Initial guess for the centre of the signal peak"""
+    logging.warning(traceback.format_stack())
+
     return 146.0
 
 
@@ -333,6 +337,7 @@ def signal_defaults(time_bin: int) -> Tuple[float, float, float, float]:
     the default values of the signal params (centre, width, alpha, beta)
 
     """
+    logging.warning(traceback.format_stack())
     return default_centre(), 0.2, 0.18, 0.0019 * time_bin + 0.0198
 
 
@@ -341,6 +346,7 @@ def background_defaults(sign: str) -> Tuple[float, float]:
     default values for background parameters (a, b), for either "cf" or "dcs"
 
     """
+    logging.warning(traceback.format_stack())
     assert sign in {"dcs", "cf"}
     if sign == "dcs":
         return 0.06, -0.00645
@@ -355,6 +361,7 @@ def defaults(
     default centre, width, alpha, beta, a, b
 
     """
+    logging.warning(traceback.format_stack())
     centre, width, alpha, beta = signal_defaults(time_bin)
     a, b = background_defaults(sign)
 

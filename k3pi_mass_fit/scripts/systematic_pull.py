@@ -13,7 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.stats import norm
-from scipy.integrate import quad
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
@@ -23,7 +22,7 @@ from lib_data import stats
 from lib_data import get, training_vars
 from lib_cuts.get import classifier as get_clf
 from lib_cuts.definitions import THRESHOLD
-from libFit import util as mass_util, fit, plotting, pdfs, definitions
+from libFit import util as mass_util, fit, plotting, pdfs, definitions, toy_utils
 
 
 class GaussKDE:
@@ -82,56 +81,26 @@ def _sig_counts(
     return count
 
 
-def _bkg_gen_region() -> Tuple[float, float, float]:
-    """
-    y_max, x_min, x_max
-
-    """
-    return 0.125, *pdfs.domain()
-
-
-def _bkg_pdf(pts: np.ndarray) -> np.ndarray:
-    """
-    Unary bkg pdf
-
-    """
-    _, low, high = _bkg_gen_region()
-    return pdfs.normalised_bkg(pts, 0.0, 0.0, (low, high))
-
-
 def _bkg(
-    rng: np.random.Generator, n_gen: int, bins: np.ndarray
+    rng: np.random.Generator, n_gen: int, bins: np.ndarray, sign: str
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Background counts with Poisson errors from the PDF
 
     """
-    # Accept reject sample
-    max_, low, high = _bkg_gen_region()
-
-    x = low + (high - low) * rng.random(n_gen)
-    y = max_ * rng.random(n_gen)
-
-    assert (_bkg_pdf(x) < max_).all()
-
-    points = x[y < _bkg_pdf(x)]
+    points = toy_utils.gen_bkg_sqrt(rng, n_gen, mass_util.sqrt_bkg_param_guess(sign))
 
     counts, _ = stats.counts(points, bins)
 
     return counts
 
 
-def _n_bkg_expected(n_gen: int) -> float:
+def _n_bkg_expected(n_gen: int, sign: str) -> float:
     """
     The number of bkg events we expect to accept, given a number generated
 
     """
-    max_, low, high = _bkg_gen_region()
-
-    bkg_area, _ = quad(_bkg_pdf, low, high)
-    total_area = max_ * (high - low)
-
-    return n_gen * bkg_area / total_area
+    return toy_utils.n_expected_bkg(n_gen, mass_util.sqrt_bkg_param_guess(sign))
 
 
 def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.ndarray:
@@ -173,8 +142,8 @@ def _pull_study(
     ws_n_bkg_gen = 45_000
 
     # Find the expected number of bkg events from the acceptance area / generating area
-    rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen)
-    ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen)
+    rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen, "cf")
+    ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen, "dcs")
 
     n_experiments = 5
     # want to track n_sig and n_bkg for both RS and WS
@@ -184,8 +153,8 @@ def _pull_study(
         # Keep trying until a fit converges
         while True:
             # Generate bkg
-            rs_bkg = _bkg(rng, rs_n_bkg_gen, bins=bins)
-            ws_bkg = _bkg(rng, ws_n_bkg_gen, bins=bins)
+            rs_bkg = _bkg(rng, rs_n_bkg_gen, bins=bins, sign="cf")
+            ws_bkg = _bkg(rng, ws_n_bkg_gen, bins=bins, sign="dcs")
 
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)

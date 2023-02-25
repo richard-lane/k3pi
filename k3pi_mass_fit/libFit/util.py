@@ -276,3 +276,23 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
             os.makedirs(dir_)
 
     return retval
+
+
+def sqrt_bkg_param_guess(sign: str = "dcs") -> Tuple:
+    """
+    Some parameters for the sqrt background
+
+    """
+    assert sign in {"dcs", "cf"}
+    if sign == "dcs":
+        return 0.06, -0.00645
+
+    return 0.004, -0.001
+
+
+def signal_param_guess(time_bin: int = 5) -> Tuple:
+    """
+    Some parameters for the signal
+
+    """
+    return 146.0, 0.2, 0.2, 0.18, 0.18, 0.0019 * time_bin + 0.0198

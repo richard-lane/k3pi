@@ -54,11 +54,37 @@ def _plot_fit(
         plotting.mass_fit(axes, *stats.counts(data, bins), bins, fit_range, params)
 
 
+def _sig_params():
+    """
+    Parameters for signal peak (RS)
+
+    """
+    return util.signal_param_guess(time_bin=5)
+
+
+def _bkg_params(sign: str):
+    """
+    Parameters for signal peak (RS)
+
+    """
+    return util.sqrt_bkg_param_guess(sign)
+
+
+def _gen(rng: np.random.Generator, n_sig: int, n_bkg: int, sign: str):
+    """
+    Generate points
+
+    Same signal model, slightly different bkg models
+
+    """
+    sig = toy_utils.gen_sig(rng, n_sig, _sig_params())
+    bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, _bkg_params(sign))
+
+    return np.concatenate((sig, bkg))
+
+
 def _pull(
     rng: np.random.Generator,
-    rs_n_sig: int,
-    ws_n_sig: int,
-    n_bkg: int,
     time_bin: int,
     fit_range: Tuple[float, float],
     out_dict: dict,
@@ -69,25 +95,30 @@ def _pull(
     Returns array of pulls
 
     """
-    # Perform fit
-    rs_combined, rs_true_params = toy_utils.gen_points(
-        rng,
-        rs_n_sig,
-        n_bkg,
-        pdfs.domain(),
-        bkg_params=pdfs.background_defaults("cf"),
-        verbose=False,
-    )
-    ws_combined, ws_true_params = toy_utils.gen_points(
-        rng,
-        ws_n_sig,
-        n_bkg,
-        pdfs.domain(),
-        bkg_params=pdfs.background_defaults("dcs"),
-        verbose=False,
-    )
+    rs_n_sig, ws_n_sig, n_bkg = 15_600_000, 55000, 50000
 
-    true_params = np.array(util.fit_params(rs_true_params, ws_true_params))
+    # Perform fit
+    rs_combined = _gen(rng, rs_n_sig, n_bkg, "cf")
+    ws_combined = _gen(rng, ws_n_sig, n_bkg, "dcs")
+
+    rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, _sig_params())
+    rs_bkg_expected = toy_utils.n_expected_bkg(n_bkg, _bkg_params("cf"))
+
+    ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, _sig_params())
+    ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, _bkg_params("dcs"))
+    print(ws_bkg_expected)
+
+    true_params = np.array(
+        (
+            rs_sig_expected,
+            rs_bkg_expected,
+            ws_sig_expected,
+            ws_bkg_expected,
+            *_sig_params(),
+            *_bkg_params("cf"),
+            *_bkg_params("dcs"),
+        )
+    )
 
     bins = _bins()
     rs_counts, _ = stats.counts(rs_combined, bins)
@@ -101,6 +132,7 @@ def _pull(
 
     fit_params = fitter.values
     fit_errs = fitter.errors
+    print(f"{fit_params[3]:.2f}, {fit_errs[3]:.2f}")
 
     if not out_dict:
         # If the output dict is empty, this is the first pseudoexperiment
@@ -125,7 +157,6 @@ def _pull(
 
 def _pull_study(
     n_experiments: int,
-    n_evts: Tuple[int, int],
     time_bin: int,
     fit_range: Tuple[float, float],
     out_list: list,
@@ -137,11 +168,9 @@ def _pull_study(
     return value appended to out_list; (9xN) shape array of pulls
 
     """
-    n_rs_sig, n_ws_sig, n_bkg = n_evts
 
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
-    # 10 params for the simultaneous sqrt bkg fit
     n_params = 14
 
     return_vals = tuple([] for _ in range(n_params))
@@ -150,9 +179,6 @@ def _pull_study(
             try:
                 pulls = _pull(
                     rng,
-                    n_rs_sig,
-                    n_ws_sig,
-                    n_bkg,
                     time_bin,
                     fit_range,
                     out_dict,
@@ -161,7 +187,6 @@ def _pull_study(
             except InvalidFitError:
                 print("invalid fit")
 
-        # Only look at the pulls of n_sig and n_bkg
         for pull, lst in zip(pulls, return_vals):
             lst.append(pull)
 
@@ -249,7 +274,6 @@ def _do_pull_study():
     time_bin = 5
     # NB these are the total number generated BEFORE we do the accept reject
     # The bkg acc-rej is MUCH more efficient than the signal!
-    n_rs_sig, n_ws_sig, n_bkg = 5_600_000, 15000, 50000
     fit_range = pdfs.reduced_domain()
 
     manager = Manager()
@@ -262,13 +286,12 @@ def _do_pull_study():
     )
 
     n_procs = 6
-    n_experiments = 200
+    n_experiments = 25
     procs = [
         Process(
             target=_pull_study,
             args=(
                 n_experiments,
-                (n_rs_sig, n_ws_sig, n_bkg),
                 time_bin,
                 fit_range,
                 out_list,
