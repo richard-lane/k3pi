@@ -3,62 +3,75 @@ Tools for estimating the background by combining our
 K3pi with a random slow pion
 
 """
+import sys
+import glob
 import pathlib
 import pickle
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Iterable
 import numpy as np
 
 from . import definitions
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
-def dump_path(
-    n_bins: int, sign: str, *, bdt_cut: bool, efficiency: bool
+from lib_data import stats
+from lib_data.util import check_year_mag_sign
+
+
+def dump_dir(
+    year: str, magnetisation: str, sign: str, *, bdt_cut: bool
 ) -> pathlib.Path:
     """
-    Location of the background pickle dump
+    Where the dump arrays are stored
+
+    :param year: data taking year
+    :param magnetisation: "magdown" or "magup"
+    :param sign: "cf" or "dcs"
+    :param bdt_cut: whether to bdt cut
 
     """
-    assert sign in {"dcs", "cf"}
-
-    suffix = ""
-    if bdt_cut:
-        suffix += "_cut"
-    if efficiency:
-        assert bdt_cut
-        suffix += "_eff"
+    check_year_mag_sign(year, magnetisation, sign)
 
     return (
         pathlib.Path(__file__).resolve().parents[1]
-        / f"bkg_dump_{sign}_{n_bins}_bins{suffix}.pkl"
+        / "bkg_dumps"
+        / f"{year}_{magnetisation}_{sign}/"
     )
 
 
-def get_dump(
-    n_bins: int,
+def get_dumps(
+    year: str,
+    magnetisation: str,
     sign: str,
     *,
     bdt_cut: bool,
-    efficiency: bool,
-    verbose: bool = False,
+) -> Iterable[np.ndarray]:
+    """
+    Generator of arrays
+
+    """
+    dirname = dump_dir(year, magnetisation, sign, bdt_cut=bdt_cut)
+
+    for path in glob.glob(str(dirname / "*")):
+        with open(path, "rb") as dump_f:
+            yield pickle.load(dump_f)
+
+
+def get_counts(
+    year: str,
+    magnetisation: str,
+    sign: str,
+    bins: np.ndarray,
+    *,
+    bdt_cut: bool,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Get an array of estimated background counts from a pickle dump
-
-    :param n_bins: number of mass bins
-    :param sign: dcs or cf
-    :param bdt_cut: whether to do the BDT cut before estimating background
-    :param efficiency: whether to do the efficiency correction before estimating background
-
-    :returns: array of counts
-    :returns: array of errors
+    Get the bkg counts and errors in each bin
 
     """
-    path = dump_path(n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency)
-
-    with open(path, "rb") as bkg_f:
-        if verbose:
-            print(f"loading {path}")
-        return pickle.load(bkg_f)
+    return stats.counts_generator(
+        get_dumps(year, magnetisation, sign, bdt_cut=bdt_cut), bins
+    )
 
 
 def create_dump(
@@ -84,7 +97,9 @@ def create_dump(
         pickle.dump((counts, errors), bkg_f)
 
 
-def pdf(n_bins: int, sign: str, *, bdt_cut: bool, efficiency: bool) -> Callable:
+def pdf(
+    bins: np.ndarray, year: str, magnetisation: str, sign: str, *, bdt_cut: bool
+) -> Callable:
     """
     Get a function that returns normalised probability density from
     an estimated background histogram
@@ -99,10 +114,11 @@ def pdf(n_bins: int, sign: str, *, bdt_cut: bool, efficiency: bool) -> Callable:
 
     """
     # Get the histogram
-    counts, _ = get_dump(n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency)
+    counts, _ = get_counts(year, magnetisation, sign, bins, bdt_cut=bdt_cut)
 
-    # Get the mass bins
-    bins = definitions.mass_bins(n_bins)
+    # Normalise counts
+    widths = bins[1:] - bins[:-1]
+    counts /= widths * np.sum(counts)
 
     def fcn(point: float):
         """histogram -> pdf"""
