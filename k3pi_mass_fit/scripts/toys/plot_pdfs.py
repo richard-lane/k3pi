@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 
-from libFit import pdfs, definitions
+from libFit import pdfs, definitions, util
 
 
 def _reduced_domain():
@@ -24,7 +24,7 @@ def _bkg(points: np.ndarray, points2: np.ndarray, alt_bkg: bool) -> np.ndarray:
 
     """
     if not alt_bkg:
-        bkg_params = pdfs.background_defaults("cf")
+        bkg_params = util.sqrt_bkg_param_guess("cf")
         return (
             pdfs.normalised_bkg(points, *bkg_params, pdfs.domain()),
             pdfs.normalised_bkg(points2, *bkg_params, _reduced_domain()),
@@ -65,11 +65,11 @@ def main(alt_bkg: bool):
     (
         centre,
         width_l,
+        width_r,
         alpha_l,
+        alpha_r,
         beta,
-    ) = pdfs.signal_defaults(5)
-    width_r = 1.5 * width_l
-    alpha_r = 1.5 * alpha_l
+    ) = util.signal_param_guess(5)
 
     sig = pdfs.normalised_signal(
         centres,

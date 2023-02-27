@@ -5,6 +5,7 @@ Generate some points with accept/reject, fit to them and show the fit
 import sys
 import pathlib
 import argparse
+from typing import Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,9 +17,12 @@ from libFit import pdfs, fit, toy_utils, plotting, definitions, util
 from lib_data import stats
 
 
-def _gen():
+def _gen() -> Tuple[np.ndarray, Tuple]:
     """
     Generate points
+
+    returns the points and a best guess at the params
+
     """
     sign, time_bin = "cf", 5
 
@@ -26,13 +30,18 @@ def _gen():
     # The bkg acc-rej is MUCH more efficient than the signal!
     n_sig, n_bkg = 2_000_000, 5_000_000
 
-    rng = np.random.default_rng()
-    sig = toy_utils.gen_sig(rng, n_sig, util.signal_param_guess(time_bin), verbose=True)
-    bkg = toy_utils.gen_bkg_sqrt(
-        rng, n_bkg, util.sqrt_bkg_param_guess(sign), verbose=True
-    )
+    sig_params = util.signal_param_guess(time_bin)
+    bkg_params = util.sqrt_bkg_param_guess(sign)
 
-    return np.concatenate((sig, bkg))
+    rng = np.random.default_rng()
+    sig = toy_utils.gen_sig(rng, n_sig, sig_params, verbose=True)
+    bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, bkg_params, verbose=True)
+
+    # Number we expect to generate
+    n_sig = toy_utils.n_expected_sig(n_sig, sig_params)
+    n_bkg = toy_utils.n_expected_bkg(n_bkg, bkg_params)
+
+    return np.concatenate((sig, bkg)), (n_sig, n_bkg, *sig_params, *bkg_params)
 
 
 def main():
@@ -40,7 +49,7 @@ def main():
     just do 1 fit
 
     """
-    combined = _gen()
+    combined, initial_guess = _gen()
 
     # Perform fits to the restricted range
     fit_low, _ = pdfs.reduced_domain()
@@ -57,11 +66,12 @@ def main():
     binned_fitter = fit.binned_fit(
         counts[n_underflow:],
         bins[n_underflow:],
-        "cf",
-        5,
-        0.9,  # Signal frac guess
+        initial_guess,
         (fit_low, gen_high),  # Fit to reduced region
     )
+
+    print("initial guess:", initial_guess)
+    print("fit vals:", binned_fitter.values)
 
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(18, 12), sharex=True

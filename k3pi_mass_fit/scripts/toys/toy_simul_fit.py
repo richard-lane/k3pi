@@ -15,22 +15,28 @@ from libFit import fit, toy_utils, plotting, definitions, pdfs, util
 from lib_data import stats
 
 
-def _gen(n_sig: int, n_bkg: int, sign: str):
+def _gen(rng: np.random.Generator, n_sig: int, n_bkg: int, sign: str):
     """
     Generate points
 
     Same signal model, slightly different bkg models
 
+    returns true params also
+
     """
     time_bin = 5
 
-    rng = np.random.default_rng()
-    sig = toy_utils.gen_sig(rng, n_sig, util.signal_param_guess(time_bin), verbose=True)
-    bkg = toy_utils.gen_bkg_sqrt(
-        rng, n_bkg, util.sqrt_bkg_param_guess(sign), verbose=True
-    )
+    sig_params = util.signal_param_guess(time_bin)
+    bkg_params = util.sqrt_bkg_param_guess(sign)
 
-    return np.concatenate((sig, bkg))
+    sig = toy_utils.gen_sig(rng, n_sig, sig_params, verbose=True)
+    bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, bkg_params, verbose=True)
+
+    # Number we expect to generate
+    n_sig = toy_utils.n_expected_sig(n_sig, sig_params)
+    n_bkg = toy_utils.n_expected_bkg(n_bkg, bkg_params)
+
+    return np.concatenate((sig, bkg)), (n_sig, n_bkg, *sig_params, *bkg_params)
 
 
 def main():
@@ -40,10 +46,13 @@ def main():
     """
     n_rs_sig, n_ws_sig, n_bkg = 20_000_000, 100_000, 300_000
 
-    rs_masses = _gen(n_rs_sig, n_bkg, "cf")
-    ws_masses = _gen(n_ws_sig, n_bkg, "dcs")
+    rng = np.random.default_rng()
+    rs_masses, rs_params = _gen(rng, n_rs_sig, n_bkg, "cf")
+    ws_masses, ws_params = _gen(rng, n_ws_sig, n_bkg, "dcs")
 
     # Perform fit
+    initial_guess = util.fit_params(rs_params, ws_params)
+
     fit_low, _ = pdfs.reduced_domain()
     gen_low, gen_high = pdfs.domain()
 
@@ -56,13 +65,13 @@ def main():
     ws_counts, ws_errs = stats.counts(ws_masses, bins)
 
     binned_fitter = fit.binned_simultaneous_fit(
-        rs_counts,
-        ws_counts,
-        bins,
-        5,
+        rs_counts[n_underflow:],
+        ws_counts[n_underflow:],
+        bins[n_underflow:],
+        initial_guess,
         (fit_low, gen_high),
-        rs_errs,
-        ws_errs,
+        rs_errors=rs_errs[n_underflow:],
+        ws_errors=ws_errs[n_underflow:],
     )
 
     fig, _ = plotting.simul_fits(

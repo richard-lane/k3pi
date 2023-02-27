@@ -93,7 +93,10 @@ def _mass_fitters(
         enumerate(zip(dcs_counts[1:-1], cf_counts[1:-1]))
     ):
         # Perform a mass fit
-        fitter = fit.binned_simultaneous_fit(cf_count, dcs_count, mass_bins, time_bin)
+        initial_guess = None  # TODO fill this in lol
+        fitter = fit.binned_simultaneous_fit(
+            cf_count, dcs_count, mass_bins, initial_guess, pdfs.reduced_domain()
+        )
         fitters.append(fitter)
 
     return fitters

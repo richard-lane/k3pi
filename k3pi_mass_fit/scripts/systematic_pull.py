@@ -123,6 +123,7 @@ def _pull_study(
     rs_signal_counts: np.ndarray,
     ws_signal_counts: np.ndarray,
     bins: np.ndarray,
+    n_underflow: int,
     fit_range: Tuple[float, float],
 ):
     """
@@ -145,7 +146,7 @@ def _pull_study(
     rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen, "cf")
     ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen, "dcs")
 
-    n_experiments = 5
+    n_experiments = 3
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
@@ -165,11 +166,20 @@ def _pull_study(
             ws_counts = ws_sig + ws_bkg
 
             # Do a fit
+            initial_guess = (
+                np.sum(rs_sig),
+                np.sum(rs_bkg),
+                np.sum(ws_sig),
+                np.sum(ws_bkg),
+                *mass_util.signal_param_guess(),
+                *mass_util.sqrt_bkg_param_guess("cf"),
+                *mass_util.sqrt_bkg_param_guess("dcs"),
+            )
             binned_fitter = fit.binned_simultaneous_fit(
-                rs_counts,
-                ws_counts,
-                bins,
-                5,
+                rs_counts[n_underflow:],
+                ws_counts[n_underflow:],
+                bins[n_underflow:],
+                initial_guess,
                 fit_range,
             )
             if not binned_fitter.valid:
@@ -308,7 +318,10 @@ def main():
     year, magnetisation = "2018", "magdown"
     low, high = pdfs.domain()
     fit_range = pdfs.reduced_domain()
-    bins = definitions.nonuniform_mass_bins((low, 144.5, 146.5, high), (50, 100, 50))
+    n_underflow = 3
+    bins = definitions.nonuniform_mass_bins(
+        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 50, 100, 50)
+    )
 
     rs_count = _sig_counts(year, "cf", magnetisation, bins)
     ws_count = _sig_counts(year, "dcs", magnetisation, bins)
@@ -320,7 +333,7 @@ def main():
     procs = [
         Process(
             target=_pull_study,
-            args=(out_list, out_dict, rs_count, ws_count, bins, fit_range),
+            args=(out_list, out_dict, rs_count, ws_count, bins, n_underflow, fit_range),
         )
         for _ in range(n_procs)
     ]

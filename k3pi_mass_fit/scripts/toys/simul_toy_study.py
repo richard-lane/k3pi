@@ -27,14 +27,20 @@ class InvalidFitError(Exception):
     """
 
 
-def _bins():
+def _bins(n_underflow: int = 3) -> np.ndarray:
     """
     For fitting + plotting
 
-    """
-    low, high = pdfs.domain()
+    :param n_underflow: number of underflow bins
+    :returns: bins
 
-    return definitions.nonuniform_mass_bins((low, 144.0, 148.0, high), (75, 175, 75))
+    """
+    fit_low, _ = pdfs.reduced_domain()
+    gen_low, gen_high = pdfs.domain()
+
+    return definitions.nonuniform_mass_bins(
+        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
+    )
 
 
 def _plot_fit(
@@ -106,7 +112,6 @@ def _pull(
 
     ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, _sig_params())
     ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, _bkg_params("dcs"))
-    print(ws_bkg_expected)
 
     true_params = np.array(
         (
@@ -120,12 +125,17 @@ def _pull(
         )
     )
 
-    bins = _bins()
+    n_underflow = 3
+    bins = _bins(n_underflow)
     rs_counts, _ = stats.counts(rs_combined, bins)
     ws_counts, _ = stats.counts(ws_combined, bins)
 
     fitter = fit.binned_simultaneous_fit(
-        rs_counts, ws_counts, bins, time_bin, fit_range
+        rs_counts[n_underflow:],
+        ws_counts[n_underflow:],
+        bins[n_underflow:],
+        true_params,
+        fit_range,
     )
     if not fitter.valid:
         raise InvalidFitError
@@ -286,7 +296,7 @@ def _do_pull_study():
     )
 
     n_procs = 6
-    n_experiments = 25
+    n_experiments = 50
     procs = [
         Process(
             target=_pull_study,

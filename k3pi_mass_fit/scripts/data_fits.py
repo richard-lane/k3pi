@@ -27,53 +27,45 @@ def _separate_fit(
     err: np.ndarray,
     bin_number: int,
     bins: np.ndarray,
+    n_underflow: int,
     sign: str,
     plot_path: str,
-    *,
-    alt_bkg: bool,
-    bdt_cut: bool,
-    efficiency: bool,
 ):
     """
     Plot separate fits
 
     """
+    sig_frac = 0.9 if sign == "cf" else 0.05
+    total = np.sum(count)
+    initial_guess = (
+        total * sig_frac,
+        total * (1 - sig_frac),
+        *mass_util.signal_param_guess(bin_number),
+        *mass_util.sqrt_bkg_param_guess(sign),
+    )
     try:
-        fitter = (
-            fit.alt_bkg_fit(
-                count,
-                bins,
-                sign,
-                bin_number,
-                0.9 if sign == "cf" else 0.05,
-                errors=err,
-                bdt_cut=bdt_cut,
-                efficiency=efficiency,
-            )
-            if alt_bkg
-            else fit.binned_fit(
-                count, bins, sign, bin_number, 0.9 if sign == "cf" else 0.05, errors=err
-            )
+        fitter = fit.binned_fit(
+            count[n_underflow:],
+            bins[n_underflow:],
+            initial_guess,
+            (bins[n_underflow], bins[-1]),
+            errors=err[n_underflow:],
         )
+
     except pdfs.ZeroCountsError as exc:
         print("time bin:", bin_number, repr(exc))
         return
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(6, 8))
 
-    if alt_bkg:
-        plotting.alt_bkg_fit(
-            (axes["A"], axes["B"]),
-            count,
-            err,
-            bins,
-            fitter.values,
-            sign=sign,
-            bdt_cut=False,
-            efficiency=False,
-        )
-    else:
-        plotting.mass_fit((axes["A"], axes["B"]), count, err, bins, fitter.values)
+    plotting.mass_fit(
+        (axes["A"], axes["B"]),
+        count,
+        err,
+        bins,
+        (bins[n_underflow], bins[-1]),
+        fitter.values,
+    )
 
     axes["A"].legend()
 
@@ -103,32 +95,33 @@ def _fit(
     ws_err: np.ndarray,
     bin_number: int,
     bins: np.ndarray,
+    n_underflow: int,
     fit_dir: str,
-    *,
-    alt_bkg: bool,
-    bdt_cut: bool,
-    efficiency: bool,
 ) -> None:
     """
     Plot the fit
 
     """
+    rs_total = np.sum(rs_count)
+    ws_total = np.sum(ws_count)
+    initial_guess = (
+        rs_total * 0.9,
+        rs_total * 0.1,
+        ws_total * 0.05,
+        ws_total * 0.95,
+        *mass_util.signal_param_guess(bin_number),
+        *mass_util.sqrt_bkg_param_guess("cf"),
+        *mass_util.sqrt_bkg_param_guess("dcs"),
+    )
     try:
-        fitter = (
-            fit.alt_simultaneous_fit(
-                rs_count,
-                ws_count,
-                bins,
-                bin_number,
-                rs_err,
-                ws_err,
-                bdt_cut=bdt_cut,
-                efficiency=efficiency,
-            )
-            if alt_bkg
-            else fit.binned_simultaneous_fit(
-                rs_count, ws_count, bins, bin_number, rs_err, ws_err
-            )
+        fitter = fit.binned_simultaneous_fit(
+            rs_count[n_underflow:],
+            ws_count[n_underflow:],
+            bins[n_underflow:],
+            initial_guess,
+            (bins[n_underflow], bins[-1]),
+            rs_errors=rs_err[n_underflow:],
+            ws_errors=ws_err[n_underflow:],
         )
     except pdfs.ZeroCountsError as err:
         print("time bin:", bin_number, repr(err))
@@ -139,26 +132,14 @@ def _fit(
     print(f"{params[-2]} +- {fitter.errors[-2]}", end="\t")
     print(f"{params[-1]} +- {fitter.errors[-1]}")
 
-    fig, axes = (
-        plotting.alt_bkg_simul(
-            rs_count,
-            rs_err,
-            ws_count,
-            ws_err,
-            bins,
-            params,
-            bdt_cut=False,
-            efficiency=False,
-        )
-        if alt_bkg
-        else plotting.simul_fits(
-            rs_count,
-            rs_err,
-            ws_count,
-            ws_err,
-            bins,
-            params,
-        )
+    fig, axes = plotting.simul_fits(
+        rs_count,
+        rs_err,
+        ws_count,
+        ws_err,
+        bins,
+        (bins[n_underflow], bins[-1]),
+        params,
     )
 
     axes["A"].set_title(
@@ -181,8 +162,7 @@ def _fit(
     fig.tight_layout()
     fig.tight_layout()
 
-    bkg_str = "_alt_bkg" if alt_bkg else ""
-    plot_path = f"{fit_dir}fit_{bkg_str}{bin_number}.png"
+    plot_path = f"{fit_dir}fit_{bin_number}.png"
 
     print(f"Saving {plot_path}")
     fig.savefig(plot_path)
@@ -222,7 +202,6 @@ def main(
     phsp_bin: int,
     bdt_cut: bool,
     efficiency: bool,
-    alt_bkg: bool,
 ):
     """
     Do mass fits in each time bin
@@ -232,7 +211,13 @@ def main(
         assert bdt_cut, "cannot have efficiency with BDT cut (for now)"
 
     time_bins = TIME_BINS[2:-1]
-    mass_bins = definitions.nonuniform_mass_bins((144.0, 147.0), (50, 100, 50))
+
+    low, high = pdfs.domain()
+    fit_range = pdfs.reduced_domain()
+    n_underflow = 3
+    mass_bins = definitions.nonuniform_mass_bins(
+        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 50, 100, 50)
+    )
 
     # Get the classifier for BDT cut if we need
     bdt_clf = get_clf(year, "dcs", magnetisation) if bdt_cut else None
@@ -254,8 +239,6 @@ def main(
     )
 
     plot_dir = mass_util.plot_dir(bdt_cut, efficiency, phsp_bin)
-
-    bkg_str = "alt_bkg_" if alt_bkg else ""
 
     for i, (low_t, high_t) in enumerate(zip(time_bins[:-1], time_bins[1:])):
         # Get generators of dataframes
@@ -307,32 +290,26 @@ def main(
             dcs_err,
             i,
             mass_bins,
+            n_underflow,
             plot_dir,
-            alt_bkg=alt_bkg,
-            bdt_cut=bdt_cut,
-            efficiency=efficiency,
         )
         _separate_fit(
             cf_count,
             cf_err,
             i,
             mass_bins,
+            n_underflow,
             "cf",
-            f"{plot_dir}{bkg_str}rs/{i}.png",
-            alt_bkg=alt_bkg,
-            bdt_cut=bdt_cut,
-            efficiency=efficiency,
+            f"{plot_dir}rs/{i}.png",
         )
         _separate_fit(
             dcs_count,
             dcs_err,
             i,
             mass_bins,
+            n_underflow,
             "dcs",
-            f"{plot_dir}{bkg_str}ws/{i}.png",
-            alt_bkg=alt_bkg,
-            bdt_cut=bdt_cut,
-            efficiency=efficiency,
+            f"{plot_dir}ws/{i}.png",
         )
 
 
@@ -356,11 +333,6 @@ if __name__ == "__main__":
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")
     parser.add_argument(
         "--efficiency", action="store_true", help="Correct for the detector efficiency"
-    )
-    parser.add_argument(
-        "--alt_bkg",
-        action="store_true",
-        help="Whether to attempt the fits with the alternate background model",
     )
 
     main(**vars(parser.parse_args()))

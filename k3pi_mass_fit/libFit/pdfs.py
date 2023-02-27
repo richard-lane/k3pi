@@ -325,49 +325,6 @@ class SimultaneousBinnedChi2:
         )
 
 
-def default_centre() -> float:
-    """Initial guess for the centre of the signal peak"""
-    logging.warning(traceback.format_stack())
-
-    return 146.0
-
-
-def signal_defaults(time_bin: int) -> Tuple[float, float, float, float]:
-    """
-    the default values of the signal params (centre, width, alpha, beta)
-
-    """
-    logging.warning(traceback.format_stack())
-    return default_centre(), 0.2, 0.18, 0.0019 * time_bin + 0.0198
-
-
-def background_defaults(sign: str) -> Tuple[float, float]:
-    """
-    default values for background parameters (a, b), for either "cf" or "dcs"
-
-    """
-    logging.warning(traceback.format_stack())
-    assert sign in {"dcs", "cf"}
-    if sign == "dcs":
-        return 0.06, -0.00645
-
-    return 0.004, -0.001
-
-
-def defaults(
-    sign: str, time_bin: int
-) -> Tuple[float, float, float, float, float, float, float, float]:
-    """
-    default centre, width, alpha, beta, a, b
-
-    """
-    logging.warning(traceback.format_stack())
-    centre, width, alpha, beta = signal_defaults(time_bin)
-    a, b = background_defaults(sign)
-
-    return centre, width, alpha, beta, a, b
-
-
 def estimated_bkg(x: float, pdf: Callable, a_0: float, a_1: float, a_2: float) -> float:
     """
     Background model from estimated bkg
@@ -405,15 +362,16 @@ def model_alt_bkg(
     with the alternate background model
 
     """
-    return n_sig * normalised_signal(
-        x,
-        centre,
-        width_l,
-        width_r,
-        alpha_l,
-        alpha_r,
-        beta,
-    ) + n_bkg * estimated_bkg(x, bkg_pdf, a_0, a_1, a_2)
+    raise NotImplementedError
+    # return n_sig * normalised_signal(
+    #     x,
+    #     centre,
+    #     width_l,
+    #     width_r,
+    #     alpha_l,
+    #     alpha_r,
+    #     beta,
+    # ) + n_bkg * estimated_bkg(x, bkg_pdf, a_0, a_1, a_2)
 
 
 class AltBkgBinnedChi2:
