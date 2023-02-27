@@ -113,8 +113,16 @@ def pdf(
               probability density
 
     """
+    # Bins with an under and overflow
+    extended_bins = (-np.inf, *bins, np.inf)
+
     # Get the histogram
-    counts, _ = get_counts(year, magnetisation, sign, bins, bdt_cut=bdt_cut)
+    counts, _ = get_counts(year, magnetisation, sign, extended_bins, bdt_cut=bdt_cut)
+
+    print(f"{counts[0]} underflow (<{bins[0]}); {counts[-1]} overflow (>{bins[-1]})")
+
+    # Get rid of under and overflow
+    counts = counts[1:-1]
 
     # Normalise counts
     widths = bins[1:] - bins[:-1]

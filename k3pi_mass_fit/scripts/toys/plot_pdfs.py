@@ -11,14 +11,18 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 
-from libFit import pdfs, definitions, util
+from libFit import pdfs, definitions, util, bkg
 
 
-def _reduced_domain():
-    return 140, pdfs.domain()[1]
-
-
-def _bkg(points: np.ndarray, points2: np.ndarray, alt_bkg: bool) -> np.ndarray:
+def _bkg(
+    points: np.ndarray,
+    points2: np.ndarray,
+    alt_bkg: bool,
+    year: str,
+    sign: str,
+    magnetisation: str,
+    bdt_cut: bool,
+) -> np.ndarray:
     """
     Background evaluated at some points
 
@@ -27,17 +31,22 @@ def _bkg(points: np.ndarray, points2: np.ndarray, alt_bkg: bool) -> np.ndarray:
         bkg_params = util.sqrt_bkg_param_guess("cf")
         return (
             pdfs.normalised_bkg(points, *bkg_params, pdfs.domain()),
-            pdfs.normalised_bkg(points2, *bkg_params, _reduced_domain()),
+            pdfs.normalised_bkg(points2, *bkg_params, pdfs.reduced_domain()),
             bkg_params,
         )
 
-    low, high = pdfs.domain()
+    # TODO plot the actual pdf
+    bins = np.linspace(*pdfs.domain(), 100)
+    bins2 = np.linspace(*pdfs.reduced_domain(), 100)
 
-    def bkg_pdf(x):
-        """toy bkg pdf"""
-        return 3 * np.sqrt(x - low) / (2 * np.sqrt(high - low))
+    pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
+    pdf2 = bkg.pdf(bins2, year, magnetisation, sign, bdt_cut=bdt_cut)
 
-    bkg_params = bkg_pdf, 0.0, 0.1, 0.001
+    vals = pdf(points)
+    vals2 = pdf2(points2)
+
+    return vals, vals2, None
+
     return pdfs.estimated_bkg(points, *bkg_params), bkg_params
 
 
@@ -52,15 +61,27 @@ def _pdf(points: np.ndarray, alt_bkg: bool, params: Tuple) -> np.ndarray:
     if not alt_bkg:
         return pdfs.model(points, n_sig, n_bkg, *params, pdfs.domain())
 
-    return pdfs.model_alt_bkg(points, n_sig, n_bkg, *params)
+    # TODO the actual PDF
+    return np.zeros_like(points)
 
 
-def main(alt_bkg: bool):
+def main(
+    *,
+    alt_bkg: bool,
+    year: str = None,
+    magnetisation: str = None,
+    sign: str = None,
+    bdt_cut: bool = None
+):
     """Make and show a plot"""
-    assert not alt_bkg
+    if alt_bkg:
+        assert year is not None
+        assert magnetisation is not None
+        assert sign is not None
+        assert bdt_cut is not None
 
-    centres = np.linspace(*pdfs.domain(), 1000)
-    reduced_centres = np.linspace(*_reduced_domain(), 1000)
+    centres = np.linspace(*pdfs.domain(), 1000)[:-1]
+    reduced_centres = np.linspace(*pdfs.reduced_domain(), 1000)[:-1]
 
     (
         centre,
@@ -89,10 +110,17 @@ def main(alt_bkg: bool):
         alpha_l,
         alpha_r,
         beta,
-        _reduced_domain(),
+        pdfs.reduced_domain(),
     )
 
-    bkg, reduced_bkg, bkg_params = _bkg(centres, reduced_centres, alt_bkg)
+    bkg, reduced_bkg, bkg_params = _bkg(
+        centres, reduced_centres, alt_bkg, year, sign, magnetisation, bdt_cut
+    )
+
+    # TODO tmp hack while _bkg doesnt return actual alt bkg params
+    if alt_bkg:
+        bkg_params = []
+
     pdf = _pdf(
         centres,
         alt_bkg,
@@ -121,7 +149,29 @@ if __name__ == "__main__":
     parser.add_argument(
         "--alt_bkg",
         action="store_true",
-        help="Plot the alt bkg model with the D-pi combination. I think I broke this when I added the reduced domain",
+        help="Plot the alt bkg model with the D-pi combination",
+    )
+    parser.add_argument(
+        "--year",
+        type=str,
+        help="data taking year for alt bkg dump",
+    )
+    parser.add_argument(
+        "--sign",
+        type=str,
+        choices={"cf", "dcs"},
+        help="sign for alt bkg dump",
+    )
+    parser.add_argument(
+        "--magnetisation",
+        type=str,
+        choices={"magdown", "magup"},
+        help="magnetisation direction for alt bkg dump",
+    )
+    parser.add_argument(
+        "--bdt_cut",
+        action="store_true",
+        help="Whether to use the bdt cut for alt bkg dump",
     )
 
     main(**vars(parser.parse_args()))
