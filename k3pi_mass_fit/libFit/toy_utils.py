@@ -49,6 +49,7 @@ def _max(pdf: Callable) -> float:
 def _gen(
     rng: np.random.Generator,
     pdf: Callable[[np.ndarray], np.ndarray],
+    domain: Tuple,
     n_gen: int,
     plot=False,
 ) -> np.ndarray:
@@ -62,7 +63,7 @@ def _gen(
         return np.array([])
 
     pdf_max = _max(pdf)
-    low, high = pdfs.domain()
+    low, high = domain
 
     x = low + (high - low) * rng.random(n_gen)
 
@@ -110,6 +111,7 @@ def gen_bkg_sqrt(
     points = _gen(
         rng,
         lambda pts: pdfs.normalised_bkg(pts, *bkg_params, pdfs.domain()),
+        pdfs.domain(),
         n_gen,
         plot=False,
     )
@@ -147,6 +149,7 @@ def gen_sig(
     points = _gen(
         rng,
         lambda pts: pdfs.normalised_signal(pts, *sig_params, pdfs.domain()),
+        pdfs.domain(),
         n_gen,
         plot=False,
     )
@@ -161,13 +164,41 @@ def gen_sig(
 
 def gen_alt_bkg(
     rng: np.random.Generator,
-    n_sig: int,
-    n_bkg: int,
-    pdf_domain: Tuple[float, float],
-    verbose: bool = True,
+    n_gen: int,
+    bkg_pdf: Callable,
+    bkg_params: Tuple,
+    pdf_domain: Tuple,
+    *,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """ """
-    raise NotImplementedError
+    """
+    Generate points according to the alternate background model
+
+    :param rng: rng
+    :param n_gen: number to generate
+    :param bkg_pdf: a PDF like the one returned from
+                    bkg.pdf
+    :param bkg_params: 3 params for alt bkg model
+    :param pdf_domain: domain along which the provided PDF is normalised
+    :param verbose: whether to print stuff
+
+    """
+    assert len(bkg_params) == 3, "Wrong number alt bkg params"
+
+    points = _gen(
+        rng,
+        lambda pts: pdfs.estimated_bkg(pts, bkg_pdf, pdf_domain, *bkg_params),
+        pdf_domain,
+        n_gen,
+        plot=False,
+    )
+
+    if verbose:
+        print(
+            f"bkg generated: {len(points)}; efficiency {100 * len(points) / n_gen:.2f}%"
+        )
+
+    return points
 
 
 def n_expected_sig(n_gen: int, signal_params: Tuple):

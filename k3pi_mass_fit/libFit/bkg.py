@@ -104,13 +104,16 @@ def pdf(
     Get a function that returns normalised probability density from
     an estimated background histogram
 
-    :param n_bins: how many mass bins
-    :param sign: dcs or cf
+    :param bins: the bins to use
+    :param year: for finding the right dump
+    :param magnetisation: for finding the right dump
+    :param sign: for finding the right dump
     :param bdt_cut: whether to do the BDT cut
-    :param efficiency: whether to do the efficiency correction
 
     :returns: a function that takes a mass difference and returns normalised
               probability density
+              Fcn is defined from bins[0] to bins[-1], and is
+              normalised over this region
 
     """
     # Bins with an under and overflow

@@ -285,9 +285,9 @@ def sqrt_bkg_param_guess(sign: str = "dcs") -> Tuple:
     """
     assert sign in {"dcs", "cf"}
     if sign == "dcs":
-        return 0.06, -0.00645
+        return -0.02, 0.0
 
-    return 0.004, -0.001
+    return -0.016, -0.0002
 
 
 def signal_param_guess(time_bin: int = 5) -> Tuple:

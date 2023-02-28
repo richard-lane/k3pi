@@ -325,7 +325,14 @@ class SimultaneousBinnedChi2:
         )
 
 
-def estimated_bkg(x: float, pdf: Callable, a_0: float, a_1: float, a_2: float) -> float:
+def estimated_bkg(
+    x: float,
+    pdf: Callable,
+    pdf_domain: Tuple[float, float],
+    a_0: float,
+    a_1: float,
+    a_2: float,
+) -> float:
     """
     Background model from estimated bkg
 
@@ -335,7 +342,7 @@ def estimated_bkg(x: float, pdf: Callable, a_0: float, a_1: float, a_2: float) -
 
     """
     # Find the integral of the PDF so we can scale
-    a, b = domain()
+    a, b = pdf_domain
     width = b - a
     integral = 1 + a_0 * width + a_1 * width**2 / 2 + a_2 * width**3 / 3
 
