@@ -4,6 +4,8 @@ Utilities for doing a toy study
 All generators use the whole domain
 
 """
+import sys
+import pathlib
 from typing import Callable, Tuple
 
 import numpy as np
@@ -11,27 +13,39 @@ import matplotlib.pyplot as plt
 
 from . import pdfs
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
+from lib_data import stats
 
-def _n_expected_normalised(
+
+def _n_expected(
     n_gen: int,
     domain: Tuple[float, float],
     pdf_range: Tuple[float, float],
+    fit_region_integral: float,
 ) -> float:
     """
-    The number of events we expect to accept, given a number generated
-    assuming the pdf is normalised
+    The number of events we expect to accept in the fit region,
+    given a number generated
 
     :param n_gen: number we're generating total
-    :param domain: (low, high) x
+    :param domain: (low, high) x for generating
     :param range: (low, high) y
+    :param fit_region_integral: the integral of the PDF in the fit region
 
     """
+    # Total number accepted in the fit region is
+    #   (n gen tot * n_gen in fit region * integral in fit region) / (height * fit region width)
+    # The width of the fit region cancels out here if we write
+    #   (n_gen in fit region) = (fit region width / domain width)
+    # Giving
+    #   (n gen tot * integral in fit region * fit region width) / (height * domain width)
     low, high = domain
     min_, max_ = pdf_range
 
-    total_area = (max_ - min_) * (high - low)
+    domain_width = high - low
+    range_height = max_ - min_
 
-    return n_gen / total_area
+    return n_gen * fit_region_integral / (domain_width * range_height)
 
 
 def _max(pdf: Callable) -> float:
@@ -129,7 +143,7 @@ def gen_sig(
     n_gen: int,
     sig_params: Tuple,
     *,
-    verbose: bool = True,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate points according to the signal model - quite slow and inefficient
@@ -201,31 +215,46 @@ def gen_alt_bkg(
     return points
 
 
-def n_expected_sig(n_gen: int, signal_params: Tuple):
+def n_expected_sig(n_gen: int, domain: Tuple[float, float], signal_params: Tuple):
     """
     The average number we would expect to accept given the
     signal parameters
 
     """
-    domain = pdfs.domain()
+    # Find the integral of the PDF in domain
+    # The PDF is normalised along the whole of pdfs.domain()
+    pts = np.linspace(*domain, 100_000)
+    integral = stats.integral(
+        pts, pdfs.normalised_signal(pts, *signal_params, pdfs.domain())
+    )
 
-    return _n_expected_normalised(
+    return _n_expected(
         n_gen,
         domain,
-        (0.0, _max(lambda pts: pdfs.normalised_signal(pts, *signal_params, domain))),
+        (
+            0.0,
+            _max(
+                lambda pts: pdfs.normalised_signal(pts, *signal_params, pdfs.domain())
+            ),
+        ),
+        integral,
     )
 
 
-def n_expected_bkg(n_gen: int, bkg_params: Tuple):
+def n_expected_bkg(n_gen: int, domain: Tuple[float, float], bkg_params: Tuple):
     """
     The average number we would expect to accept given the
     bkg parameters
 
     """
-    domain = pdfs.domain()
+    # Find the integral of the PDF in domain
+    # The PDF is normalised along the whole of pdfs.domain()
+    pts = np.linspace(*domain, 100_000)
+    integral = stats.integral(pts, pdfs.normalised_bkg(pts, *bkg_params, pdfs.domain()))
 
-    return _n_expected_normalised(
+    return _n_expected(
         n_gen,
         domain,
-        (0.0, _max(lambda pts: pdfs.normalised_bkg(pts, *bkg_params, domain))),
+        (0.0, _max(lambda pts: pdfs.normalised_bkg(pts, *bkg_params, pdfs.domain()))),
+        integral,
     )

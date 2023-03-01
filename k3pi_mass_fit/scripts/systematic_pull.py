@@ -95,12 +95,14 @@ def _bkg(
     return counts
 
 
-def _n_bkg_expected(n_gen: int, sign: str) -> float:
+def _n_bkg_expected(n_gen: int, fit_region: Tuple[float, float], sign: str) -> float:
     """
     The number of bkg events we expect to accept, given a number generated
 
     """
-    return toy_utils.n_expected_bkg(n_gen, mass_util.sqrt_bkg_param_guess(sign))
+    return toy_utils.n_expected_bkg(
+        n_gen, fit_region, mass_util.sqrt_bkg_param_guess(sign)
+    )
 
 
 def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.ndarray:
@@ -143,8 +145,8 @@ def _pull_study(
     ws_n_bkg_gen = 45_000
 
     # Find the expected number of bkg events from the acceptance area / generating area
-    rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen, "cf")
-    ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen, "dcs")
+    rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen, fit_range, "cf")
+    ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen, fit_range, "dcs")
 
     n_experiments = 3
     # want to track n_sig and n_bkg for both RS and WS

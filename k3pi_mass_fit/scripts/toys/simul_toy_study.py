@@ -107,11 +107,11 @@ def _pull(
     rs_combined = _gen(rng, rs_n_sig, n_bkg, "cf")
     ws_combined = _gen(rng, ws_n_sig, n_bkg, "dcs")
 
-    rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, _sig_params())
-    rs_bkg_expected = toy_utils.n_expected_bkg(n_bkg, _bkg_params("cf"))
+    rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, fit_range, _sig_params())
+    rs_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("cf"))
 
-    ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, _sig_params())
-    ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, _bkg_params("dcs"))
+    ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, fit_range, _sig_params())
+    ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("dcs"))
 
     true_params = np.array(
         (
@@ -142,7 +142,6 @@ def _pull(
 
     fit_params = fitter.values
     fit_errs = fitter.errors
-    print(f"{fit_params[3]:.2f}, {fit_errs[3]:.2f}")
 
     if not out_dict:
         # If the output dict is empty, this is the first pseudoexperiment
@@ -156,11 +155,6 @@ def _pull(
         out_dict["labels"] = fitter.parameters
 
     pull = (true_params - fit_params) / fit_errs
-
-    if abs(pull[0]) > 20:
-        print(fitter)
-        # Just raise
-        raise InvalidFitError(f"{pull[0]=}")
 
     return pull
 
@@ -282,8 +276,6 @@ def _do_pull_study():
 
     """
     time_bin = 5
-    # NB these are the total number generated BEFORE we do the accept reject
-    # The bkg acc-rej is MUCH more efficient than the signal!
     fit_range = pdfs.reduced_domain()
 
     manager = Manager()
@@ -296,7 +288,7 @@ def _do_pull_study():
     )
 
     n_procs = 6
-    n_experiments = 50
+    n_experiments = 5
     procs = [
         Process(
             target=_pull_study,

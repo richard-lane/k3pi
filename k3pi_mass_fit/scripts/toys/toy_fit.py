@@ -17,11 +17,15 @@ from libFit import pdfs, fit, toy_utils, plotting, definitions, util
 from lib_data import stats
 
 
-def _gen() -> Tuple[np.ndarray, Tuple]:
+def _gen(domain: Tuple[float, float]) -> Tuple[np.ndarray, Tuple]:
     """
     Generate points
 
     returns the points and a best guess at the params
+
+    Generates points along all of pdfs.domain(),
+    but returns the expected amount in the region given by
+    the domain parameter
 
     """
     sign, time_bin = "cf", 5
@@ -38,8 +42,8 @@ def _gen() -> Tuple[np.ndarray, Tuple]:
     bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, bkg_params, verbose=True)
 
     # Number we expect to generate
-    n_sig = toy_utils.n_expected_sig(n_sig, sig_params)
-    n_bkg = toy_utils.n_expected_bkg(n_bkg, bkg_params)
+    n_sig = toy_utils.n_expected_sig(n_sig, domain, sig_params)
+    n_bkg = toy_utils.n_expected_bkg(n_bkg, domain, bkg_params)
 
     return np.concatenate((sig, bkg)), (n_sig, n_bkg, *sig_params, *bkg_params)
 
@@ -49,11 +53,11 @@ def main():
     just do 1 fit
 
     """
-    combined, initial_guess = _gen()
-
     # Perform fits to the restricted range
     fit_low, _ = pdfs.reduced_domain()
     gen_low, gen_high = pdfs.domain()
+
+    combined, initial_guess = _gen((fit_low, gen_high))
 
     n_underflow = 3
     bins = definitions.nonuniform_mass_bins(
