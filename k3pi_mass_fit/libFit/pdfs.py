@@ -360,6 +360,7 @@ def model_alt_bkg(
     alpha_r: float,
     beta: float,
     bkg_pdf: Callable,
+    pdf_domain: Tuple,
     a_0: float,
     a_1: float,
     a_2: float,
@@ -369,16 +370,16 @@ def model_alt_bkg(
     with the alternate background model
 
     """
-    raise NotImplementedError
-    # return n_sig * normalised_signal(
-    #     x,
-    #     centre,
-    #     width_l,
-    #     width_r,
-    #     alpha_l,
-    #     alpha_r,
-    #     beta,
-    # ) + n_bkg * estimated_bkg(x, bkg_pdf, a_0, a_1, a_2)
+    return n_sig * normalised_signal(
+        x,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        pdf_domain,
+    ) + n_bkg * estimated_bkg(x, bkg_pdf, pdf_domain, a_0, a_1, a_2)
 
 
 class AltBkgBinnedChi2:
@@ -426,6 +427,7 @@ class AltBkgBinnedChi2:
         self.centres = (bins[1:] + bins[:-1]) / 2
         self.widths = bins[1:] - bins[:-1]
         self.pdf = bkg_pdf
+        self.domain = bins[0], bins[-1]
 
     def __call__(
         self,
@@ -460,6 +462,7 @@ class AltBkgBinnedChi2:
             alpha_r,
             beta,
             self.pdf,
+            self.domain,
             a_0,
             a_1,
             a_2,

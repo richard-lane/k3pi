@@ -67,7 +67,10 @@ def main():
 
     # Change colour cycle to have enough colours
     fig, axes = plt.subplots(1, 2)
+
+    # pylint: disable-next=no-member
     colours = list(plt.cm.tab10(np.arange(10))) + ["plum", "crimson"]
+
     for axis in axes:
         axis.set_prop_cycle("color", colours)
 

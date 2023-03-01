@@ -149,9 +149,10 @@ def alt_bkg_fit(
     bins: np.ndarray,
     fit_params: Tuple,
     *,
+    year: str,
+    magnetisation: str,
     sign: str,
     bdt_cut: bool,
-    efficiency: bool,
 ) -> None:
     """
     Plot the mass fit and pulls on an axis, using the alt bkg model
@@ -163,13 +164,15 @@ def alt_bkg_fit(
     :param errs: errors on the counts in each bin
     :param bins: mass bins
     :param fit_params: fit parameters; (sig frac, bkg frac, other params)
-    :param: sign "cf" or "dcs", for finding the right estimated bkg pickle
-    :param: bdt_cut for finding the right estimated bkg pickle
-    :param: efficiency for finding the right estimated bkg pickle
+    :param year: for finding the estimated bkg
+    :param magnetisation: for finding the estimated bkg
+    :param sign: for finding the estimated bkg
+    :param bdt_cut: for finding the estimated bkg
 
     """
     centres = (bins[1:] + bins[:-1]) / 2
     bin_widths = bins[1:] - bins[:-1]
+    domain = bins[0], bins[-1]
 
     # Plot histogram
     err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
@@ -180,17 +183,15 @@ def alt_bkg_fit(
         **err_kw,
     )
 
-    bkg_pdf = bkg.pdf(100, sign=sign, bdt_cut=bdt_cut, efficiency=efficiency)
-    params = (*fit_params[:8], bkg_pdf, *fit_params[8:])
+    bkg_pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
+    params = (*fit_params[:8], bkg_pdf, domain, *fit_params[8:])
     predicted = bin_widths * pdfs.model_alt_bkg(centres, *params)
 
     predicted_signal = fit_params[0] * stats.areas(
-        bins, pdfs.normalised_signal(bins, *fit_params[2:-3])
+        bins, pdfs.normalised_signal(bins, *fit_params[2:8])
     )
     predicted_bkg = (
-        fit_params[1]
-        * bin_widths
-        * pdfs.estimated_bkg(centres, bkg_pdf, *fit_params[-3:])
+        fit_params[1] * bin_widths * pdfs.estimated_bkg(centres, *fit_params[-5:])
     )
 
     axes[0].plot(centres, predicted)
@@ -224,8 +225,9 @@ def alt_bkg_simul(
     bins: np.ndarray,
     fit_params: Tuple,
     *,
+    year: str,
+    magnetisation: str,
     bdt_cut: bool,
-    efficiency: bool,
 ) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
     """
     Plot a simultaneous RS and WS fit on four Axes - two histograms
@@ -237,6 +239,10 @@ def alt_bkg_simul(
     :param ws_errs: errors on the counts in each bin
     :param bins: mass bins
     :param fit_params: fit parameters as returned by the simultaneous fitter
+
+    :param year: for finding the right dump
+    :param magnetisation: for finding the right dump
+    :param bdt_cut: for finding the right dump
 
     :returns: the figure
     :returns: a dict of A/B/C/D and the plot axes
@@ -254,9 +260,10 @@ def alt_bkg_simul(
         rs_errs,
         bins,
         rs_params,
+        year=year,
+        magnetisation=magnetisation,
         sign="cf",
         bdt_cut=bdt_cut,
-        efficiency=efficiency,
     )
     alt_bkg_fit(
         (axes["B"], axes["D"]),
@@ -264,9 +271,10 @@ def alt_bkg_simul(
         ws_errs,
         bins,
         ws_params,
+        year=year,
+        magnetisation=magnetisation,
         sign="dcs",
         bdt_cut=bdt_cut,
-        efficiency=efficiency,
     )
 
     axes["A"].legend()

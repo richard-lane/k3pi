@@ -74,29 +74,6 @@ def get_counts(
     )
 
 
-def create_dump(
-    counts: np.ndarray,
-    errors: np.ndarray,
-    n_bins: int,
-    sign: str,
-    *,
-    bdt_cut: bool,
-    efficiency: bool,
-) -> None:
-    """
-    Create an array of estimated background counts from a pickle dump
-
-    """
-    assert len(counts) == n_bins
-    assert len(counts) == len(errors)
-
-    path = dump_path(n_bins, sign, bdt_cut=bdt_cut, efficiency=efficiency)
-
-    with open(path, "wb") as bkg_f:
-        print(f"dumping {path}")
-        pickle.dump((counts, errors), bkg_f)
-
-
 def pdf(
     bins: np.ndarray, year: str, magnetisation: str, sign: str, *, bdt_cut: bool
 ) -> Callable:
@@ -121,6 +98,8 @@ def pdf(
 
     # Get the histogram
     counts, _ = get_counts(year, magnetisation, sign, extended_bins, bdt_cut=bdt_cut)
+
+    assert np.sum(counts), "Empty histogram - have you created the dump?"
 
     print(f"{counts[0]} underflow (<{bins[0]}); {counts[-1]} overflow (>{bins[-1]})")
 

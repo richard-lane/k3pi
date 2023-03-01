@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 
-from libFit import pdfs, definitions, util, bkg
+from libFit import pdfs, util, bkg
 
 
 def _bkg(
@@ -26,6 +26,10 @@ def _bkg(
     """
     Background evaluated at some points
 
+    Returns params if sqrt bkg
+
+    Returns full range PDF, domain and params if alt bkg
+
     """
     if not alt_bkg:
         bkg_params = util.sqrt_bkg_param_guess("cf")
@@ -35,19 +39,20 @@ def _bkg(
             bkg_params,
         )
 
-    # TODO plot the actual pdf
     bins = np.linspace(*pdfs.domain(), 100)
     bins2 = np.linspace(*pdfs.reduced_domain(), 100)
 
     pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
     pdf2 = bkg.pdf(bins2, year, magnetisation, sign, bdt_cut=bdt_cut)
 
-    vals = pdf(points)
-    vals2 = pdf2(points2)
+    bkg_params = (pdf, pdfs.domain(), 0, 0, 0)
+    bkg_params2 = (pdf2, pdfs.reduced_domain(), 0, 0, 0)
 
-    return vals, vals2, None
-
-    return pdfs.estimated_bkg(points, *bkg_params), bkg_params
+    return (
+        pdfs.estimated_bkg(points, *bkg_params),
+        pdfs.estimated_bkg(points2, *bkg_params2),
+        bkg_params,
+    )
 
 
 def _pdf(points: np.ndarray, alt_bkg: bool, params: Tuple) -> np.ndarray:
@@ -61,8 +66,7 @@ def _pdf(points: np.ndarray, alt_bkg: bool, params: Tuple) -> np.ndarray:
     if not alt_bkg:
         return pdfs.model(points, n_sig, n_bkg, *params, pdfs.domain())
 
-    # TODO the actual PDF
-    return np.zeros_like(points)
+    return pdfs.model_alt_bkg(points, n_sig, n_bkg, *params)
 
 
 def main(
@@ -113,13 +117,9 @@ def main(
         pdfs.reduced_domain(),
     )
 
-    bkg, reduced_bkg, bkg_params = _bkg(
+    full_bkg, reduced_bkg, bkg_params = _bkg(
         centres, reduced_centres, alt_bkg, year, sign, magnetisation, bdt_cut
     )
-
-    # TODO tmp hack while _bkg doesnt return actual alt bkg params
-    if alt_bkg:
-        bkg_params = []
 
     pdf = _pdf(
         centres,
@@ -127,16 +127,18 @@ def main(
         (centre, width_l, width_r, alpha_l, alpha_r, beta, *bkg_params),
     )
 
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    fig, axis = plt.subplots(1, 2, figsize=(10, 5))
 
-    ax[0].plot(centres, sig, color="b", label="full")
-    ax[0].plot(centres, bkg, color="b")
+    axis[0].plot(centres, sig, color="b", label="full")
+    axis[0].plot(centres, full_bkg, color="b")
 
-    ax[0].plot(reduced_centres, reduced_sig, linestyle="--", color="r", label="reduced")
-    ax[0].plot(reduced_centres, reduced_bkg, linestyle="--", color="r")
-    ax[0].legend()
+    axis[0].plot(
+        reduced_centres, reduced_sig, linestyle="--", color="r", label="reduced"
+    )
+    axis[0].plot(reduced_centres, reduced_bkg, linestyle="--", color="r")
+    axis[0].legend()
 
-    ax[1].plot(centres, pdf)
+    axis[1].plot(centres, pdf)
 
     title = "Alternative Bkg" if alt_bkg else "Signal + Bkg"
     fig.suptitle(title)

@@ -4,35 +4,57 @@ Get a background PDF from a pickle dump
 """
 import sys
 import pathlib
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
 from libFit import pdfs, bkg
-from lib_data import stats
 
 
-def main():
+def main(*, year: str, magnetisation: str, bdt_cut: bool):
     """
     Get the pdf, plot points
 
     """
-    n_bins = 100
-    dcs_pdf = bkg.pdf(n_bins, "dcs", bdt_cut=False, efficiency=False)
-    cf_pdf = bkg.pdf(n_bins, "cf", bdt_cut=False, efficiency=False)
+    domain = (pdfs.domain()[0], 160.0)
+    bins = np.linspace(*domain, 250)
 
-    points = np.linspace(*pdfs.domain(), 10000)[1:-1]
+    dcs_pdf = bkg.pdf(bins, year, magnetisation, "dcs", bdt_cut=bdt_cut)
+    cf_pdf = bkg.pdf(bins, year, magnetisation, "cf", bdt_cut=bdt_cut)
 
-    plt.plot(
-        points, pdfs.estimated_bkg(points, dcs_pdf, 0.01, 0.0002, 0.0001), label="DCS"
-    )
-    plt.plot(points, pdfs.estimated_bkg(points, cf_pdf, 0, 0, 0), label="CF")
-    plt.legend()
+    points = bins[1:-1]
 
-    plt.show()
+    params = (0, 0, 0)
+    fig, axis = plt.subplots()
+
+    axis.plot(points, pdfs.estimated_bkg(points, dcs_pdf, domain, *params), label="WS")
+    axis.plot(points, pdfs.estimated_bkg(points, cf_pdf, domain, *params), label="RS")
+
+    axis.legend()
+    axis.set_xlabel(r"$\Delta M$")
+    axis.set_title(f"Estimated BKG pdf, {params=}")
+
+    path = f"estimated_bkg_{year}_{magnetisation}_{bdt_cut=}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Plot pheno bkgs")
+    parser.add_argument(
+        "year",
+        type=str,
+        choices={"2018"},
+        help="Data taking year.",
+    )
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown"},
+        help="magnetisation direction",
+    )
+    parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")
+
+    main(**vars(parser.parse_args()))

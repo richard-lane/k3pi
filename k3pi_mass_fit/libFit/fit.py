@@ -6,7 +6,7 @@ from typing import Tuple
 import numpy as np
 from iminuit import Minuit
 
-from . import pdfs, bkg, util
+from . import pdfs, bkg
 
 
 def binned_fit(
@@ -140,8 +140,7 @@ def binned_simultaneous_fit(
 
     n_rs = np.sum(rs_counts)
     n_ws = np.sum(ws_counts)
-    rs_frac_guess, ws_frac_guess = 0.95, 0.05
-    m = Minuit(
+    fitter = Minuit(
         chi2,
         rs_n_sig=n_rs_sig,
         rs_n_bkg=n_rs_bkg,
@@ -158,72 +157,80 @@ def binned_simultaneous_fit(
         ws_a=ws_a,
         ws_b=ws_b,
     )
-    m.limits["rs_n_sig"] = (0.0, n_rs)
-    m.limits["ws_n_sig"] = (0.0, n_ws)
-    m.limits["rs_n_bkg"] = (0.0, n_rs)
-    m.limits["ws_n_bkg"] = (0.0, n_ws)
-    m.limits["centre"] = (144.0, 147.0)
-    m.limits["width_l"] = (0.1, 1.0)
-    m.limits["width_r"] = (0.1, 1.0)
-    m.limits["alpha_l"] = (0.0, 2.0)
-    m.limits["alpha_r"] = (0.0, 2.0)
+    fitter.limits["rs_n_sig"] = (0.0, n_rs)
+    fitter.limits["ws_n_sig"] = (0.0, n_ws)
+    fitter.limits["rs_n_bkg"] = (0.0, n_rs)
+    fitter.limits["ws_n_bkg"] = (0.0, n_ws)
+    fitter.limits["centre"] = (144.0, 147.0)
+    fitter.limits["width_l"] = (0.1, 1.0)
+    fitter.limits["width_r"] = (0.1, 1.0)
+    fitter.limits["alpha_l"] = (0.0, 2.0)
+    fitter.limits["alpha_r"] = (0.0, 2.0)
 
-    m.fixed["beta"] = True
+    fitter.fixed["beta"] = True
 
-    m.migrad(ncall=5000)
+    fitter.migrad(ncall=5000)
 
-    m.hesse()
+    fitter.hesse()
 
-    return m
+    return fitter
 
 
 def alt_bkg_fit(
     counts: np.ndarray,
     bins: np.ndarray,
+    year: str,
+    magnetisation: str,
     sign: str,
-    time_bin: int,
-    signal_frac_guess: float,
+    initial_guess: Tuple,
     *,
     errors: np.ndarray = None,
     bdt_cut: bool = False,
-    efficiency: bool = False,
 ) -> Minuit:
     """
     Perform a binned fit with the alternate bkg, return the fitter
 
     :param counts: array of D* - D0 mass differences
     :param bins: delta M binning used for the fit
+    :param year: data taking year
+    :param magnetisation: magnetisation direction
     :param sign: either "cf" or "dcs"
-    :param time_bin: which time bin we're performing the fit in; this determines the value of beta
-    :param signal_frac_guess: initial guess at the signal fraction
-    :param errors: optional errors. If not provided Poisson errors assumed
+    :param initial_guess:  initial guess at the parameters
+
     :param bdt_cut: whether to model the background after the BDT cut
-    :param efficiency: whether to model the background after the efficiency correction
+    :param errors: optional errors. If not provided Poisson errors assumed
 
     :returns: fitter after performing the fit
 
     """
-    raise NotImplementedError
-    assert sign in {"cf", "dcs"}
     assert len(counts) == len(bins) - 1
     if (errors is not None) and (len(errors) != len(counts)):
         raise ValueError(f"{len(errors)=}\t{len(counts)=}")
 
-    centre, width_l, width_r, alpha_l, alpha_r, beta = util.signal_param_guess(time_bin)
-    width_r, alpha_r = width_l, alpha_l
-
-    a_0, a_1, a_2 = 0.0, 0.0, 0.0
-
     # Get the bkg pdf from a pickle dump
-    bkg_pdf = bkg.pdf(len(counts), sign, bdt_cut=bdt_cut, efficiency=efficiency)
+    bkg_pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
 
     chi2 = pdfs.AltBkgBinnedChi2(bkg_pdf, counts, bins, errors)
 
+    (
+        n_sig,
+        n_bkg,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        a_0,
+        a_1,
+        a_2,
+    ) = initial_guess
+
     n_tot = np.sum(counts)
-    m = Minuit(
+    fitter = Minuit(
         chi2,
-        n_sig=signal_frac_guess * n_tot,
-        n_bkg=(1 - signal_frac_guess) * n_tot,
+        n_sig=n_sig,
+        n_bkg=n_bkg,
         centre=centre,
         width_l=width_l,
         width_r=width_r,
@@ -234,7 +241,7 @@ def alt_bkg_fit(
         a_1=a_1,
         a_2=a_2,
     )
-    m.limits = (
+    fitter.limits = (
         (0, n_tot),  # N sig
         (0, n_tot),  # N bkg
         (144.0, 147.0),  # Centre
@@ -248,23 +255,24 @@ def alt_bkg_fit(
         (None, None),  # Background a2
     )
 
-    m.fixed["beta"] = True
+    fitter.fixed["beta"] = True
 
-    m.migrad()
+    fitter.migrad()
 
-    return m
+    return fitter
 
 
 def alt_simultaneous_fit(
     rs_counts: np.ndarray,
     ws_counts: np.ndarray,
     bins: np.ndarray,
-    time_bin: int,
+    year: str,
+    magnetisation: str,
+    initial_guess: Tuple,
+    *,
     rs_errors: np.ndarray = None,
     ws_errors: np.ndarray = None,
-    *,
     bdt_cut: bool = False,
-    efficiency: bool = False,
 ) -> Minuit:
     """
     Perform the fit, return the fitter
@@ -279,17 +287,31 @@ def alt_simultaneous_fit(
     :returns: fitter after performing the fit
 
     """
-    raise NotImplementedError
     assert len(rs_counts) == len(ws_counts)
     assert len(bins) - 1 == len(ws_counts)
 
-    centre, width_l, width_r, alpha_l, alpha_r, beta = util.signal_param_guess(time_bin)
-    width_r, alpha_r = width_l, alpha_l
+    (
+        rs_n_sig,
+        rs_n_bkg,
+        ws_n_sig,
+        ws_n_bkg,
+        centre,
+        width_l,
+        width_r,
+        alpha_l,
+        alpha_r,
+        beta,
+        rs_a0,
+        rs_a1,
+        rs_a2,
+        ws_a0,
+        ws_a1,
+        ws_a2,
+    ) = initial_guess
 
-    a_0, a_1, a_2 = 0.0, 0.0, 0.0
-    # Get the bkg pdf from a pickle dump
-    cf_bkg = bkg.pdf(len(rs_counts), "cf", bdt_cut=bdt_cut, efficiency=efficiency)
-    dcs_bkg = bkg.pdf(len(rs_counts), "dcs", bdt_cut=bdt_cut, efficiency=efficiency)
+    # Get the bkg pdfs from a pickle dump
+    cf_bkg = bkg.pdf(bins, year, "cf", magnetisation, bdt_cut=bdt_cut)
+    dcs_bkg = bkg.pdf(bins, year, "dcs", magnetisation, bdt_cut=bdt_cut)
 
     chi2 = pdfs.SimulAltBkg(
         cf_bkg, dcs_bkg, rs_counts, ws_counts, bins, rs_errors, ws_errors
@@ -297,43 +319,42 @@ def alt_simultaneous_fit(
 
     n_rs = np.sum(rs_counts)
     n_ws = np.sum(ws_counts)
-    rs_frac_guess, ws_frac_guess = 0.95, 0.05
-    m = Minuit(
+    fitter = Minuit(
         chi2,
-        rs_n_sig=n_rs * rs_frac_guess,
-        rs_n_bkg=n_rs * (1 - rs_frac_guess),
-        ws_n_sig=n_ws * ws_frac_guess,
-        ws_n_bkg=n_ws * (1 - ws_frac_guess),
+        rs_n_sig=rs_n_sig,
+        rs_n_bkg=rs_n_bkg,
+        ws_n_sig=ws_n_sig,
+        ws_n_bkg=ws_n_bkg,
         centre=centre,
         width_l=width_l,
         width_r=width_r,
         alpha_l=alpha_l,
         alpha_r=alpha_r,
         beta=beta,
-        rs_a_0=a_0,
-        rs_a_1=a_1,
-        rs_a_2=a_2,
-        ws_a_0=a_0,
-        ws_a_1=a_1,
-        ws_a_2=a_2,
+        rs_a_0=rs_a0,
+        rs_a_1=rs_a1,
+        rs_a_2=rs_a2,
+        ws_a_0=ws_a0,
+        ws_a_1=ws_a1,
+        ws_a_2=ws_a2,
     )
-    m.limits["rs_n_sig"] = (0, n_rs)
-    m.limits["ws_n_sig"] = (0, n_ws)
-    m.limits["rs_n_bkg"] = (0.0, n_rs)
-    m.limits["ws_n_bkg"] = (0.0, n_ws)
-    m.limits["centre"] = (144.0, 147.0)
-    m.limits["width_l"] = (0.1, 1.0)
-    m.limits["width_r"] = (0.1, 1.0)
-    m.limits["alpha_l"] = (0.0, 2.0)
-    m.limits["alpha_r"] = (0.0, 2.0)
+    fitter.limits["rs_n_sig"] = (0, n_rs)
+    fitter.limits["ws_n_sig"] = (0, n_ws)
+    fitter.limits["rs_n_bkg"] = (0.0, n_rs)
+    fitter.limits["ws_n_bkg"] = (0.0, n_ws)
+    fitter.limits["centre"] = (144.0, 147.0)
+    fitter.limits["width_l"] = (0.1, 1.0)
+    fitter.limits["width_r"] = (0.1, 1.0)
+    fitter.limits["alpha_l"] = (0.0, 2.0)
+    fitter.limits["alpha_r"] = (0.0, 2.0)
 
-    m.fixed["beta"] = True
+    fitter.fixed["beta"] = True
 
-    m.migrad(ncall=5000)
+    fitter.migrad(ncall=5000)
 
-    if m.valid:
-        m.minos()
+    if fitter.valid:
+        fitter.minos()
     else:
-        print(m)
+        print(fitter)
 
-    return m
+    return fitter
