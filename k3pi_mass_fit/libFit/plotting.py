@@ -147,6 +147,7 @@ def alt_bkg_fit(
     counts: np.ndarray,
     errs: np.ndarray,
     bins: np.ndarray,
+    fit_range: Tuple[float, float],
     fit_params: Tuple,
     *,
     year: str,
@@ -174,45 +175,76 @@ def alt_bkg_fit(
     bin_widths = bins[1:] - bins[:-1]
     domain = bins[0], bins[-1]
 
+    # Which points are in the fit region
+    # Assumes the fit range covers all the points but the lowest
+    # ones
+    fit = centres > fit_range[0]
+
     # Plot histogram
     err_kw = {"fmt": "k.", "elinewidth": 0.5, "markersize": 1.0}
     axes[0].errorbar(
         centres,
-        counts,
-        yerr=errs,
+        counts / bin_widths,
+        xerr=bin_widths / 2,  # plt uses the half width
+        yerr=errs / bin_widths,
         **err_kw,
     )
 
     bkg_pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
     params = (*fit_params[:8], bkg_pdf, domain, *fit_params[8:])
-    predicted = bin_widths * pdfs.model_alt_bkg(centres, *params)
+    predicted = bin_widths * pdfs.model_alt_bkg(centres, *params) / bin_widths
 
-    predicted_signal = fit_params[0] * stats.areas(
-        bins, pdfs.normalised_signal(bins, *fit_params[2:8])
+    predicted_signal = (
+        fit_params[0]
+        * stats.areas(bins, pdfs.normalised_signal(bins, *fit_params[2:8], fit_range))
+        / bin_widths
     )
     predicted_bkg = (
-        fit_params[1] * bin_widths * pdfs.estimated_bkg(centres, *fit_params[-5:])
+        fit_params[1]
+        * bin_widths
+        * pdfs.estimated_bkg(centres, bkg_pdf, fit_range, *params[-3:])
+        / bin_widths
     )
 
-    axes[0].plot(centres, predicted)
+    # Plot in the whole region
+    axes[0].plot(centres, predicted, color="blue", linestyle="--")
     axes[0].plot(
         centres,
         predicted_signal,
         label="signal",
+        color="orange",
+        linestyle="--",
     )
     axes[0].plot(
         centres,
         predicted_bkg,
         label="bkg",
+        color="green",
+        linestyle="--",
+    )
+
+    # Plot in the fit region
+    axes[0].plot(centres[fit], predicted[fit], color="blue")
+    axes[0].plot(
+        centres[fit],
+        predicted_signal[fit],
+        label="signal",
+        color="orange",
+    )
+    axes[0].plot(
+        centres[fit],
+        predicted_bkg[fit],
+        label="bkg",
+        color="green",
     )
 
     # Plot pull
-    diff = counts - predicted
+    diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
     axes[1].plot(pdfs.domain(), [1, 1], "r-")
     axes[1].errorbar(
-        centres,
-        diff,
-        yerr=errs,
+        centres[fit],
+        diff[fit],
+        yerr=1.0,
         **err_kw,
     )
 
@@ -223,6 +255,7 @@ def alt_bkg_simul(
     ws_counts: np.ndarray,
     ws_errs: np.ndarray,
     bins: np.ndarray,
+    fit_range: Tuple[float, float],
     fit_params: Tuple,
     *,
     year: str,
@@ -259,6 +292,7 @@ def alt_bkg_simul(
         rs_counts,
         rs_errs,
         bins,
+        fit_range,
         rs_params,
         year=year,
         magnetisation=magnetisation,
@@ -270,6 +304,7 @@ def alt_bkg_simul(
         ws_counts,
         ws_errs,
         bins,
+        fit_range,
         ws_params,
         year=year,
         magnetisation=magnetisation,

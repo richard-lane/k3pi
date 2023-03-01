@@ -67,15 +67,21 @@ def main():
     counts, errs = stats.counts(combined, bins)
 
     # We don't want to fit to the stuff in the underflow bins
-    binned_fitter = fit.binned_fit(
+    sqrt_fitter = fit.binned_fit(
         counts[n_underflow:],
         bins[n_underflow:],
         initial_guess,
         (fit_low, gen_high),  # Fit to reduced region
     )
-
-    print("initial guess:", initial_guess)
-    print("fit vals:", binned_fitter.values)
+    alt_bkg_fitter = fit.alt_bkg_fit(
+        counts[n_underflow:],
+        bins[n_underflow:],
+        "2018",
+        "magdown",
+        "dcs",
+        (*initial_guess[:8], 0, 0, 0),
+        bdt_cut=False,
+    )
 
     fig, axes = plt.subplot_mosaic(
         "AAABBB\nAAABBB\nAAABBB\nCCCDDD", figsize=(18, 12), sharex=True
@@ -86,10 +92,22 @@ def main():
         errs,
         bins,
         (fit_low, gen_high),
-        binned_fitter.values,
+        sqrt_fitter.values,
+    )
+    plotting.alt_bkg_fit(
+        (axes["B"], axes["D"]),
+        counts,
+        errs,
+        bins,
+        (fit_low, gen_high),
+        alt_bkg_fitter.values,
+        year="2018",
+        magnetisation="magdown",
+        sign="dcs",
+        bdt_cut=False,
     )
 
-    axes["B"].set_title("Alt bkg fit removed")
+    axes["B"].set_title("Alt bkg fit")
 
     axes["A"].set_title("Sqrt bkg fit")
 
@@ -100,6 +118,8 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Toy fit; sqrt model only for now")
+    parser = argparse.ArgumentParser(
+        description="Toy fits with the sqrt and alt bkg. Generates with the sqrt bkg"
+    )
 
     main(**vars(parser.parse_args()))

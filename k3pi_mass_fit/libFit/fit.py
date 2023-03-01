@@ -184,8 +184,8 @@ def alt_bkg_fit(
     sign: str,
     initial_guess: Tuple,
     *,
+    bdt_cut: bool,
     errors: np.ndarray = None,
-    bdt_cut: bool = False,
 ) -> Minuit:
     """
     Perform a binned fit with the alternate bkg, return the fitter
