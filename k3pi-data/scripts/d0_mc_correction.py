@@ -61,7 +61,7 @@ def _massfit(
     return fitter.values, mass_bins, fit_range, counts
 
 
-def _sweights(
+def _sweight_fcn(
     year: str, magnetisation: str
 ) -> Tuple[Callable, plt.Figure, Iterable[plt.Axes]]:
     """
@@ -98,6 +98,19 @@ def _sweights(
     return sweight_fcn, fig, axes
 
 
+def _sweight_gen(
+    sweight_fcn: Callable, year: str, magnetisation: str
+) -> Iterable[np.ndarray]:
+    """
+    Get a generator of sWeights for the CF dataframes
+
+    """
+    return (
+        sweight_fcn(mass_util.delta_m(dataframe))
+        for dataframe in get.data(year, "cf", magnetisation)
+    )
+
+
 def main(*, year: str, magnetisation: str):
     """
     Get particle gun, MC and data dataframes
@@ -106,14 +119,19 @@ def main(*, year: str, magnetisation: str):
 
     """
     # Do + plot mass fit, find sWeighting fcn
-    sweight_fcn, fig, axes = _sweights(year, magnetisation)
-    plt.show()
+    sweight_fcn, fig, axes = _sweight_fcn(year, magnetisation)
 
-    # Plot the sWeighted RS distributions + save the plot
+    # get a generator of sWeights for the CF dataframes
+    sweights = _sweight_gen(sweight_fcn, year, magnetisation)
 
-    # pgun_pts = d0_mc_corrections.d0_points(get.particle_gun(sign))
-    # mc_pts = d0_mc_corrections.d0_points(get.mc(year, sign, magnetisation))
-    # data_pts = d0_mc_corrections.d0_points(get.data(year, sign, magnetisation))
+    # Get the D0 eta and P points
+    pgun_pts = d0_mc_corrections.d0_points(get.particle_gun("cf"))
+    mc_pts = d0_mc_corrections.d0_points(get.mc(year, "cf", magnetisation))
+    data_pts = d0_mc_corrections.d0_points(get.data(year, "cf", magnetisation))
+
+    # Plot these, sweighted/otherwise on the figure
+
+    # Save the figure
 
     # Bins for plotting
     # The reweighter doesn't use these bins, it finds its own
