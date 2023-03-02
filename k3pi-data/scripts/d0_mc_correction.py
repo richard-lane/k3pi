@@ -154,13 +154,13 @@ def main(*, year: str, magnetisation: str):
     sweight_fcn, fig, axes = _sweight_fcn(year, magnetisation)
 
     # get a generator of sWeights for the CF dataframes
-    sweights = _sweight_gen(sweight_fcn, year, magnetisation)
+    sweights = np.concatenate(list(_sweight_gen(sweight_fcn, year, magnetisation)))
 
     # Get the D0 eta and P points
     data_pts = d0_mc_corrections.d0_points(get.data(year, "cf", magnetisation))
 
     # Plot these, sweighted/otherwise on the figure
-    _plot_d0_points((axes["C"], axes["D"]), data_pts, np.concatenate(list(sweights)))
+    _plot_d0_points((axes["C"], axes["D"]), data_pts, sweights)
 
     # Save the figure
     fig.suptitle(f"RS {year} {magnetisation} sWeight Mass Fit")
@@ -170,19 +170,18 @@ def main(*, year: str, magnetisation: str):
     fig.savefig(path)
     plt.close(fig)
 
-    # pgun_pts = d0_mc_corrections.d0_points(get.particle_gun("cf"))
-    # mc_pts = d0_mc_corrections.d0_points(get.mc(year, "cf", magnetisation))
-
     # Bins for plotting
     # The reweighter doesn't use these bins, it finds its own
     bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
 
     # Weight pgun -> data as a test
+    pgun_pts = d0_mc_corrections.d0_points(get.particle_gun("cf"))
     weighter = d0_mc_corrections.EtaPWeighter(
         data_pts,
         pgun_pts,
-        n_bins=100,
-        n_neighs=0.5,
+        target_wt=sweights,
+        n_bins=200,
+        n_neighs=2.0,
     )
 
     weighter.plot_distribution("target", bins, "d0_correction_data.png")
@@ -190,6 +189,7 @@ def main(*, year: str, magnetisation: str):
     weighter.plot_ratio(bins, "d0_correction_data_pgun_ratio.png")
 
     # Make plots showing the reweighting
+    mc_pts = d0_mc_corrections.d0_points(get.mc(year, "cf", magnetisation))
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     plot_kw = {"histtype": "step", "density": True}
     axes[0].hist(mc_pts[0], bins=bins[0], label="mc", **plot_kw)

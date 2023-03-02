@@ -41,8 +41,8 @@ class EtaPWeighter:
         self._target = target
         self._orig = original
 
-        self._target_wt = target
-        self._orig_wt = original
+        self._target_wt = target_wt
+        self._orig_wt = original_wt
 
         self._reweighter = BinsReweighter(**weighter_kw)
         self._reweighter.fit(
@@ -191,7 +191,7 @@ class EtaPWeighter:
             weights=self._target_wt,
         )
         orig_count_2d, _, _ = np.histogram2d(
-            *self._orig, bins=(eta_bins, p_bins), density=True, weghts=self._orig_wt
+            *self._orig, bins=(eta_bins, p_bins), density=True, weights=self._orig_wt
         )
         ratio_2d = orig_count_2d / target_count_2d
 
