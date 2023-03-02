@@ -10,6 +10,7 @@ import os
 import sys
 import pickle
 import pathlib
+import logging
 import argparse
 from typing import Iterable
 import numpy as np
@@ -54,6 +55,15 @@ def _create_dumps(
     # involve having to concatenate the arrays
     with tqdm(total=n_dfs * n_repeats) as pbar:
         for i, dataframe in enumerate(df_generator):
+            n_evts = len(dataframe)
+            n_rolls = min(n_evts - 1, n_repeats)
+
+            if n_rolls < n_repeats:
+                logging.warning(
+                    f"{n_repeats=} but {n_evts=} in this dataframe, rolling {n_evts-1} times instead",
+                    exc_info=UserWarning(),
+                )
+
             dump_path = str(dump_dir / f"{i}.pkl")
 
             # List to append delta M arrays to
@@ -67,7 +77,7 @@ def _create_dumps(
             d_mass = util.inv_mass(k, pi1, pi2, pi3)
 
             # Shuffle the slow pi momenta by 1, find the delta M, append to list
-            for _ in range(n_repeats):
+            for _ in range(n_evts - 1):
                 slowpi = np.roll(slowpi, 1, axis=1)
                 dst_mass = util.inv_mass(k, pi1, pi2, pi3, slowpi)
 
