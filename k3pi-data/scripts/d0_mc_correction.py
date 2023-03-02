@@ -9,6 +9,7 @@ import argparse
 from typing import Tuple, Callable, Iterable
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
@@ -21,8 +22,7 @@ from libFit import fit, pdfs, definitions, plotting, sweighting, util as mass_ut
 
 
 def _massfit(
-    year: str,
-    magnetisation: str,
+    dataframes: Iterable[pd.DataFrame],
     time_range: Tuple[float, float],
 ) -> Tuple[Tuple, np.ndarray, np.ndarray]:
     """
@@ -40,7 +40,7 @@ def _massfit(
     )
 
     counts, _ = mass_util.delta_m_counts(
-        cut_get.time_cut_dfs(year, magnetisation, "cf", bdt_cut=False, time_range=time_range),
+        dataframes,
         mass_bins,
     )
 
@@ -51,6 +51,7 @@ def _massfit(
         *mass_util.signal_param_guess(),
         *mass_util.sqrt_bkg_param_guess("cf"),
     )
+
     fitter = fit.binned_fit(
         counts[n_underflow:],
         mass_bins[n_underflow:],
@@ -85,8 +86,20 @@ def _sweights(
     )
 
     # Do the mass fit, get parameters and mass fit counts
+    fit_values, mass_bins, fit_range, counts = _massfit(cf_dataframes, time_range)
 
     # Plot the fit on Axes
+    fig, axes = plt.subplot_mosaic("AAACC\nAAACC\nAAADD\nBBBDD", figsize=(12, 12))
+    plotting.mass_fit(
+        (axes["A"], axes["B"]),
+        counts,
+        np.sqrt(counts),
+        mass_bins,
+        fit_range,
+        fit_values,
+    )
+
+    plt.show()
 
     # Find the sWeighting function
     # sweight_fcn = sweighting.signal_weight_fcn(params, pdf_domain)
@@ -101,15 +114,14 @@ def main(*, year: str, magnetisation: str):
     Plot and show them
 
     """
+    # Find sWeights
+    sweight_fcn, fig, axes = _sweights(year, magnetisation)
+
+    # Plot mass fit from sWeighting, the sWeighted RS distributions
+
     # pgun_pts = d0_mc_corrections.d0_points(get.particle_gun(sign))
     # mc_pts = d0_mc_corrections.d0_points(get.mc(year, sign, magnetisation))
     # data_pts = d0_mc_corrections.d0_points(get.data(year, sign, magnetisation))
-
-    # Find sWeights
-
-    # Plot mass fit from sWeighting, the sWeighted RS distributions
-    # and the RS/WS distributions (before sWeighting?) to show that they're
-    # the same
 
     # Bins for plotting
     # The reweighter doesn't use these bins, it finds its own
