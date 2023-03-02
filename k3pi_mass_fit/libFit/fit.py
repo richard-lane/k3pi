@@ -310,8 +310,8 @@ def alt_simultaneous_fit(
     ) = initial_guess
 
     # Get the bkg pdfs from a pickle dump
-    cf_bkg = bkg.pdf(bins, year, "cf", magnetisation, bdt_cut=bdt_cut)
-    dcs_bkg = bkg.pdf(bins, year, "dcs", magnetisation, bdt_cut=bdt_cut)
+    cf_bkg = bkg.pdf(bins, year, magnetisation, "cf", bdt_cut=bdt_cut)
+    dcs_bkg = bkg.pdf(bins, year, magnetisation, "dcs", bdt_cut=bdt_cut)
 
     chi2 = pdfs.SimulAltBkg(
         cf_bkg, dcs_bkg, rs_counts, ws_counts, bins, rs_errors, ws_errors

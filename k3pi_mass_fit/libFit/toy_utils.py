@@ -11,7 +11,7 @@ from typing import Callable, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-from . import pdfs
+from . import pdfs, bkg
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 from lib_data import stats
@@ -256,5 +256,53 @@ def n_expected_bkg(n_gen: int, domain: Tuple[float, float], bkg_params: Tuple):
         n_gen,
         domain,
         (0.0, _max(lambda pts: pdfs.normalised_bkg(pts, *bkg_params, pdfs.domain()))),
+        integral,
+    )
+
+
+def n_expected_alt_bkg(
+    n_gen: int,
+    domain: Tuple[float, float],
+    bkg_params: Tuple,
+    bins: np.ndarray,
+    year,
+    sign,
+    magnetisation,
+    *,
+    bdt_cut,
+):
+    """
+    The average number we would expect to accept given the
+    bkg parameters
+
+    :param n_gen: total number generated before acc-rej
+    :param domain: fit region
+    :param bkg_params: 3 params for bkg fit
+
+    :param bins: for finding the right pdf, should be defined over the whole generator domain
+    :param year: for finding the right pdf
+    :param sign: for finding the right pdf
+    :param magnetisation: for finding the right pdf
+    :param bdt_cut: for finding the right pdf
+
+    """
+    pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
+
+    # Find the integral of the PDF in domain
+    # The PDF is normalised along the whole of pdfs.domain()
+    pts = np.linspace(*domain, 1_000_000)[
+        :-1
+    ]  # Cut the last point off so we don't overflow
+    y_vals = pdfs.estimated_bkg(pts, pdf, pdfs.domain(), *bkg_params)
+
+    integral = stats.integral(pts, y_vals)
+
+    return _n_expected(
+        n_gen,
+        domain,
+        (
+            0.0,
+            _max(lambda pts: pdfs.estimated_bkg(pts, pdf, pdfs.domain(), *bkg_params)),
+        ),
         integral,
     )
