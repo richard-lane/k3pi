@@ -12,10 +12,55 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "lib_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 
 from lib_data import get, d0_mc_corrections
 from lib_cuts import get as cut_get
+from libFit import fit, pdfs, definitions, plotting, sweighting, util as mass_util
+
+
+def _massfit(
+    year: str,
+    magnetisation: str,
+    time_range: Tuple[float, float],
+) -> Tuple[Tuple, np.ndarray, np.ndarray]:
+    """
+    Perform a massfit to CF dataframes without BDT cut
+
+    Returns params, bins, fit range, counts
+
+    """
+    low, high = pdfs.domain()
+    fit_range = pdfs.reduced_domain()
+
+    n_underflow = 3
+    mass_bins = definitions.nonuniform_mass_bins(
+        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 100, 200, 100)
+    )
+
+    counts, _ = mass_util.delta_m_counts(
+        cut_get.time_cut_dfs(year, magnetisation, "cf", bdt_cut=False, time_range=time_range),
+        mass_bins,
+    )
+
+    total = np.sum(counts)
+    initial_guess = (
+        0.9 * total,
+        0.1 * total,
+        *mass_util.signal_param_guess(),
+        *mass_util.sqrt_bkg_param_guess("cf"),
+    )
+    fitter = fit.binned_fit(
+        counts[n_underflow:],
+        mass_bins[n_underflow:],
+        initial_guess,
+        fit_range,
+        errors=None,  # Unweighted; assume Poisson errors
+    )
+    assert fitter.valid
+
+    return fitter.values, mass_bins, fit_range, counts
 
 
 def _sweights(
@@ -39,12 +84,12 @@ def _sweights(
         year, magnetisation, "cf", bdt_cut=False, time_range=time_range
     )
 
-    # Do the mass fit
-    # Get parameters
+    # Do the mass fit, get parameters and mass fit counts
+
     # Plot the fit on Axes
 
     # Find the sWeighting function
-    sweight_fcn = sweighting.signal_weight_fcn(params, pdf_domain)
+    # sweight_fcn = sweighting.signal_weight_fcn(params, pdf_domain)
 
     # Return the function, figure and axes
 
@@ -56,9 +101,9 @@ def main(*, year: str, magnetisation: str):
     Plot and show them
 
     """
-    pgun_pts = d0_mc_corrections.d0_points(get.particle_gun(sign))
-    mc_pts = d0_mc_corrections.d0_points(get.mc(year, sign, magnetisation))
-    data_pts = d0_mc_corrections.d0_points(get.data(year, sign, magnetisation))
+    # pgun_pts = d0_mc_corrections.d0_points(get.particle_gun(sign))
+    # mc_pts = d0_mc_corrections.d0_points(get.mc(year, sign, magnetisation))
+    # data_pts = d0_mc_corrections.d0_points(get.data(year, sign, magnetisation))
 
     # Find sWeights
 
