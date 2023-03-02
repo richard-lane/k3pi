@@ -99,12 +99,11 @@ def _sweights(
         fit_values,
     )
 
-    plt.show()
-
     # Find the sWeighting function
-    # sweight_fcn = sweighting.signal_weight_fcn(params, pdf_domain)
+    sweight_fcn = sweighting.signal_weight_fcn(fit_values, fit_range)
 
     # Return the function, figure and axes
+    return sweight_fcn, fig, axes
 
 
 def main(*, year: str, magnetisation: str):
