@@ -33,7 +33,7 @@ def _massfit(
 
     n_underflow = 3
     mass_bins = definitions.nonuniform_mass_bins(
-        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 200, 250, 200)
+        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 200, 300, 200)
     )
 
     counts, _ = mass_util.delta_m_counts(
@@ -81,7 +81,9 @@ def _sweight_fcn(
     fit_values, mass_bins, fit_range, counts = _massfit(cf_dataframes)
 
     # Plot the fit on Axes
-    fig, axes = plt.subplot_mosaic("AAACC\nAAACC\nAAADD\nBBBDD", figsize=(12, 12))
+    fig, axes = plt.subplot_mosaic(
+        "AAAAACCC\nAAAAACCC\nAAAAADDD\nBBBBBDDD", figsize=(15, 12)
+    )
     plotting.mass_fit(
         (axes["A"], axes["B"]),
         counts,
@@ -111,6 +113,36 @@ def _sweight_gen(
     )
 
 
+def _plot_d0_points(
+    axes: Tuple[plt.Axes, plt.Axes], d0_pts: np.ndarray, sweights: np.ndarray
+) -> None:
+    """
+    Plot the D0 eta and P on two axes, weighted and not
+
+    """
+    d0_eta, d0_p = d0_pts
+
+    hist_kw = {"histtype": "step"}
+    n_bins = 100
+    eta_bins = np.linspace(1.8, 5.5, n_bins)
+    p_bins = np.linspace(0.0, 550_000, n_bins)
+
+    axes[0].hist(d0_eta, **hist_kw, bins=eta_bins, color="k", label="Raw")
+    axes[1].hist(d0_p, **hist_kw, bins=p_bins, color="k", label="Raw")
+
+    axes[0].hist(
+        d0_eta, **hist_kw, bins=eta_bins, color="r", weights=sweights, label="sWeighted"
+    )
+    axes[1].hist(
+        d0_p, **hist_kw, bins=p_bins, color="r", weights=sweights, label="sWeighted"
+    )
+
+    axes[0].set_xlabel(r"$D^0 \eta$")
+    axes[1].set_xlabel(r"$D^0 P$")
+
+    axes[0].legend()
+
+
 def main(*, year: str, magnetisation: str):
     """
     Get particle gun, MC and data dataframes
@@ -125,13 +157,21 @@ def main(*, year: str, magnetisation: str):
     sweights = _sweight_gen(sweight_fcn, year, magnetisation)
 
     # Get the D0 eta and P points
-    pgun_pts = d0_mc_corrections.d0_points(get.particle_gun("cf"))
-    mc_pts = d0_mc_corrections.d0_points(get.mc(year, "cf", magnetisation))
     data_pts = d0_mc_corrections.d0_points(get.data(year, "cf", magnetisation))
 
     # Plot these, sweighted/otherwise on the figure
+    _plot_d0_points((axes["C"], axes["D"]), data_pts, np.concatenate(list(sweights)))
 
     # Save the figure
+    fig.suptitle(f"RS {year} {magnetisation} sWeight Mass Fit")
+    fig.tight_layout()
+    path = f"d0_mc_corr_{year}_{magnetisation}_sweight_fit.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
+    plt.close(fig)
+
+    # pgun_pts = d0_mc_corrections.d0_points(get.particle_gun("cf"))
+    # mc_pts = d0_mc_corrections.d0_points(get.mc(year, "cf", magnetisation))
 
     # Bins for plotting
     # The reweighter doesn't use these bins, it finds its own
