@@ -26,6 +26,12 @@ def main(*, year: str, magnetisation: str, sign: str):
     mc_pts = d0_mc_corrections.d0_points(get.mc(year, sign, magnetisation))
     data_pts = d0_mc_corrections.d0_points(get.data(year, sign, magnetisation))
 
+    # Find sWeights
+
+    # Plot mass fit from sWeighting, the sWeighted RS distributions
+    # and the RS/WS distributions (before sWeighting?) to show that they're
+    # the same
+
     # Bins for plotting
     # The reweighter doesn't use these bins, it finds its own
     bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
