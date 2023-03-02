@@ -13,15 +13,18 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
-from libFit import pdfs, fit, toy_utils, plotting, definitions, util
+from libFit import pdfs, fit, toy_utils, plotting, definitions, util, bkg as lib_bkg
 from lib_data import stats
 
 
-def _gen(domain: Tuple[float, float]) -> Tuple[np.ndarray, Tuple]:
+def _gen(
+    bins: np.ndarray, alt_bkg: bool, domain: Tuple[float, float]
+) -> Tuple[np.ndarray, Tuple]:
     """
     Generate points
 
     returns the points and a best guess at the params
+    for both the sqrt and alt bkg fitters
 
     Generates points along all of pdfs.domain(),
     but returns the expected amount in the region given by
@@ -35,20 +38,30 @@ def _gen(domain: Tuple[float, float]) -> Tuple[np.ndarray, Tuple]:
     n_sig, n_bkg = 2_000_000, 5_000_000
 
     sig_params = util.signal_param_guess(time_bin)
-    bkg_params = util.sqrt_bkg_param_guess(sign)
+    sqrt_bkg_params = util.sqrt_bkg_param_guess(sign)
+    alt_bkg_params = (0, 0, 0)
 
     rng = np.random.default_rng()
     sig = toy_utils.gen_sig(rng, n_sig, sig_params, verbose=True)
-    bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, bkg_params, verbose=True)
+    if not alt_bkg:
+        bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, sqrt_bkg_params, verbose=True)
+    else:
+        # Hard coded for now
+        bkg_pdf = lib_bkg.pdf(bins, "2018", "magdown", "dcs", bdt_cut=False)
+        bkg = toy_utils.gen_alt_bkg(rng, n_bkg, bkg_pdf, alt_bkg_params, domain)
 
     # Number we expect to generate
     n_sig = toy_utils.n_expected_sig(n_sig, domain, sig_params)
-    n_bkg = toy_utils.n_expected_bkg(n_bkg, domain, bkg_params)
+    n_bkg = toy_utils.n_expected_bkg(n_bkg, domain, sqrt_bkg_params)
 
-    return np.concatenate((sig, bkg)), (n_sig, n_bkg, *sig_params, *bkg_params)
+    return (
+        np.concatenate((sig, bkg)),
+        (n_sig, n_bkg, *sig_params, *sqrt_bkg_params),
+        (n_sig, n_bkg, *sig_params, *alt_bkg_params),
+    )
 
 
-def main():
+def main(*, alt_bkg: bool):
     """
     just do 1 fit
 
@@ -57,11 +70,13 @@ def main():
     fit_low, _ = pdfs.reduced_domain()
     gen_low, gen_high = pdfs.domain()
 
-    combined, initial_guess = _gen((fit_low, gen_high))
-
     n_underflow = 3
     bins = definitions.nonuniform_mass_bins(
         (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
+    )
+
+    combined, sqrt_initial_guess, alt_initial_guess = _gen(
+        bins, alt_bkg, (fit_low, gen_high)
     )
 
     counts, errs = stats.counts(combined, bins)
@@ -70,7 +85,7 @@ def main():
     sqrt_fitter = fit.binned_fit(
         counts[n_underflow:],
         bins[n_underflow:],
-        initial_guess,
+        sqrt_initial_guess,
         (fit_low, gen_high),  # Fit to reduced region
     )
     alt_bkg_fitter = fit.alt_bkg_fit(
@@ -79,7 +94,7 @@ def main():
         "2018",
         "magdown",
         "dcs",
-        (*initial_guess[:8], 0, 0, 0),
+        alt_initial_guess,
         bdt_cut=False,
     )
 
@@ -114,12 +129,16 @@ def main():
     fig.suptitle("toy data")
     fig.tight_layout()
 
-    plt.savefig("toy_mass_fit.png")
+    plt.savefig(f"toy_mass_fit_{alt_bkg=}.png")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Toy fits with the sqrt and alt bkg. Generates with the sqrt bkg"
+    parser = argparse.ArgumentParser(description="Toy fits with the sqrt and alt bkg.")
+
+    parser.add_argument(
+        "--alt_bkg",
+        help="Generate bkg distribution with the alternate background model",
+        action="store_true",
     )
 
     main(**vars(parser.parse_args()))
