@@ -1,5 +1,5 @@
 """
-Utility functions that may be useful
+ fcnUtility functions that may be useful
 
 """
 from typing import Tuple, List, Any
@@ -308,3 +308,19 @@ def check_year_mag_sign(year: str, magnetisation: str, sign: str) -> None:
     assert year in {"2018"}
     assert magnetisation in {"magdown", "magup"}
     assert sign in {"dcs", "cf"}
+
+
+def ratio_err(
+    numerator: np.ndarray,
+    denominator: np.ndarray,
+    num_err: np.ndarray,
+    denom_err: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Ratio and error of two arrays
+
+    """
+    ratio = numerator / denominator
+    err = ratio * np.sqrt((num_err / numerator) ** 2 + (denom_err / denominator) ** 2)
+
+    return ratio, err

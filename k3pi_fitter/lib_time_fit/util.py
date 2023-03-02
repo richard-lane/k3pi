@@ -3,6 +3,8 @@ Utilities that we might use in multiple places
 
 """
 import sys
+import logging
+import traceback
 import pathlib
 from collections import namedtuple
 from typing import Tuple
@@ -49,6 +51,10 @@ def ratio_err(
     Ratio and error of two arrays
 
     """
+    logging.warning(
+        "Use the ratio err fcn in lib_data.util instead", exc_info=DeprecationWarning()
+    )
+    traceback.print_stack()
     ratio = numerator / denominator
     err = ratio * np.sqrt((num_err / numerator) ** 2 + (denom_err / denominator) ** 2)
 
