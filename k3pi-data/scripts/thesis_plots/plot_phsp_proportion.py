@@ -58,9 +58,7 @@ def _plot(pts: np.ndarray, bin_indices: np.ndarray) -> plt.Figure:
 
     colours = "r", "g", "b", "y", "k"
     hist_kw = {"histtype": "stepfilled", "color": colours, "stacked": True}
-    for point, axis, bins, label in zip(
-        pts.T, axes.ravel(), hist_bins, phsp_labels()
-    ):
+    for point, axis, bins, label in zip(pts.T, axes.ravel(), hist_bins, phsp_labels()):
         plot_kw = {**hist_kw, "bins": bins}
         indices = np.unique(bin_indices)
 
