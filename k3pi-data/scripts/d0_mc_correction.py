@@ -13,17 +13,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 
 from lib_data import get, d0_mc_corrections
-from lib_cuts import get as cut_get
 from libFit import fit, pdfs, definitions, plotting, sweighting, util as mass_util
 
 
 def _massfit(
     dataframes: Iterable[pd.DataFrame],
-    time_range: Tuple[float, float],
 ) -> Tuple[Tuple, np.ndarray, np.ndarray]:
     """
     Perform a massfit to CF dataframes without BDT cut
@@ -36,7 +33,7 @@ def _massfit(
 
     n_underflow = 3
     mass_bins = definitions.nonuniform_mass_bins(
-        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 100, 200, 100)
+        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 200, 250, 200)
     )
 
     counts, _ = mass_util.delta_m_counts(
@@ -76,17 +73,12 @@ def _sweights(
     Also plots information relating to the mass fit and returns the figure and axes
 
     """
-    # Keep all the times for now
-    time_range = (-np.inf, np.inf)
-
     # Don't want the BDT cut here,
     # since the corrections are used as input for the bdt cut
-    cf_dataframes = cut_get.time_cut_dfs(
-        year, magnetisation, "cf", bdt_cut=False, time_range=time_range
-    )
+    cf_dataframes = get.data(year, "cf", magnetisation)
 
     # Do the mass fit, get parameters and mass fit counts
-    fit_values, mass_bins, fit_range, counts = _massfit(cf_dataframes, time_range)
+    fit_values, mass_bins, fit_range, counts = _massfit(cf_dataframes)
 
     # Plot the fit on Axes
     fig, axes = plt.subplot_mosaic("AAACC\nAAACC\nAAADD\nBBBDD", figsize=(12, 12))
@@ -113,10 +105,11 @@ def main(*, year: str, magnetisation: str):
     Plot and show them
 
     """
-    # Find sWeights
+    # Do + plot mass fit, find sWeighting fcn
     sweight_fcn, fig, axes = _sweights(year, magnetisation)
+    plt.show()
 
-    # Plot mass fit from sWeighting, the sWeighted RS distributions
+    # Plot the sWeighted RS distributions + save the plot
 
     # pgun_pts = d0_mc_corrections.d0_points(get.particle_gun(sign))
     # mc_pts = d0_mc_corrections.d0_points(get.mc(year, sign, magnetisation))
