@@ -6,16 +6,50 @@ show them and save to a dump somewhere
 import sys
 import pathlib
 import argparse
+from typing import Tuple, Callable, Iterable
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "lib_cuts"))
 
 from lib_data import get, d0_mc_corrections
+from lib_cuts import get as cut_get
 
 
-def main(*, year: str, magnetisation: str, sign: str):
+def _sweights(
+    year: str, magnetisation: str
+) -> Tuple[Callable, plt.Figure, Iterable[plt.Axes]]:
+    """
+    Find a unary function that projects signal out, given
+    delta M
+
+    Uses CF for the sWeighting
+
+    Also plots information relating to the mass fit and returns the figure and axes
+
+    """
+    # Keep all the times for now
+    time_range = (-np.inf, np.inf)
+
+    # Don't want the BDT cut here,
+    # since the corrections are used as input for the bdt cut
+    cf_dataframes = cut_get.time_cut_dfs(
+        year, magnetisation, "cf", bdt_cut=False, time_range=time_range
+    )
+
+    # Do the mass fit
+    # Get parameters
+    # Plot the fit on Axes
+
+    # Find the sWeighting function
+    sweight_fcn = sweighting.signal_weight_fcn(params, pdf_domain)
+
+    # Return the function, figure and axes
+
+
+def main(*, year: str, magnetisation: str):
     """
     Get particle gun, MC and data dataframes
     Make 1 and 2d histograms of D0 eta and P
@@ -84,6 +118,5 @@ if __name__ == "__main__":
     parser.add_argument(
         "magnetisation", type=str, help="mag direction", choices={"magup", "magdown"}
     )
-    parser.add_argument("sign", type=str, help="decay type", choices={"dcs", "cf"})
 
     main(**vars(parser.parse_args()))
