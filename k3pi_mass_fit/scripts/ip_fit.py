@@ -154,7 +154,9 @@ def _weighted_ipchi2_counts(
     # Get sWeights from these params
     # For now just use the sWeights from the first time bin
     # TODO properly - sWeighting in each time bin
-    sweights = sweighting.sweights(_generator(year, magnetisation, sign), params[0])
+    sweights = sweighting.sweights(
+        _generator(year, magnetisation, sign), params[0], pdfs.reduced_domain()
+    )
 
     # Get a generator of time bin indices
     time_indices = _time_indices(_generator(year, magnetisation, sign), time_bins)

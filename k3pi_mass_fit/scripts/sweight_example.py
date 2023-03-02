@@ -8,52 +8,29 @@ import argparse
 from typing import Iterable, Tuple
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
-from lib_data import get, stats
-from lib_cuts.get import cut_dfs, classifier as get_clf
+from lib_data import stats
+from lib_cuts.get import time_cut_dfs
 from libFit import fit, pdfs, definitions, plotting, sweighting, util as mass_util
-from lib_efficiency.efficiency_definitions import MIN_TIME
-
-
-def _dfs(
-    year: str, magnetisation: str, sign: str, bdt_cut: bool
-) -> Iterable[pd.DataFrame]:
-    """
-    Get a generator of the right dataframes
-
-    """
-    dfs = get.data(year, sign, magnetisation)
-
-    # Get the BDT if we need to
-    bdt_clf = get_clf(year, "dcs", magnetisation) if bdt_cut else None
-
-    # This fcn doesn't actually modify the dataframes if we
-    # don't provide a classifier
-    dataframes = cut_dfs(dfs, bdt_clf, perform_cut=bdt_cut)
-
-    # Only return dataframes over a subset of times, for now
-    for dataframe in dataframes:
-        times = dataframe["time"]
-        keep = (MIN_TIME < times) & (times < 10.0)
-
-        yield dataframe[keep]
 
 
 def _d0_momenta(
-    year: str, magnetisation: str, sign: str, bdt_cut: bool
+    year: str,
+    magnetisation: str,
+    sign: str,
+    bdt_cut: bool,
+    time_range: Tuple[float, float],
 ) -> Iterable[np.ndarray]:
     """
     Generator of D0 momenta
 
     """
-    for dataframe in _dfs(year, magnetisation, sign, bdt_cut):
+    for dataframe in time_cut_dfs(year, magnetisation, sign, bdt_cut, time_range):
         yield dataframe["D0 P"]
 
 
@@ -63,6 +40,7 @@ def _massfit(
     sign: str,
     bdt_cut: bool,
     fit_range: Tuple[float, float],
+    time_range: Tuple[float, float],
 ) -> Tuple:
     """
     Perform a massfit to some dataframes
@@ -77,7 +55,8 @@ def _massfit(
         (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 50, 100, 50)
     )
     counts, errs = mass_util.delta_m_counts(
-        _dfs(year, magnetisation, sign, bdt_cut), mass_bins
+        time_cut_dfs(year, magnetisation, sign, bdt_cut, time_range),
+        mass_bins,
     )
 
     sig_frac_guess = 0.9 if sign == "cf" else 0.05
@@ -114,22 +93,27 @@ def main(*, year: str, magnetisation: str, sign: str, bdt_cut: bool):
 
     """
     fit_range = pdfs.reduced_domain()
+    time_range = 0.0, 10.0
 
     # Do a mass fit to get the fit parameters
-    fit_params = _massfit(year, magnetisation, sign, bdt_cut, fit_range)
+    fit_params = _massfit(year, magnetisation, sign, bdt_cut, fit_range, time_range)
 
     # Get a generator of sWeights given these fit parameters
     sweights = sweighting.sweights(
-        _dfs(year, magnetisation, sign, bdt_cut), fit_params, fit_range
+        time_cut_dfs(year, magnetisation, sign, bdt_cut, time_range),
+        fit_params,
+        fit_range,
     )
 
     # Get D0 momenta
     d0_p_bins = np.linspace(0.0, 600_000, 250)
     d0_count, d0_err = stats.counts_generator(
-        _d0_momenta(year, magnetisation, sign, bdt_cut), d0_p_bins
+        _d0_momenta(year, magnetisation, sign, bdt_cut, time_range), d0_p_bins
     )
     d0_count_weighted, d0_err_weighted = stats.counts_generator(
-        _d0_momenta(year, magnetisation, sign, bdt_cut), d0_p_bins, weights=sweights
+        _d0_momenta(year, magnetisation, sign, bdt_cut, time_range),
+        d0_p_bins,
+        weights=sweights,
     )
 
     # Plot the weighted D0 momenta

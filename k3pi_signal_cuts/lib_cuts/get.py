@@ -5,14 +5,14 @@ Get a classifier
 import sys
 import pickle
 import pathlib
-from typing import Iterable
+from typing import Iterable, Tuple
 from functools import partial
 import pandas as pd
 from . import definitions
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
-from lib_data import training_vars
+from lib_data import training_vars, get
 from lib_data.util import no_op
 
 
@@ -66,3 +66,31 @@ def cut_dfs(
 
     for dataframe in dataframes:
         yield func(dataframe)
+
+
+def time_cut_dfs(
+    year: str,
+    magnetisation: str,
+    sign: str,
+    bdt_cut: bool,
+    time_range: Tuple[float, float],
+) -> Iterable[pd.DataFrame]:
+    """
+    Get a generator of dataframes from the right dump,
+    cut according to the time limits
+
+    """
+    dfs = get.data(year, sign, magnetisation)
+
+    # Get the BDT if we need to
+    bdt_clf = classifier(year, "dcs", magnetisation) if bdt_cut else None
+
+    # This fcn doesn't actually modify the dataframes if we
+    # don't provide a classifier
+    dataframes = cut_dfs(dfs, bdt_clf, perform_cut=bdt_cut)
+
+    for dataframe in dataframes:
+        times = dataframe["time"]
+        keep = (time_range[0] < times) & (times < time_range[1])
+
+        yield dataframe[keep]

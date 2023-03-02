@@ -27,6 +27,8 @@ class EtaPWeighter:
         self,
         target: np.ndarray,
         original: np.ndarray,
+        target_wt: np.ndarray = None,
+        original_wt: np.ndarray = None,
         **weighter_kw,
     ):
         """
@@ -39,17 +41,22 @@ class EtaPWeighter:
         self._target = target
         self._orig = original
 
-        self._reweighter = BinsReweighter(**weighter_kw)
-        self._reweighter.fit(original.T, target.T)
+        self._target_wt = target_wt
+        self._orig_wt = original_wt
 
-    def weights(self, points: np.ndarray) -> np.ndarray:
+        self._reweighter = BinsReweighter(**weighter_kw)
+        self._reweighter.fit(
+            original.T, target.T, original_weight=original_wt, target_weight=target_wt
+        )
+
+    def weights(self, points: np.ndarray, wts: np.ndarray = None) -> np.ndarray:
         """
         Weights for an array of points
 
         :param points: (2, N) shape array of (eta, P)
 
         """
-        return self._reweighter.predict_weights(points.T)
+        return self._reweighter.predict_weights(points.T, original_weight=wts)
 
     @staticmethod
     def _fig_ax() -> Tuple[plt.Figure, np.ndarray]:
@@ -62,6 +69,7 @@ class EtaPWeighter:
     def _proj_plots(
         axes: Tuple[plt.Axes, plt.Axes],
         points: Tuple[np.ndarray, np.ndarray],
+        weights: np.ndarray,
         *,
         eta_kw: dict = None,
         p_kw: dict = None,
@@ -83,10 +91,12 @@ class EtaPWeighter:
         eta_axis, p_axis = axes
         eta, momm = points
 
-        eta_axis.hist(eta, **eta_kw, **hist_kw, orientation="horizontal")
+        eta_axis.hist(
+            eta, **eta_kw, **hist_kw, orientation="horizontal", weights=weights
+        )
 
         # Manually scale y axis otherwise it breaks
-        counts, _, _ = p_axis.hist(momm, **p_kw, **hist_kw)
+        counts, _, _ = p_axis.hist(momm, **p_kw, **hist_kw, weights=weights)
         new_lim = 1.1 * np.max(counts[np.isfinite(counts)])
         p_axis.set_ylim(0.0, new_lim)
 
@@ -109,7 +119,10 @@ class EtaPWeighter:
 
     @staticmethod
     def _plot(
-        points: np.ndarray, bins: Tuple[np.ndarray, np.ndarray], path: str
+        points: np.ndarray,
+        weights: np.ndarray,
+        bins: Tuple[np.ndarray, np.ndarray],
+        path: str,
     ) -> None:
         """
         Make 2d + 1d plots of eta/phi
@@ -125,12 +138,13 @@ class EtaPWeighter:
         eta_bins, p_bins = bins
 
         _, _, _, image = axes["A"].hist2d(
-            momm, eta, bins=(p_bins, eta_bins), norm=LogNorm()
+            momm, eta, bins=(p_bins, eta_bins), norm=LogNorm(), weights=weights
         )
 
         EtaPWeighter._proj_plots(
             (axes["D"], axes["C"]),
             (eta, momm),
+            weights,
             eta_kw={"bins": eta_bins},
             p_kw={"bins": p_bins},
         )
@@ -157,8 +171,9 @@ class EtaPWeighter:
         assert distribution in {"target", "original"}
 
         data = self._target if distribution == "target" else self._orig
+        weights = self._target_wt if distribution == "target" else self._orig_wt
 
-        EtaPWeighter._plot(data, bins, path)
+        EtaPWeighter._plot(data, weights, bins, path)
 
     def plot_ratio(self, bins: Tuple[np.ndarray, np.ndarray], path: str) -> None:
         """
@@ -170,10 +185,13 @@ class EtaPWeighter:
 
         # 2d plot
         target_count_2d, _, _ = np.histogram2d(
-            *self._target, bins=(eta_bins, p_bins), density=True
+            *self._target,
+            bins=(eta_bins, p_bins),
+            density=True,
+            weights=self._target_wt,
         )
         orig_count_2d, _, _ = np.histogram2d(
-            *self._orig, bins=(eta_bins, p_bins), density=True
+            *self._orig, bins=(eta_bins, p_bins), density=True, weights=self._orig_wt
         )
         ratio_2d = orig_count_2d / target_count_2d
 
@@ -186,12 +204,14 @@ class EtaPWeighter:
         EtaPWeighter._proj_plots(
             (axes["D"], axes["C"]),
             self._target,
+            self._target_wt,
             eta_kw={"bins": eta_bins, "density": True},
             p_kw={"bins": p_bins, "label": "Target", "density": True},
         )
         EtaPWeighter._proj_plots(
             (axes["D"], axes["C"]),
             self._orig,
+            self._orig_wt,
             eta_kw={"bins": eta_bins, "density": True},
             p_kw={"bins": p_bins, "label": "Original", "density": True},
         )
