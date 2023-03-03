@@ -37,7 +37,6 @@ def main():
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
-
                 chi2s[j, i] = _normal(re_z, im_z)
                 pbar.update(1)
 

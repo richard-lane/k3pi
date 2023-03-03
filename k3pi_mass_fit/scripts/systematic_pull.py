@@ -152,7 +152,6 @@ def _pull_study(
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
-
         # Keep trying until a fit converges
         while True:
             # Generate bkg

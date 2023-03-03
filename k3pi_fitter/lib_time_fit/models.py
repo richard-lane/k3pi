@@ -454,6 +454,7 @@ class CharmThreshholdScan(ConstrainedBase):
 # Hold 4 things
 BinnedStuff = namedtuple("BinnedStuff", ["bin1", "bin2", "bin3", "bin4"])
 
+
 # TODO I'm tired right now so I can't think but this should definitely
 # inherit somehow
 class MultiBinFit:
@@ -568,7 +569,7 @@ class MultiBinFit:
         # and all bets are off. Prevent this by just returning inf if we're outside the range
         # this will cause the fit to "fail" but that's probably ok
         # TODO raise instead
-        for (re, im) in zip((re_z1, re_z2, re_z3, re_z4), (im_z1, im_z2, im_z3, im_z4)):
+        for re, im in zip((re_z1, re_z2, re_z3, re_z4), (im_z1, im_z2, im_z3, im_z4)):
             if re**2 + im**2 > 1.0:
                 return np.inf
 
