@@ -40,7 +40,7 @@ def main():
 
     """
     # Read dataframes of stuff
-    year, sign, magnetisation = "2018", "cf", "magdown"
+    year, sign, magnetisation = "2018", "dcs", "magdown"
 
     n_dfs = 100
     dataframes = list(
@@ -60,7 +60,7 @@ def main():
 
     # Plot histograms of our variables before/after doing these cuts
     columns = list(training_vars.training_var_names()) + ["D0 mass", "D* mass"]
-    fig, ax = plt.subplots(4, 4, figsize=(8, 8))
+    fig, ax = plt.subplots(3, 3, figsize=(8, 8))
     for col, axis in zip(columns, ax.ravel()):
         _plot(axis, dataframe[col], predictions)
 
@@ -82,9 +82,7 @@ def main():
 
     fig.tight_layout()
 
-    plt.savefig("data_cuts.png")
-
-    plt.show()
+    plt.savefig("dcs_data_cuts.png")
 
 
 if __name__ == "__main__":

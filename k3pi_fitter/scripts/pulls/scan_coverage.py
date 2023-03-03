@@ -143,8 +143,7 @@ def main():
         weights=np.ones_like(delta_chi2) / len(delta_chi2),
     )
     ax.plot(bins, 2 * (norm.cdf(bins) - 0.5), "k--")
-    fig.savefig("coverage.png")
-    plt.show()
+    fig.savefig("toy_coverage.png")
 
 
 if __name__ == "__main__":

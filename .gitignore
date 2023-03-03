@@ -15,6 +15,9 @@ lib_efficiency/amplitude_models/dcs.cpp
 *.log
 *.err
 
+# Environment
+workflow/envs/d2k3py/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

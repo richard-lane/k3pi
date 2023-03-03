@@ -104,7 +104,6 @@ def main():
     ax.set_ylabel("signal significance")
 
     plt.savefig("significance_threshholds.png")
-    plt.show()
 
 
 if __name__ == "__main__":

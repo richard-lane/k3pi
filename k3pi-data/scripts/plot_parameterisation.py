@@ -5,6 +5,8 @@ Make plots of phase space variables to make sure everything looks like we expect
 import sys
 import pathlib
 from typing import List, Tuple
+from itertools import islice
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,27 +14,31 @@ from tqdm import tqdm
 from fourbody.param import helicity_param
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_efficiency"))
 
 from lib_data import definitions, get, util
+from lib_efficiency.plotting import phsp_labels
 
 
-def _plot(points: List[np.ndarray], labels: List[str]) -> Tuple[plt.Figure, plt.Axes]:
+def _plot(
+    points: List[np.ndarray], labels: List[str], path: str
+) -> Tuple[plt.Figure, plt.Axes]:
     """
     Plot a list of points and labels on an axis; return the figure and axis
 
     """
 
-    fig, ax = plt.subplots(2, 3, figsize=(12, 8))
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
 
     hist_kw = {"density": True, "histtype": "step"}
-    for i, axis in tqdm(enumerate(ax.ravel())):
+    for i, (axis, axis_label) in tqdm(enumerate(zip(axes.ravel(), phsp_labels()))):
         for arr, label in zip(points, labels):
             if label.startswith("False"):
                 hist_kw["histtype"] = "stepfilled"
                 hist_kw["alpha"] = 0.5
 
             # Might want to plot up to some maximum lifetime, to illustrate something
-            max_lifetimes = np.inf
+            max_lifetimes = 10.0
             mask = arr[:, -1] < max_lifetimes
 
             # Set the bins by finding automatic bin limits for the first set of points
@@ -47,12 +53,17 @@ def _plot(points: List[np.ndarray], labels: List[str]) -> Tuple[plt.Figure, plt.
             hist_kw["histtype"] = "step"
             hist_kw["alpha"] = 1
 
+            axis.set_xlabel(axis_label)
+
         # Remove the bins from the dict once we've plotted all the points
         hist_kw.pop("bins")
 
-    ax.ravel()[-1].legend()
+    axes.ravel()[-1].legend()
 
-    return fig, ax
+    fig.tight_layout()
+
+    print(f"plotting {path}")
+    fig.savefig(path)
 
 
 def _parameterise(data_frame: pd.DataFrame):
@@ -79,19 +90,22 @@ def main():
     """
     year, magnetisation = "2018", "magdown"
     # These return generators
-    # rs_data = _parameterise(
-    #     util.flip_momenta(pd.concat(get.data(year, "cf", magnetisation)))
-    # )
+    n_dfs = 50
+    rs_data = _parameterise(
+        util.flip_momenta(pd.concat(islice(get.data(year, "cf", magnetisation), n_dfs)))
+    )
     ws_data = _parameterise(
-        util.flip_momenta(pd.concat(get.data(year, "dcs", magnetisation)))
+        util.flip_momenta(
+            pd.concat(islice(get.data(year, "dcs", magnetisation), n_dfs))
+        )
     )
 
-    # rs_pgun = _parameterise(
-    #     util.flip_momenta(get.particle_gun("cf", show_progress=True))
-    # )
-    # ws_pgun = _parameterise(
-    #     util.flip_momenta(get.particle_gun("dcs", show_progress=True))
-    # )
+    rs_pgun = _parameterise(
+        util.flip_momenta(get.particle_gun("cf", show_progress=True))
+    )
+    ws_pgun = _parameterise(
+        util.flip_momenta(get.particle_gun("dcs", show_progress=True))
+    )
     rs_pgun = _parameterise(get.particle_gun("cf", show_progress=True))
     ws_pgun = _parameterise(get.particle_gun("dcs", show_progress=True))
 
@@ -100,40 +114,44 @@ def main():
     #     util.flip_momenta(false_df)
     # )  # Might want to flip momentum the other way
 
-    # rs_mc = _parameterise(util.flip_momenta(get.mc(year, "cf", magnetisation)))
+    rs_mc = _parameterise(util.flip_momenta(get.mc(year, "cf", magnetisation)))
     ws_mc = _parameterise(util.flip_momenta(get.mc(year, "dcs", magnetisation)))
 
-    # rs_ampgen = _parameterise(get.ampgen("cf"))
+    rs_ampgen = _parameterise(get.ampgen("cf"))
     ws_ampgen = _parameterise(get.ampgen("dcs"))
 
     _plot(
         [
-            # rs_data,
-            # rs_mc,
+            rs_data,
+            rs_mc,
             rs_pgun,
-            # rs_ampgen,
+            rs_ampgen,
             # false_sign,
+        ],
+        [
+            "CF data",
+            "CF MC",
+            "CF pgun",
+            "CF AmpGen",
+            # "False sign pgun",
+        ],
+        "data_param_rs.png",
+    )
+    _plot(
+        [
             ws_data,
             ws_mc,
             ws_pgun,
             ws_ampgen,
         ],
         [
-            # "CF data",
-            # "CF MC",
-            "CF pgun",
-            # "CF AmpGen",
-            # "False sign pgun",
             "DCS data",
             "DCS MC",
             "DCS pgun",
             "DCS AmpGen",
         ],
+        "data_param_ws.png",
     )
-
-    plt.savefig("projs.png")
-
-    plt.show()
 
 
 if __name__ == "__main__":

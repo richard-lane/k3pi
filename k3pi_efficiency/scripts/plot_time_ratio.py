@@ -131,8 +131,6 @@ def main(args: argparse.Namespace):
         f"_weighter_{args.weighter_k_charge}{fit_suffix}.png"
     )
 
-    plt.show()
-
 
 if __name__ == "__main__":
     parser = common.parser("Plot ratio of DCS/CF histograms")

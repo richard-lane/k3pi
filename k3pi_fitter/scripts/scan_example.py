@@ -237,9 +237,7 @@ def main():
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    plt.savefig("scan.png")
-
-    plt.show()
+    plt.savefig("toy_scan.png")
 
 
 if __name__ == "__main__":

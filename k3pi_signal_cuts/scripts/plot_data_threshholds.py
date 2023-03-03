@@ -81,8 +81,6 @@ def main():
 
     fig.savefig("data_threshholds.png")
 
-    plt.show()
-
 
 if __name__ == "__main__":
     main()

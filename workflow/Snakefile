@@ -1,9 +1,238 @@
+# For now, only using a subset of the data files
+
+
+# Run the whole analysis
 rule k3pi_analysis:
     input:
         "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
         "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl"
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+        # Data validation
+        "data_param_rs.png",
+        "data_param_ws.png",
+        # BDT cut validation + plots
+        "significance_threshholds.png",
+        "roc.png",
+        # Show the BDT cut on data
+        "data_threshholds.png",
+        "dcs_data_cuts.png",
+        # Efficiency validation
+        "proj_2018_magdown_data_dcs_both_weighter_dcs_both.png",
+        "proj_2018_magdown_data_cf_both_weighter_cf_both.png",
+        "ratio_2018_magdown_data_both_weighter_both.png",
+        "z_2018_magdown_data_dcs_both_weighter_dcs_both.png",
+        "z_2018_magdown_data_cf_both_weighter_cf_both.png",
+        # Show the efficiency correction on data
+        # Toy mass fit
+        "toy_mass_fit_alt_bkg=False.png",
+        "toy_mass_fit_alt_bkg=True.png",
+        # Mass fit on data
+        # Charm fit toys
+        "unconstrained_example.png",
+        "toy_scan.png",
+        "toy_coverage.png",
+        # Charm fits to data
 
+
+# Set up the python environment
+rule setup_python:
+    output:
+        # Special file that flags whether the conda environment
+        # has been created by this script
+        # ugly and hacky but might work
+        "workflow/envs/conda_created",
+    log:
+        "logs/setup_python.log",
+    run:
+        shell("conda create --name d2k3py python=3.10 --yes >> {log} 2>&1")
+        shell("conda activate d2k3py >> {log} 2>&1")
+        shell("pip install -r requirements.txt >> {log} 2>&1")
+        shell("touch workflow/envs/conda_created >> {log} 2>&1")
+
+
+# Create dataframes - AmpGen, pGun, MC, data
+rule create_ampgen:
+    input:
+        ancient("ws_D02piKpipi.root"),
+        ancient("rs_Dbar02piKpipi.root"),
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/ampgen/cf.pkl",
+        "k3pi-data/dumps/ampgen/dcs.pkl",
+    log:
+        "logs/create_ampgen.log",
+    conda:
+        "workflow/envs/d2k3py"
+    shell:
+        "python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs >> {log} 2>&1"
+        "&& python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf >> {log} 2>&1"
+
+
+rule create_dcs_pgun:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/pgun/dcs/0.pkl",
+        "k3pi-data/dumps/pgun/dcs/100.pkl",
+        "k3pi-data/dumps/pgun/dcs/101.pkl",
+        "k3pi-data/dumps/pgun/dcs/102.pkl",
+        "k3pi-data/dumps/pgun/dcs/103.pkl",
+        "k3pi-data/dumps/pgun/dcs/104.pkl",
+        "k3pi-data/dumps/pgun/dcs/10.pkl",
+        "k3pi-data/dumps/pgun/dcs/1.pkl",
+    log:
+        "logs/create_dcs_pgun.log",
+    conda:
+        "d2k3py"
+    shell:
+        "python k3pi-data/create_pgun.py dcs -n 8 >> {log} 2>&1"
+
+
+rule create_cf_pgun:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/pgun/cf/0.pkl",
+        "k3pi-data/dumps/pgun/cf/100.pkl",
+        "k3pi-data/dumps/pgun/cf/101.pkl",
+        "k3pi-data/dumps/pgun/cf/102.pkl",
+        "k3pi-data/dumps/pgun/cf/103.pkl",
+        "k3pi-data/dumps/pgun/cf/104.pkl",
+        "k3pi-data/dumps/pgun/cf/10.pkl",
+        "k3pi-data/dumps/pgun/cf/1.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/create_cf_pgun.log",
+    shell:
+        "python k3pi-data/create_pgun.py cf -n 8 >> {log} 2>&1"
+
+
+rule create_cf_mc:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/mc/2018_cf_magdown.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/create_cf_mc.log",
+    shell:
+        "python k3pi-data/create_mc.py 2018 cf magdown >> {log} 2>&1"
+
+
+rule create_dcs_mc:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/create_dcs_mc.log",
+    shell:
+        "python k3pi-data/create_mc.py 2018 dcs magdown >> {log} 2>&1"
+
+
+rule create_uppermass:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+    threads: 8
+    conda:
+        "d2k3py"
+    log:
+        "logs/create_uppermass.log",
+    shell:
+        "python k3pi-data/create_uppermass.py 2018 dcs magdown -n 8 >> {log} 2>&1"
+
+
+rule create_dcs_real:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+    threads: 8
+    conda:
+        "d2k3py"
+    log:
+        "logs/create_dcs_real.log",
+    shell:
+        "python k3pi-data/create_real.py 2018 dcs magdown -n 8 >> {log} 2>&1"
+
+
+rule create_cf_real:
+    # TODO have an input directive pointing at the analysis productions
+    input:
+        ancient("workflow/envs/conda_created"),
+    output:
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+    threads: 8
+    conda:
+        "d2k3py"
+    log:
+        "logs/create_dcs_real.log",
+    shell:
+        "python k3pi-data/create_real.py 2018 cf magdown -n 8 >> {log} 2>&1"
+
+
+
+# Do MC corrections - TODO, decide what this is
+
+
+# Train the classifier for the BDT cut
+rule train_bdt:
+    input:
+        ancient("workflow/envs/conda_created"),
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl",
+    output:
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/train_bdt.log",
+    shell:
+        "python k3pi_signal_cuts/create_classifier.py 2018 dcs magdown >> {log} 2>&1"
+
+
+
+# Train the efficiency reweighters
 rule train_cf_efficiency:
     input:
         "k3pi-data/dumps/pgun/cf/0.pkl",
@@ -14,12 +243,18 @@ rule train_cf_efficiency:
         "k3pi-data/dumps/pgun/cf/104.pkl",
         "k3pi-data/dumps/pgun/cf/10.pkl",
         "k3pi-data/dumps/pgun/cf/1.pkl",
-        "k3pi-data/dumps/ampgen/cf.pkl"
+        "k3pi-data/dumps/ampgen/cf.pkl",
     output:
         # TODO year/magnetisation are currently unused
-        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl"
+        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/train_cf_efficiency.log",
     shell:
-        "python k3pi_efficiency/create_reweighter.py cf 2018 magdown both"
+        "python k3pi_efficiency/create_reweighter.py cf 2018 magdown both >> {log} 2>&1"
+
+
 
 rule train_dcs_efficiency:
     input:
@@ -31,16 +266,42 @@ rule train_dcs_efficiency:
         "k3pi-data/dumps/pgun/dcs/104.pkl",
         "k3pi-data/dumps/pgun/dcs/10.pkl",
         "k3pi-data/dumps/pgun/dcs/1.pkl",
-        "k3pi-data/dumps/ampgen/dcs.pkl"
+        "k3pi-data/dumps/ampgen/dcs.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/train_dcs_efficiency.log",
     output:
         # TODO year/magnetisation are currently unused
-        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl"
+        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
     shell:
-        "python k3pi_efficiency/create_reweighter.py dcs 2018 magdown both"
+        "python k3pi_efficiency/create_reweighter.py dcs 2018 magdown both >> {log} 2>&1"
 
 
-rule train_bdt:
+
+# Create validation plots for the data
+rule validation_data:
     input:
+        "k3pi-data/dumps/ampgen/cf.pkl",
+        "k3pi-data/dumps/ampgen/dcs.pkl",
+        "k3pi-data/dumps/pgun/dcs/0.pkl",
+        "k3pi-data/dumps/pgun/dcs/100.pkl",
+        "k3pi-data/dumps/pgun/dcs/101.pkl",
+        "k3pi-data/dumps/pgun/dcs/102.pkl",
+        "k3pi-data/dumps/pgun/dcs/103.pkl",
+        "k3pi-data/dumps/pgun/dcs/104.pkl",
+        "k3pi-data/dumps/pgun/dcs/10.pkl",
+        "k3pi-data/dumps/pgun/dcs/1.pkl",
+        "k3pi-data/dumps/pgun/cf/0.pkl",
+        "k3pi-data/dumps/pgun/cf/100.pkl",
+        "k3pi-data/dumps/pgun/cf/101.pkl",
+        "k3pi-data/dumps/pgun/cf/102.pkl",
+        "k3pi-data/dumps/pgun/cf/103.pkl",
+        "k3pi-data/dumps/pgun/cf/104.pkl",
+        "k3pi-data/dumps/pgun/cf/10.pkl",
+        "k3pi-data/dumps/pgun/cf/1.pkl",
+        "k3pi-data/dumps/mc/2018_cf_magdown.pkl",
+        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
@@ -49,60 +310,6 @@ rule train_bdt:
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl"
-    output:
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl"
-    shell:
-        "python k3pi_signal_cuts/create_classifier.py 2018 dcs magdown"
-
-rule create_dcs_pgun:
-    output:
-        "k3pi-data/dumps/pgun/dcs/0.pkl",
-        "k3pi-data/dumps/pgun/dcs/100.pkl",
-        "k3pi-data/dumps/pgun/dcs/101.pkl",
-        "k3pi-data/dumps/pgun/dcs/102.pkl",
-        "k3pi-data/dumps/pgun/dcs/103.pkl",
-        "k3pi-data/dumps/pgun/dcs/104.pkl",
-        "k3pi-data/dumps/pgun/dcs/10.pkl",
-        "k3pi-data/dumps/pgun/dcs/1.pkl"
-    shell:
-        "python k3pi-data/create_pgun.py dcs -n 8"
-
-rule create_cf_pgun:
-    output:
-        "k3pi-data/dumps/pgun/cf/0.pkl",
-        "k3pi-data/dumps/pgun/cf/100.pkl",
-        "k3pi-data/dumps/pgun/cf/101.pkl",
-        "k3pi-data/dumps/pgun/cf/102.pkl",
-        "k3pi-data/dumps/pgun/cf/103.pkl",
-        "k3pi-data/dumps/pgun/cf/104.pkl",
-        "k3pi-data/dumps/pgun/cf/10.pkl",
-        "k3pi-data/dumps/pgun/cf/1.pkl"
-    shell:
-        "python k3pi-data/create_pgun.py cf -n 8"
-
-rule create_ampgen:
-    output:
-        "k3pi-data/dumps/ampgen/cf.pkl",
-        "k3pi-data/dumps/ampgen/dcs.pkl"
-    run:
-        shell("python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs")
-        shell("python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf")
-
-rule create_dcs_mc:
-    output:
-        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl"
-    shell:
-        "python k3pi-data/create_mc.py 2018 dcs magdown"
-
-rule create_cf_mc:
-    output:
-        "k3pi-data/dumps/mc/2018_cf_magdown.pkl"
-    shell:
-        "python k3pi-data/create_mc.py 2018 cf magdown"
-
-rule create_dcs_real:
-    output:
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
@@ -110,21 +317,142 @@ rule create_dcs_real:
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl"
-    threads: 8
-    shell:
-        "python k3pi-data/create_real.py 2018 dcs magdown -n 8"
-
-rule create_uppermass:
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
     output:
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl"
-    threads: 8
+        "data_param_rs.png",
+        "data_param_ws.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/validation_data.log",
     shell:
-        "python k3pi-data/create_uppermass.py 2018 dcs magdown -n 8"
+        "python k3pi-data/scripts/plot_parameterisation.py >> {log} 2>&1"
+
+
+
+# Create validation plots for the BDT cut
+rule validation_bdt_cut:
+    input:
+        # Also need the data files that were used
+        # to train this BDT, but that's guaranteed
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+    output:
+        "significance_threshholds.png",
+        "roc.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/validation_bdt_cut.log",
+    shell:
+        "python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {log} 2>&1"
+
+        "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {log} 2>&1"
+
+
+
+rule validation_bdt_cut_data:
+    input:
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+        # Also need the data files
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+    output:
+        "data_threshholds.png",
+        "dcs_data_cuts.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/bdt_cut_data.log",
+    shell:
+        "python k3pi_signal_cuts/scripts/plot_data_threshholds.py >> {log} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_data_cuts.py >> {log} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {log} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {log} 2>&1"
+
+
+# Create validation plots for the efficiency
+rule validation_efficiency:
+    input:
+        # Also need the data files that were used
+        # to train the reweighters, but that's guaranteed
+        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
+        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+    output:
+        "proj_2018_magdown_data_dcs_both_weighter_dcs_both.png",
+        "proj_2018_magdown_data_cf_both_weighter_cf_both.png",
+        "ratio_2018_magdown_data_both_weighter_both.png",
+        "z_2018_magdown_data_dcs_both_weighter_dcs_both.png",
+        "z_2018_magdown_data_cf_both_weighter_cf_both.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/validation_efficiency.log",
+    shell:
+        "python k3pi_efficiency/scripts/plot_projection.py 2018 dcs dcs magdown both both >> {log} 2>&1"
+        "&& python k3pi_efficiency/scripts/plot_projection.py 2018 cf cf magdown both both >> {log} 2>&1"
+        "&& python k3pi_efficiency/scripts/plot_time_ratio.py 2018 magdown both both >> {log} 2>&1"
+        "&& python k3pi_efficiency/scripts/plot_z_scatter.py 2018 dcs dcs magdown both both >> {log} 2>&1"
+        "&& python k3pi_efficiency/scripts/plot_z_scatter.py 2018 cf cf magdown both both >> {log} 2>&1"
+
+
+# Mass fit toy plots
+rule massfit_toys:
+    output:
+        "toy_mass_fit_alt_bkg=False.png",
+        "toy_mass_fit_alt_bkg=True.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/massfit_toys.log",
+    shell:
+        "python k3pi_mass_fit/scripts/toys/toy_fit.py >> {log} 2>&1"
+        "&& python k3pi_mass_fit/scripts/toys/toy_fit.py --alt_bkg >> {log} 2>&1"
+
+
+# Mass fit example plots
+# TODO - these should dump the yields to a file
+
+
+# Toy plots for the time fitter
+rule charmfit_toys:
+    output:
+        "unconstrained_example.png",
+        "toy_scan.png",
+        "toy_coverage.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/charmfit_toys.log",
+    shell:
+        "python k3pi_fitter/scripts/scan_example.py >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/pulls/scan_coverage.py >> {log} 2>&1"
+
+# BDT cut on real data
+# Efficiency correction plot on real data
+# Mass fit time binned real data - output yields + errors to file
+# output to file because we'll use these values multiple times in future
+# Time fit yields
+# Scan yields
+# Scan yields w/ charm constraint

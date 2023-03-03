@@ -67,8 +67,6 @@ def main(args: argparse.Namespace):
         f"_weighter_{args.weighter_type}_{args.weighter_k_charge}{fit_suffix}.png"
     )
 
-    plt.show()
-
 
 if __name__ == "__main__":
     parser = common.parser(
