@@ -296,3 +296,82 @@ def signal_param_guess(time_bin: int = 5) -> Tuple:
 
     """
     return 146.0, 0.2, 0.2, 0.18, 0.18, 0.0019 * time_bin + 0.0198
+
+
+def yield_file(
+    year: str, magnetisation: str, phsp_bin: int, bdt_cut: bool, efficiency: bool
+) -> pathlib.Path:
+    """
+    For writing the yields to
+
+    """
+    return (
+        pathlib.Path(__file__).resolve().parents[1]
+        / f"yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}.txt"
+    )
+
+
+def write_yield(
+    times: Tuple,
+    yields: Tuple,
+    errs: Tuple,
+    path: pathlib.Path,
+    *,
+    print_str: bool = False,
+) -> None:
+    """
+    Append yields to a file
+
+    :param times: tuple (low time, high time) used for the fit
+    :param yields: tuple (RS yield, WS yield)
+    :param errs: tuple (RS err, WS err)
+    :param path: where the file lives. it should already exist
+    :param print_str: print the string that will be written
+
+    """
+    assert path.exists()
+
+    out_str = "\t".join((str(num) for num in (*times, *yields, *errs)))
+    out_str += "\n"
+    if print_str:
+        print(out_str)
+
+    with open(str(path), "a", encoding="utf8") as yield_f:
+        yield_f.write(out_str)
+
+
+def read_yield(path: pathlib.Path) -> Tuple:
+    """
+    Read time bins, RS yields, RS errs, WS yields, WS errs
+    from a file
+
+    Returns arrays
+
+    """
+    time_bins = []
+    rs_yields = []
+    rs_errs = []
+    ws_yields = []
+    ws_errs = []
+
+    with open(str(path), "r", encoding="utf8") as yield_f:
+        for line in yield_f.readlines():
+            low_t, high_t, rs_yield, rs_err, ws_yield, ws_err = (
+                float(val) for val in line.strip().split("\t")
+            )
+
+            # Add the high time bin from each line, except the first
+            # line in which case we add both
+            if not time_bins:
+                time_bins.append(low_t)
+            time_bins.append(high_t)
+
+            rs_yields.append(rs_yield)
+            rs_errs.append(rs_err)
+
+            ws_yields.append(ws_yield)
+            ws_errs.append(ws_err)
+
+    return tuple(
+        np.array(arr) for arr in (time_bins, rs_yields, rs_errs, ws_yields, ws_errs)
+    )
