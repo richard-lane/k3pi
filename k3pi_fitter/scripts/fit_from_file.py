@@ -24,6 +24,7 @@ def main(
     phsp_bin: int,
     bdt_cut: bool,
     efficiency: bool,
+    alt_bkg: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -32,9 +33,8 @@ def main(
     """
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    yield_file_path = mass_util.yield_file(
-        year, magnetisation, phsp_bin, bdt_cut, efficiency
-    )
+    yield_file_fcn = mass_util.yield_file if not alt_bkg else mass_util.alt_yield_file
+    yield_file_path = yield_file_fcn(year, magnetisation, phsp_bin, bdt_cut, efficiency)
 
     assert yield_file_path.exists()
 
@@ -104,7 +104,9 @@ def main(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    path = "fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}.png"
+    path = (
+        f"fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}.png"
+    )
     print(f"plotting {path}")
     fig.savefig(path)
 
@@ -129,6 +131,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "phsp_bin", type=int, choices=range(4), help="Phase space bin index"
+    )
+    parser.add_argument(
+        "--alt_bkg", action="store_true", help="Whether to use alt bkg model file"
     )
 
     main(**vars(parser.parse_args()))

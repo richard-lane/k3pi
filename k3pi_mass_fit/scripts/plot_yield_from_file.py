@@ -22,6 +22,7 @@ def main(
     phsp_bins: List[int],
     bdt_cut: bool,
     efficiency: bool,
+    alt_bkg: bool,
 ):
     """
     From a file of yields, time bins etc., plot the
@@ -31,8 +32,10 @@ def main(
     fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
     hist_kw = {"histtype": "step"}
 
+    yield_file_fcn = mass_util.yield_file if not alt_bkg else mass_util.alt_yield_file
+
     for phsp_bin in phsp_bins:
-        yield_file_path = mass_util.yield_file(
+        yield_file_path = yield_file_fcn(
             year, magnetisation, phsp_bin, bdt_cut, efficiency
         )
 
@@ -77,7 +80,7 @@ def main(
     axes[2].set_ylabel(r"$\frac{WS}{RS}$")
 
     fig.tight_layout()
-    fig.savefig(f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}.png")
+    fig.savefig(f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png")
 
 
 if __name__ == "__main__":
@@ -98,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--efficiency", action="store_true", help="Correct for the detector efficiency"
     )
+    parser.add_argument("--alt_bkg", action="store_true", help="Use the alternate background model")
     parser.add_argument(
         "phsp_bins", type=int, choices=range(4), help="Phase space bin index", nargs="*"
     )

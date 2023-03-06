@@ -249,9 +249,6 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
 
     Creates it if it doesnt exist
 
-    Also creates subdirs /ws/ and /rs/
-    and some alt bkg subdirs
-
     """
     if correct_efficiency:
         assert bdt_cut
@@ -269,8 +266,40 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
         retval,
         f"{retval}ws/",
         f"{retval}rs/",
-        f"{retval}alt_bkg_rs",
-        f"{retval}alt_bkg_ws",
+    ):
+        if not os.path.isdir(dir_):
+            os.makedirs(dir_)
+
+    return retval
+
+
+def alt_plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
+    """
+    Directory for storing plots for the alt bkg fit
+
+    / terminated
+
+    Creates it if it doesnt exist
+
+    Also creates subdirs /ws/ and /rs/
+
+    """
+    if correct_efficiency:
+        assert bdt_cut
+
+    if bdt_cut and correct_efficiency:
+        retval = "eff_fits/"
+    elif bdt_cut:
+        retval = "bdt_fits/"
+    else:
+        retval = "raw_fits/"
+
+    retval = os.path.join(retval, f"alt_bkg_bin_{phsp_bin}/")
+
+    for dir_ in (
+        retval,
+        f"{retval}ws/",
+        f"{retval}rs/",
     ):
         if not os.path.isdir(dir_):
             os.makedirs(dir_)
@@ -308,6 +337,19 @@ def yield_file(
     return (
         pathlib.Path(__file__).resolve().parents[1]
         / f"yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}.txt"
+    )
+
+
+def alt_yield_file(
+    year: str, magnetisation: str, phsp_bin: int, bdt_cut: bool, efficiency: bool
+) -> pathlib.Path:
+    """
+    For writing the yields to
+
+    """
+    return (
+        pathlib.Path(__file__).resolve().parents[1]
+        / f"alt_yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}.txt"
     )
 
 
