@@ -27,11 +27,21 @@ rule k3pi_analysis:
         "toy_mass_fit_alt_bkg=False.png",
         "toy_mass_fit_alt_bkg=True.png",
         # Mass fit on data
+        # TODO put the yield files or mass fit plots here?
         # Charm fit toys
         "unconstrained_example.png",
         "toy_scan.png",
         "toy_coverage.png",
         # Charm fits to data
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_0.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_1.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_2.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_3.png",
+        # Charm fits to data with efficiency
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_0.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_1.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_2.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_3.png",
 
 
 # Set up the python environment
@@ -204,14 +214,12 @@ rule create_cf_real:
         "python k3pi-data/create_real.py 2018 cf magdown -n 8 >> {log} 2>&1"
 
 
-
 # Do MC corrections - TODO, decide what this is
 
 
 # Train the classifier for the BDT cut
 rule train_bdt:
     input:
-        ancient("workflow/envs/conda_created"),
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
         "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
@@ -229,7 +237,6 @@ rule train_bdt:
         "logs/train_bdt.log",
     shell:
         "python k3pi_signal_cuts/create_classifier.py 2018 dcs magdown >> {log} 2>&1"
-
 
 
 # Train the efficiency reweighters
@@ -255,7 +262,6 @@ rule train_cf_efficiency:
         "python k3pi_efficiency/create_reweighter.py cf 2018 magdown both >> {log} 2>&1"
 
 
-
 rule train_dcs_efficiency:
     input:
         "k3pi-data/dumps/pgun/dcs/0.pkl",
@@ -276,7 +282,6 @@ rule train_dcs_efficiency:
         "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
     shell:
         "python k3pi_efficiency/create_reweighter.py dcs 2018 magdown both >> {log} 2>&1"
-
 
 
 # Create validation plots for the data
@@ -337,7 +342,6 @@ rule validation_data:
         "python k3pi-data/scripts/plot_parameterisation.py >> {log} 2>&1"
 
 
-
 # Create validation plots for the BDT cut
 rule validation_bdt_cut:
     input:
@@ -355,7 +359,6 @@ rule validation_bdt_cut:
         "python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {log} 2>&1"
 
         "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {log} 2>&1"
-
 
 
 rule validation_bdt_cut_data:
@@ -419,6 +422,8 @@ rule validation_efficiency:
 
 # Mass fit toy plots
 rule massfit_toys:
+    input:
+        "workflow/envs/conda_created",
     output:
         "toy_mass_fit_alt_bkg=False.png",
         "toy_mass_fit_alt_bkg=True.png",
@@ -431,12 +436,10 @@ rule massfit_toys:
         "&& python k3pi_mass_fit/scripts/toys/toy_fit.py --alt_bkg >> {log} 2>&1"
 
 
-# Mass fit example plots
-# TODO - these should dump the yields to a file
-
-
 # Toy plots for the time fitter
 rule charmfit_toys:
+    input:
+        "workflow/envs/conda_created",
     output:
         "unconstrained_example.png",
         "toy_scan.png",
@@ -449,10 +452,134 @@ rule charmfit_toys:
         "python k3pi_fitter/scripts/scan_example.py >> {log} 2>&1"
         "&& python k3pi_fitter/scripts/pulls/scan_coverage.py >> {log} 2>&1"
 
+
 # BDT cut on real data
 # Efficiency correction plot on real data
 # Mass fit time binned real data - output yields + errors to file
 # output to file because we'll use these values multiple times in future
+rule massfit_data_no_eff:
+    output:
+        # Also outputs yield images
+        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=False.txt",
+        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=False.txt",
+        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=False.txt",
+        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=False.txt",
+    input:
+        # BDT cut
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+        # Data
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/massfit_data_noeff.log",
+    shell:
+        "python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 0 --bdt_cut"
+        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 1 --bdt_cut"
+        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 2 --bdt_cut"
+        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 3 --bdt_cut"
+
+
+rule massfit_data:
+    output:
+        # Also outputs yield images
+        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=True.txt",
+        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=True.txt",
+        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=True.txt",
+        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=True.txt",
+    input:
+        # BDT cut
+        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+        # Data
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
+        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        # Efficiency
+        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
+        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+    conda:
+        "d2k3py"
+    log:
+        "logs/massfit_data.log",
+    shell:
+        "python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 0 --bdt_cut --efficiency"
+        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 1 --bdt_cut --efficiency"
+        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 2 --bdt_cut --efficiency"
+        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 3 --bdt_cut --efficiency"
+
+
 # Time fit yields
+rule timefit_data_no_eff:
+    input:
+        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=False.txt",
+        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=False.txt",
+        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=False.txt",
+        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=False.txt",
+    output:
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_0.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_1.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_2.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=False_3.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/timefit_data.log",
+    shell:
+        "python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut >> {log} 2>&1"
+
+
+rule timefit_data:
+    input:
+        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=True.txt",
+        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=True.txt",
+        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=True.txt",
+        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=True.txt",
+    output:
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_0.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_1.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_2.png",
+        "fits_2018_magdown_bdt_cut=True_efficiency=True_3.png",
+    conda:
+        "d2k3py"
+    log:
+        "logs/timefit_data_eff.log",
+    shell:
+        "python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut --efficiency >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut --efficiency >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut --efficiency >> {log} 2>&1"
+        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut --efficiency >> {log} 2>&1"
+
+
 # Scan yields
 # Scan yields w/ charm constraint
