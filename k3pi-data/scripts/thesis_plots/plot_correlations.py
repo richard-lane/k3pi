@@ -71,6 +71,7 @@ def _plot_cm(dataframe: pd.DataFrame):
 
     fig.savefig("ampgen_corr_cm.png")
 
+
 def _plot_invmass(dataframe: pd.DataFrame):
     """
     Plot correlation the CM param of a dataframe
@@ -82,15 +83,18 @@ def _plot_invmass(dataframe: pd.DataFrame):
     mass_pts = np.column_stack((inv_mass_param(*k_3pi(dataframe)), dataframe["time"]))
 
     # Plot matrices
-    _plot(axis, mass_pts, (
-        r"$M(K^+\pi_1^-)$",
-        r"$M(\pi_1^-\pi_2^-)$",
-        r"$M(\pi_2^-\pi^+)$",
-        r"$M(K^+\pi_1^-\pi_2^-)$",
-        r"$M(\pi_1^-\pi_2^-\pi^+)$",
-        r"t / $\tau$"
-        )
-        )
+    _plot(
+        axis,
+        mass_pts,
+        (
+            r"$M(K^+\pi_1^-)$",
+            r"$M(\pi_1^-\pi_2^-)$",
+            r"$M(\pi_2^-\pi^+)$",
+            r"$M(K^+\pi_1^-\pi_2^-)$",
+            r"$M(\pi_1^-\pi_2^-\pi^+)$",
+            r"t / $\tau$",
+        ),
+    )
 
     fig.tight_layout()
     # Plot colour bars

@@ -55,7 +55,7 @@ jobs:
           mv ../mixing.png ../log_mixing.png ../more_mixing.png ../simul_sqrt_model_sqrt_fit.png ../toy_scan.png ../toy_coverage.png ../fit_examples.png ../xy_constraint.png .
           git config user.name "Automated Commit"
           git config user.email "none@none.com"
-          git add mixing.png log_mixing.png more_mixing.png binned_toy_simul_fit.png toy_scan.png toy_coverage.png fit_examples.png xy_constraint.png
+          git add mixing.png log_mixing.png more_mixing.png simul_sqrt_model_sqrt_fit.png binned_toy_simul_fit.png toy_scan.png toy_coverage.png fit_examples.png xy_constraint.png
 
           # Amend commit to prevent the repo from growing out of control
           git commit --amend -m "Plots cached on: `date` by GitHub Actions"

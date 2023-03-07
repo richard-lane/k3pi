@@ -62,15 +62,17 @@ def _plot_invmass(dataframe: pd.DataFrame):
     mass_pts = np.column_stack((inv_mass_param(*k_3pi(dataframe)), dataframe["time"]))
 
     # Plot matrices
-    fig = _plot(mass_pts, (
-        r"$M(K^+\pi_1^-)$",
-        r"$M(\pi_1^-\pi_2^-)$",
-        r"$M(\pi_2^-\pi^+)$",
-        r"$M(K^+\pi_1^-\pi_2^-)$",
-        r"$M(\pi_1^-\pi_2^-\pi^+)$",
-        r"t / $\tau$"
-        )
-        )
+    fig = _plot(
+        mass_pts,
+        (
+            r"$M(K^+\pi_1^-)$",
+            r"$M(\pi_1^-\pi_2^-)$",
+            r"$M(\pi_2^-\pi^+)$",
+            r"$M(K^+\pi_1^-\pi_2^-)$",
+            r"$M(\pi_1^-\pi_2^-\pi^+)$",
+            r"t / $\tau$",
+        ),
+    )
 
     fig.savefig("ampgen_param_mass.png")
     plt.close(fig)

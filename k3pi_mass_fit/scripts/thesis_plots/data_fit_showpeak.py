@@ -57,7 +57,7 @@ def _separate_fit(
         bins[n_underflow:],
         weights=count[n_underflow:],
         histtype="step",
-        color="k",
+        color="k" if nocut_count is None else "darkslategrey",
     )
 
     # Plot bkg
@@ -70,6 +70,12 @@ def _separate_fit(
     axis.plot(centres[n_underflow:], predicted_bkg, "r-")
 
     # Plot signal
+    predicted = stats.areas(
+        bins[n_underflow:],
+        pdfs.model(bins[n_underflow:], *fit_params, pdfs.reduced_domain()),
+    )
+    axis.plot(centres[n_underflow:], predicted, "indigo")
+
     predicted_sig = fit_params[0] * stats.areas(
         bins[n_underflow:],
         pdfs.normalised_signal(
@@ -91,7 +97,7 @@ def _separate_fit(
             weights=nocut_count[n_underflow:],
             histtype="step",
             linestyle="dashed",
-            color="b",
+            color="k",
         )
 
     print(f"Saving {plot_path}")
