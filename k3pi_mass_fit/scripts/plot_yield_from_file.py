@@ -80,7 +80,9 @@ def main(
     axes[2].set_ylabel(r"$\frac{WS}{RS}$")
 
     fig.tight_layout()
-    fig.savefig(f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png")
+    fig.savefig(
+        f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png"
+    )
 
 
 if __name__ == "__main__":
@@ -101,7 +103,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--efficiency", action="store_true", help="Correct for the detector efficiency"
     )
-    parser.add_argument("--alt_bkg", action="store_true", help="Use the alternate background model")
+    parser.add_argument(
+        "--alt_bkg", action="store_true", help="Use the alternate background model"
+    )
     parser.add_argument(
         "phsp_bins", type=int, choices=range(4), help="Phase space bin index", nargs="*"
     )
