@@ -1,57 +1,153 @@
-# For now, only using a subset of the data files
+# The code for getting the right files lives in this library, so import it
+# using sys.path hackery
+# Unfortunately this means it must be run from the git root dir, but that's
+# probably what you're doing anyway
+import sys
+
+sys.path.append("k3pi-data")
+
+from lib_data import definitions
+
+# Options - TODO will do this nicer
+year, magnetisation = "2018", "magdown"
+
+# Number of data files to use for real data, upper mass
+# since this is by far the slowest step
+n_files = 8
+
+# Other things
+# ----
+# Track whether we've set up the python environment
+# Hacky but works
+# Will break if a conda environment with this name already exists
+conda_flag = "workflow/envs/conda_created"
 
 
-# Run the whole analysis
+# Input files
+# ----
+real_data_files = definitions.data_files(year, magnetisation)[:n_files]
+
+dcs_ampgen_input = "ws_D02piKpipi.root"
+cf_ampgen_input = "rs_Dbar02piKpipi.root"
+
+
+# Output files
+# ----
+dcs_data_dumps = [
+    definitions.data_dump(data_file, year, "dcs", magnetisation)
+    for data_file in real_data_files
+]
+cf_data_dumps = [
+    definitions.data_dump(data_file, year, "cf", magnetisation)
+    for data_file in real_data_files
+]
+
+# Uppermass dumps
+# Only need DCS - this is all we use to train the BDT cut classifier
+dcs_uppermass_dumps = [
+    definitions.uppermass_dump(data_file, year, "dcs", "magdown")
+    for data_file in real_data_files
+]
+
+# MC dumps
+dcs_mc_dump, cf_mc_dump = (
+    definitions.mc_dump(year, sign, magnetisation) for sign in ("dcs", "cf")
+)
+
+# Find the right particle gun dirs - these are ones that are just numbers
+dcs_pgun_dirs = definitions.pgun_dirs("dcs")
+cf_pgun_dirs = definitions.pgun_dirs("cf")
+false_pgun_dirs = definitions.pgun_dirs("false")
+
+# Particle gun dumps
+dcs_pgun_dumps = [definitions.pgun_dump("dcs", folder.name) for folder in dcs_pgun_dirs]
+cf_pgun_dumps = [definitions.pgun_dump("cf", folder.name) for folder in dcs_pgun_dirs]
+false_pgun_dumps = [
+    definitions.pgun_dump("false", folder.name) for folder in dcs_pgun_dirs
+]
+
+# AmpGen dumps
+dcs_ampgen_dump = definitions.ampgen_dump("dcs")
+cf_ampgen_dump = definitions.ampgen_dump("cf")
+
+# Classifier for BDT cut
+# TODO get programatically
+bdt_clf = ("k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",)
+
+# Efficiency reweighters
+# TODO get programatically
+cf_eff_weighter = ("k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",)
+dcs_eff_weighter = ("k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",)
+
+analysis_plots = (
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_0_alt_bkg=False.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_1_alt_bkg=False.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_2_alt_bkg=False.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_3_alt_bkg=False.png",
+    # Charm fits to data with efficiency
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_0_alt_bkg=False.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_1_alt_bkg=False.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_2_alt_bkg=False.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_3_alt_bkg=False.png",
+    # Alt bkg fits to data
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_0_alt_bkg=True.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_1_alt_bkg=True.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_2_alt_bkg=True.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_3_alt_bkg=True.png",
+    # Alt bkg fits to data with efficiency
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_0_alt_bkg=True.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_1_alt_bkg=True.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_2_alt_bkg=True.png",
+    f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_3_alt_bkg=True.png",
+)
+
+validation_plots = (
+    # Data validation
+    "data_param_rs.png",
+    "data_param_ws.png",
+    # BDT cut validation + plots
+    "significance_threshholds.png",
+    "roc.png",
+    # Show the BDT cut on data
+    "data_threshholds.png",
+    "dcs_data_cuts.png",
+    # Efficiency validation
+    f"proj_{year}_{magnetisation}_data_dcs_both_weighter_dcs_both.png",
+    f"proj_{year}_{magnetisation}_data_cf_both_weighter_cf_both.png",
+    f"ratio_{year}_{magnetisation}_data_both_weighter_both.png",
+    f"z_{year}_{magnetisation}_data_dcs_both_weighter_dcs_both.png",
+    f"z_{year}_{magnetisation}_data_cf_both_weighter_cf_both.png",
+    # Show the efficiency correction on data
+    # TODO
+    # Toy mass fit
+    "toy_mass_fit_alt_bkg=False.png",
+    "toy_mass_fit_alt_bkg=True.png",
+    # Mass fit on data
+    # Charm fit toys
+    "unconstrained_example.png",
+    "toy_scan.png",
+    "toy_coverage.png",
+)
+
+
+rule run_all:
+    input:
+        "analysis_done",
+        "validation_done",
+
+
 rule k3pi_analysis:
     input:
-        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
-        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
-        # Data validation
-        "data_param_rs.png",
-        "data_param_ws.png",
-        # BDT cut validation + plots
-        "significance_threshholds.png",
-        "roc.png",
-        # Show the BDT cut on data
-        "data_threshholds.png",
-        "dcs_data_cuts.png",
-        # Efficiency validation
-        "proj_2018_magdown_data_dcs_both_weighter_dcs_both.png",
-        "proj_2018_magdown_data_cf_both_weighter_cf_both.png",
-        "ratio_2018_magdown_data_both_weighter_both.png",
-        "z_2018_magdown_data_dcs_both_weighter_dcs_both.png",
-        "z_2018_magdown_data_cf_both_weighter_cf_both.png",
-        # Show the efficiency correction on data
-        # Toy mass fit
-        "toy_mass_fit_alt_bkg=False.png",
-        "toy_mass_fit_alt_bkg=True.png",
-        # Mass fit on data
-        # TODO put the yield files or mass fit plots here?
-        # Charm fit toys
-        "unconstrained_example.png",
-        "toy_scan.png",
-        "toy_coverage.png",
-        # Charm fits to data
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_0_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_1_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_2_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_3_alt_bkg=False.png",
-        # Charm fits to data with efficiency
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_0_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_1_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_2_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_3_alt_bkg=False.png",
-        # Alt bkg fits to data
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_0_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_1_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_2_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_3_alt_bkg=True.png",
-        # Alt bkg fits to data with efficiency
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_0_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_1_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_2_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_3_alt_bkg=True.png",
+        analysis_plots,
+    output:
+        "analysis_done"
+
+
+rule validation:
+    input:
+        validation_plots,
+    output:
+        "validation_done"
 
 
 # Set up the python environment
@@ -60,168 +156,132 @@ rule setup_python:
         # Special file that flags whether the conda environment
         # has been created by this script
         # ugly and hacky but might work
-        "workflow/envs/conda_created",
+        conda_flag,
     log:
         "logs/setup_python.log",
     run:
-        shell("conda create --name d2k3py python=3.10 --yes >> {log} 2>&1")
-        shell("conda activate d2k3py >> {log} 2>&1")
-        shell("pip install -r requirements.txt >> {log} 2>&1")
-        shell("touch workflow/envs/conda_created >> {log} 2>&1")
+        shell("conda create --name d2k3py python=3.10 --yes >> {{log}} 2>&1")
+        shell("conda activate d2k3py >> {{log}} 2>&1")
+        shell("pip install -r requirements.txt >> {{log}} 2>&1")
+        shell(f"touch {conda_flag} >> {{log}} 2>&1")
 
 
 # Create dataframes - AmpGen, pGun, MC, data
 rule create_ampgen:
     input:
-        ancient("ws_D02piKpipi.root"),
-        ancient("rs_Dbar02piKpipi.root"),
-        ancient("workflow/envs/conda_created"),
+        # Could mark these as ancient, because they will be; but just in case
+        conda_flag,
     output:
-        "k3pi-data/dumps/ampgen/cf.pkl",
-        "k3pi-data/dumps/ampgen/dcs.pkl",
+        dcs_ampgen_dump,
+        cf_ampgen_dump,
     log:
         "logs/create_ampgen.log",
     conda:
         "workflow/envs/d2k3py"
     shell:
-        "python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs >> {log} 2>&1"
-        "&& python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf >> {log} 2>&1"
+        "python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs >> {{log}} 2>&1"
+        "&& python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf >> {{log}} 2>&1"
 
 
 rule create_dcs_pgun:
     # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
     output:
-        "k3pi-data/dumps/pgun/dcs/0.pkl",
-        "k3pi-data/dumps/pgun/dcs/100.pkl",
-        "k3pi-data/dumps/pgun/dcs/101.pkl",
-        "k3pi-data/dumps/pgun/dcs/102.pkl",
-        "k3pi-data/dumps/pgun/dcs/103.pkl",
-        "k3pi-data/dumps/pgun/dcs/104.pkl",
-        "k3pi-data/dumps/pgun/dcs/10.pkl",
-        "k3pi-data/dumps/pgun/dcs/1.pkl",
+        *dcs_pgun_dumps,
     log:
         "logs/create_dcs_pgun.log",
     conda:
         "d2k3py"
     shell:
-        "python k3pi-data/create_pgun.py dcs -n 8 >> {log} 2>&1"
+        "python k3pi-data/create_pgun.py dcs >> {{log}} 2>&1"
 
 
 rule create_cf_pgun:
     # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
     output:
-        "k3pi-data/dumps/pgun/cf/0.pkl",
-        "k3pi-data/dumps/pgun/cf/100.pkl",
-        "k3pi-data/dumps/pgun/cf/101.pkl",
-        "k3pi-data/dumps/pgun/cf/102.pkl",
-        "k3pi-data/dumps/pgun/cf/103.pkl",
-        "k3pi-data/dumps/pgun/cf/104.pkl",
-        "k3pi-data/dumps/pgun/cf/10.pkl",
-        "k3pi-data/dumps/pgun/cf/1.pkl",
+        *cf_pgun_dumps,
     conda:
         "d2k3py"
     log:
         "logs/create_cf_pgun.log",
     shell:
-        "python k3pi-data/create_pgun.py cf -n 8 >> {log} 2>&1"
+        f"python k3pi-data/create_pgun.py cf >> {{log}} 2>&1"
 
 
 rule create_cf_mc:
     # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
     output:
-        "k3pi-data/dumps/mc/2018_cf_magdown.pkl",
+        cf_mc_dump,
     conda:
         "d2k3py"
     log:
         "logs/create_cf_mc.log",
     shell:
-        "python k3pi-data/create_mc.py 2018 cf magdown >> {log} 2>&1"
+        f"python k3pi-data/create_mc.py {year} cf {magnetisation} >> {{log}} 2>&1"
 
 
 rule create_dcs_mc:
     # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
     output:
-        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl",
+        dcs_mc_dump,
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_mc.log",
     shell:
-        "python k3pi-data/create_mc.py 2018 dcs magdown >> {log} 2>&1"
+        f"python k3pi-data/create_mc.py {year} dcs {magnetisation} >> {{log}} 2>&1"
 
 
 rule create_uppermass:
-    # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
+        real_data_files,
     output:
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        dcs_uppermass_dumps,
     threads: 8
     conda:
         "d2k3py"
     log:
         "logs/create_uppermass.log",
     shell:
-        "python k3pi-data/create_uppermass.py 2018 dcs magdown -n 8 >> {log} 2>&1"
+        f"python k3pi-data/create_uppermass.py {year} dcs {magnetisation} -n {n_files} >> {{log}} 2>&1"
 
 
 rule create_dcs_real:
-    # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
+        real_data_files,
     output:
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        dcs_data_dumps,
     threads: 8
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_real.log",
     shell:
-        "python k3pi-data/create_real.py 2018 dcs magdown -n 8 >> {log} 2>&1"
+        f"python k3pi-data/create_real.py {year} dcs {magnetisation} -n {n_files} >> {{log}} 2>&1"
 
 
 rule create_cf_real:
-    # TODO have an input directive pointing at the analysis productions
     input:
-        ancient("workflow/envs/conda_created"),
+        conda_flag,
+        real_data_files,
     output:
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        cf_data_dumps,
     threads: 8
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_real.log",
     shell:
-        "python k3pi-data/create_real.py 2018 cf magdown -n 8 >> {log} 2>&1"
+        f"python k3pi-data/create_real.py {year} cf {magnetisation} -n {n_files} >> {{log}} 2>&1"
 
 
 # Do MC corrections - TODO, decide what this is
@@ -230,117 +290,61 @@ rule create_cf_real:
 # Train the classifier for the BDT cut
 rule train_bdt:
     input:
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl",
+        dcs_uppermass_dumps,
+        dcs_mc_dump,
     output:
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+        bdt_clf,
     conda:
         "d2k3py"
     log:
         "logs/train_bdt.log",
     shell:
-        "python k3pi_signal_cuts/create_classifier.py 2018 dcs magdown >> {log} 2>&1"
+        f"python k3pi_signal_cuts/create_classifier.py {year} dcs {magnetisation} >> {{log}} 2>&1"
 
 
 # Train the efficiency reweighters
 rule train_cf_efficiency:
     input:
-        "k3pi-data/dumps/pgun/cf/0.pkl",
-        "k3pi-data/dumps/pgun/cf/100.pkl",
-        "k3pi-data/dumps/pgun/cf/101.pkl",
-        "k3pi-data/dumps/pgun/cf/102.pkl",
-        "k3pi-data/dumps/pgun/cf/103.pkl",
-        "k3pi-data/dumps/pgun/cf/104.pkl",
-        "k3pi-data/dumps/pgun/cf/10.pkl",
-        "k3pi-data/dumps/pgun/cf/1.pkl",
-        "k3pi-data/dumps/ampgen/cf.pkl",
+        *cf_pgun_dumps,
+        cf_ampgen_dump,
     output:
-        # TODO year/magnetisation are currently unused
-        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+        cf_eff_weighter,
     conda:
         "d2k3py"
     log:
         "logs/train_cf_efficiency.log",
     shell:
-        "python k3pi_efficiency/create_reweighter.py cf 2018 magdown both >> {log} 2>&1"
+        f"python k3pi_efficiency/create_reweighter.py cf {year} {magnetisation} both >> {{log}} 2>&1"
 
 
 rule train_dcs_efficiency:
     input:
-        "k3pi-data/dumps/pgun/dcs/0.pkl",
-        "k3pi-data/dumps/pgun/dcs/100.pkl",
-        "k3pi-data/dumps/pgun/dcs/101.pkl",
-        "k3pi-data/dumps/pgun/dcs/102.pkl",
-        "k3pi-data/dumps/pgun/dcs/103.pkl",
-        "k3pi-data/dumps/pgun/dcs/104.pkl",
-        "k3pi-data/dumps/pgun/dcs/10.pkl",
-        "k3pi-data/dumps/pgun/dcs/1.pkl",
-        "k3pi-data/dumps/ampgen/dcs.pkl",
+        *dcs_pgun_dumps,
+        dcs_ampgen_dump,
     conda:
         "d2k3py"
     log:
         "logs/train_dcs_efficiency.log",
     output:
         # TODO year/magnetisation are currently unused
-        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
+        f"k3pi_efficiency/reweighter/{year}_dcs_{magnetisation}_both.pkl",
     shell:
-        "python k3pi_efficiency/create_reweighter.py dcs 2018 magdown both >> {log} 2>&1"
+        f"python k3pi_efficiency/create_reweighter.py dcs {year} {magnetisation} both >> {{log}} 2>&1"
 
 
 # Create validation plots for the data
 rule validation_data:
     input:
-        "k3pi-data/dumps/ampgen/cf.pkl",
-        "k3pi-data/dumps/ampgen/dcs.pkl",
-        "k3pi-data/dumps/pgun/dcs/0.pkl",
-        "k3pi-data/dumps/pgun/dcs/100.pkl",
-        "k3pi-data/dumps/pgun/dcs/101.pkl",
-        "k3pi-data/dumps/pgun/dcs/102.pkl",
-        "k3pi-data/dumps/pgun/dcs/103.pkl",
-        "k3pi-data/dumps/pgun/dcs/104.pkl",
-        "k3pi-data/dumps/pgun/dcs/10.pkl",
-        "k3pi-data/dumps/pgun/dcs/1.pkl",
-        "k3pi-data/dumps/pgun/cf/0.pkl",
-        "k3pi-data/dumps/pgun/cf/100.pkl",
-        "k3pi-data/dumps/pgun/cf/101.pkl",
-        "k3pi-data/dumps/pgun/cf/102.pkl",
-        "k3pi-data/dumps/pgun/cf/103.pkl",
-        "k3pi-data/dumps/pgun/cf/104.pkl",
-        "k3pi-data/dumps/pgun/cf/10.pkl",
-        "k3pi-data/dumps/pgun/cf/1.pkl",
-        "k3pi-data/dumps/mc/2018_cf_magdown.pkl",
-        "k3pi-data/dumps/mc/2018_dcs_magdown.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/upper_mass/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        cf_ampgen_dump,
+        dcs_ampgen_dump,
+        dcs_pgun_dumps,
+        cf_pgun_dumps,
+        cf_mc_dump,
+        dcs_mc_dump,
+        dcs_uppermass_dumps,
+        # *cf_uppermass_dumps,  # TODO define
+        cf_data_dumps,
+        dcs_data_dumps,
     output:
         "data_param_rs.png",
         "data_param_ws.png",
@@ -349,15 +353,15 @@ rule validation_data:
     log:
         "logs/validation_data.log",
     shell:
-        "python k3pi-data/scripts/plot_parameterisation.py >> {log} 2>&1"
+        "python k3pi-data/scripts/plot_parameterisation.py >> {{log}} 2>&1"
 
 
 # Create validation plots for the BDT cut
 rule validation_bdt_cut:
     input:
-        # Also need the data files that were used
-        # to train this BDT, but that's guaranteed
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
+        f"k3pi_signal_cuts/classifiers/{year}_dcs_{magnetisation}.pkl",
+        dcs_uppermass_dumps,
+        dcs_mc_dump,
     output:
         "significance_threshholds.png",
         "roc.png",
@@ -366,31 +370,15 @@ rule validation_bdt_cut:
     log:
         "logs/validation_bdt_cut.log",
     shell:
-        "python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {log} 2>&1"
-
-        "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {log} 2>&1"
+        "python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {{log}} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {{log}} 2>&1"
 
 
 rule validation_bdt_cut_data:
     input:
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
-        # Also need the data files
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        f"k3pi_signal_cuts/classifiers/{year}_dcs_{magnetisation}.pkl",
+        dcs_data_dumps,
+        cf_data_dumps,
     output:
         "data_threshholds.png",
         "dcs_data_cuts.png",
@@ -399,41 +387,43 @@ rule validation_bdt_cut_data:
     log:
         "logs/bdt_cut_data.log",
     shell:
-        "python k3pi_signal_cuts/scripts/plot_data_threshholds.py >> {log} 2>&1"
-        "&& python k3pi_signal_cuts/scripts/plot_data_cuts.py >> {log} 2>&1"
-        "&& python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {log} 2>&1"
-        "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {log} 2>&1"
+        "python k3pi_signal_cuts/scripts/plot_data_threshholds.py >> {{log}} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_data_cuts.py >> {{log}} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_signal_significance.py >> {{log}} 2>&1"
+        "&& python k3pi_signal_cuts/scripts/plot_roc.py >> {{log}} 2>&1"
 
 
 # Create validation plots for the efficiency
 rule validation_efficiency:
     input:
-        # Also need the data files that were used
-        # to train the reweighters, but that's guaranteed
-        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
-        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+        dcs_eff_weighter,
+        cf_eff_weighter,
+        dcs_pgun_dumps,
+        cf_pgun_dumps,
+        cf_ampgen_dump,
+        dcs_ampgen_dump,
     output:
-        "proj_2018_magdown_data_dcs_both_weighter_dcs_both.png",
-        "proj_2018_magdown_data_cf_both_weighter_cf_both.png",
-        "ratio_2018_magdown_data_both_weighter_both.png",
-        "z_2018_magdown_data_dcs_both_weighter_dcs_both.png",
-        "z_2018_magdown_data_cf_both_weighter_cf_both.png",
+        f"proj_{year}_{magnetisation}_data_dcs_both_weighter_dcs_both.png",
+        f"proj_{year}_{magnetisation}_data_cf_both_weighter_cf_both.png",
+        f"ratio_{year}_{magnetisation}_data_both_weighter_both.png",
+        f"z_{year}_{magnetisation}_data_dcs_both_weighter_dcs_both.png",
+        f"z_{year}_{magnetisation}_data_cf_both_weighter_cf_both.png",
     conda:
         "d2k3py"
     log:
         "logs/validation_efficiency.log",
     shell:
-        "python k3pi_efficiency/scripts/plot_projection.py 2018 dcs dcs magdown both both >> {log} 2>&1"
-        "&& python k3pi_efficiency/scripts/plot_projection.py 2018 cf cf magdown both both >> {log} 2>&1"
-        "&& python k3pi_efficiency/scripts/plot_time_ratio.py 2018 magdown both both >> {log} 2>&1"
-        "&& python k3pi_efficiency/scripts/plot_z_scatter.py 2018 dcs dcs magdown both both >> {log} 2>&1"
-        "&& python k3pi_efficiency/scripts/plot_z_scatter.py 2018 cf cf magdown both both >> {log} 2>&1"
+        f"python k3pi_efficiency/scripts/plot_projection.py {year} dcs dcs {magnetisation} both both >> {{log}} 2>&1"
+        f"&& python k3pi_efficiency/scripts/plot_projection.py {year} cf cf {magnetisation} both both >> {{log}} 2>&1"
+        f"&& python k3pi_efficiency/scripts/plot_time_ratio.py {year} {magnetisation} both both >> {{log}} 2>&1"
+        f"&& python k3pi_efficiency/scripts/plot_z_scatter.py {year} dcs dcs {magnetisation} both both >> {{log}} 2>&1"
+        f"&& python k3pi_efficiency/scripts/plot_z_scatter.py {year} cf cf {magnetisation} both both >> {{log}} 2>&1"
 
 
 # Mass fit toy plots
 rule massfit_toys:
     input:
-        "workflow/envs/conda_created",
+        conda_flag,
     output:
         "toy_mass_fit_alt_bkg=False.png",
         "toy_mass_fit_alt_bkg=True.png",
@@ -442,14 +432,14 @@ rule massfit_toys:
     log:
         "logs/massfit_toys.log",
     shell:
-        "python k3pi_mass_fit/scripts/toys/toy_fit.py >> {log} 2>&1"
-        "&& python k3pi_mass_fit/scripts/toys/toy_fit.py --alt_bkg >> {log} 2>&1"
+        "python k3pi_mass_fit/scripts/toys/toy_fit.py >> {{log}} 2>&1"
+        "&& python k3pi_mass_fit/scripts/toys/toy_fit.py --alt_bkg >> {{log}} 2>&1"
 
 
 # Toy plots for the time fitter
 rule charmfit_toys:
     input:
-        "workflow/envs/conda_created",
+        conda_flag,
     output:
         "unconstrained_example.png",
         "toy_scan.png",
@@ -459,258 +449,190 @@ rule charmfit_toys:
     log:
         "logs/charmfit_toys.log",
     shell:
-        "python k3pi_fitter/scripts/scan_example.py >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/pulls/scan_coverage.py >> {log} 2>&1"
+        "python k3pi_fitter/scripts/scan_example.py >> {{log}} 2>&1"
+        "&& python k3pi_fitter/scripts/pulls/scan_coverage.py >> {{log}} 2>&1"
 
 
 # BDT cut on real data
 # Efficiency correction plot on real data
 # Mass fit time binned real data - output yields + errors to file
-# output to file because we'll use these values multiple times in future
 rule massfit_data_no_eff:
     output:
         # Also outputs yield images
-        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=False.txt",
     input:
-        # BDT cut
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
-        # Data
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        bdt_clf,
+        cf_data_dumps,
+        dcs_data_dumps,
     conda:
         "d2k3py"
     log:
         "logs/massfit_data_noeff.log",
     shell:
-        "python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 0 --bdt_cut"
-        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 1 --bdt_cut"
-        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 2 --bdt_cut"
-        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 3 --bdt_cut"
+        f"python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 0 --bdt_cut"
+        f"&& python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 1 --bdt_cut"
+        f"&& python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 2 --bdt_cut"
+        f"&& python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 3 --bdt_cut"
 
 
 rule massfit_data:
     output:
         # Also outputs yield images
-        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=True.txt",
     input:
-        # BDT cut
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
-        # Data
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        # Efficiency
-        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
-        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+        bdt_clf,
+        dcs_data_dumps,
+        cf_data_dumps,
+        dcs_eff_weighter,
+        cf_eff_weighter,
     conda:
         "d2k3py"
     log:
         "logs/massfit_data.log",
     shell:
-        "python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 0 --bdt_cut --efficiency"
-        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 1 --bdt_cut --efficiency"
-        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 2 --bdt_cut --efficiency"
-        "&& python k3pi_mass_fit/scripts/get_yields.py 2018 magdown 3 --bdt_cut --efficiency"
+        f"python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 0 --bdt_cut --efficiency"
+        f"&& python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 1 --bdt_cut --efficiency"
+        f"&& python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 2 --bdt_cut --efficiency"
+        f"&& python k3pi_mass_fit/scripts/get_yields.py {year} {magnetisation} 3 --bdt_cut --efficiency"
 
 
 rule massfit_data_no_eff_altbkg:
     output:
         # Also outputs yield images
-        "k3pi_mass_fit/alt_yields_2018_magdown_0_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_1_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_2_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_3_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=False.txt",
     input:
-        # BDT cut
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
-        # Data
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
+        bdt_clf,
+        dcs_data_dumps,
+        cf_data_dumps,
     conda:
         "d2k3py"
     log:
         "logs/alt_massfit_data_noeff.log",
     shell:
-        "python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 0 --bdt_cut"
-        "&& python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 1 --bdt_cut"
-        "&& python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 2 --bdt_cut"
-        "&& python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 3 --bdt_cut"
+        f"python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 0 --bdt_cut"
+        f"&& python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 1 --bdt_cut"
+        f"&& python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 2 --bdt_cut"
+        f"&& python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 3 --bdt_cut"
 
 
 rule massfit_data_altbkg:
     output:
         # Also outputs yield images
-        "k3pi_mass_fit/alt_yields_2018_magdown_0_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_1_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_2_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_3_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=True.txt",
     input:
-        # BDT cut
-        "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",
-        # Data
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_dcs_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000009_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000002_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000006_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000010_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000011_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000014_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000003_1.charm_d02hhhh_dvntuple.pkl",
-        "k3pi-data/dumps/data/2018_cf_magdown/00111438_00000019_1.charm_d02hhhh_dvntuple.pkl",
-        # Efficiency
-        "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",
-        "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",
+        bdt_clf,
+        dcs_data_dumps,
+        cf_data_dumps,
     conda:
         "d2k3py"
     log:
         "logs/massfit_data_altbkg.log",
     shell:
-        "python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 0 --bdt_cut --efficiency"
-        "&& python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 1 --bdt_cut --efficiency"
-        "&& python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 2 --bdt_cut --efficiency"
-        "&& python k3pi_mass_fit/scripts/get_yields_altbkg.py 2018 magdown 3 --bdt_cut --efficiency"
+        f"python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 0 --bdt_cut --efficiency"
+        f"&& python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 1 --bdt_cut --efficiency"
+        f"&& python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 2 --bdt_cut --efficiency"
+        f"&& python k3pi_mass_fit/scripts/get_yields_altbkg.py {year} {magnetisation} 3 --bdt_cut --efficiency"
 
 
 # Time fit yields
 rule timefit_data_no_eff:
     input:
-        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=False.txt",
     output:
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_0_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_1_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_2_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_3_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_0_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_1_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_2_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_3_alt_bkg=False.png",
     conda:
         "d2k3py"
     log:
         "logs/timefit_data.log",
     shell:
-        "python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut >> {log} 2>&1"
+        f"python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 0 --bdt_cut >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 1 --bdt_cut >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 2 --bdt_cut >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 3 --bdt_cut >> {{log}} 2>&1"
 
 
 rule timefit_data:
     input:
-        "k3pi_mass_fit/yields_2018_magdown_0_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/yields_2018_magdown_1_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/yields_2018_magdown_2_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/yields_2018_magdown_3_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=True.txt",
     output:
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_0_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_1_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_2_alt_bkg=False.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_3_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_0_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_1_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_2_alt_bkg=False.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_3_alt_bkg=False.png",
     conda:
         "d2k3py"
     log:
         "logs/timefit_data_eff.log",
     shell:
-        "python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut --efficiency >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut --efficiency >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut --efficiency >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut --efficiency >> {log} 2>&1"
+        f"python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 0 --bdt_cut --efficiency >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 1 --bdt_cut --efficiency >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 2 --bdt_cut --efficiency >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 3 --bdt_cut --efficiency >> {{log}} 2>&1"
+
 
 rule timefit_data_no_eff_altbkg:
     input:
-        "k3pi_mass_fit/alt_yields_2018_magdown_0_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_1_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_2_bdt_cut=True_efficiency=False.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_3_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=False.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=False.txt",
     output:
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_0_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_1_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_2_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=False_3_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_0_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_1_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_2_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_3_alt_bkg=True.png",
     conda:
         "d2k3py"
     log:
         "logs/timefit_data_no_eff_altbkg.log",
     shell:
-        "python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut --alt_bkg >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut --alt_bkg >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut --alt_bkg >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut --alt_bkg >> {log} 2>&1"
+        f"python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 0 --bdt_cut --alt_bkg >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 1 --bdt_cut --alt_bkg >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 2 --bdt_cut --alt_bkg >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 3 --bdt_cut --alt_bkg >> {{log}} 2>&1"
 
 
 rule timefit_data_altbkg:
     input:
-        "k3pi_mass_fit/alt_yields_2018_magdown_0_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_1_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_2_bdt_cut=True_efficiency=True.txt",
-        "k3pi_mass_fit/alt_yields_2018_magdown_3_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_0_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_1_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_2_bdt_cut=True_efficiency=True.txt",
+        f"k3pi_mass_fit/alt_yields_{year}_{magnetisation}_3_bdt_cut=True_efficiency=True.txt",
     output:
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_0_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_1_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_2_alt_bkg=True.png",
-        "fits_2018_magdown_bdt_cut=True_efficiency=True_3_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_0_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_1_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_2_alt_bkg=True.png",
+        f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=True_3_alt_bkg=True.png",
     conda:
         "d2k3py"
     log:
         "logs/timefit_data_eff.log",
     shell:
-        "python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut --efficiency --alt_bkg >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut --efficiency --alt_bkg >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut --efficiency --alt_bkg >> {log} 2>&1"
-        "&& python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut --efficiency --alt_bkg >> {log} 2>&1"
+        f"python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 0 --bdt_cut --efficiency --alt_bkg >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 1 --bdt_cut --efficiency --alt_bkg >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 2 --bdt_cut --efficiency --alt_bkg >> {{log}} 2>&1"
+        f"&& python k3pi_fitter/scripts/fit_from_file.py {year} {magnetisation} 3 --bdt_cut --efficiency --alt_bkg >> {{log}} 2>&1"
 
 
 # Scan yields w/ charm constraint

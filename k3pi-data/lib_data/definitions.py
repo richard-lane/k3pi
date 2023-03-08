@@ -2,6 +2,7 @@
 """
 import pathlib
 from typing import List
+from glob import glob
 
 D0_MASS_MEV = 1864.84
 D0_LIFETIME_PS = 0.4101
@@ -234,3 +235,21 @@ def uppermass_dump(
         uppermass_dir(year, sign, magnetisation)
         / f"{data_file.with_suffix('').name}.pkl"
     )
+
+
+def pgun_dirs(sign: str) -> List[pathlib.Path]:
+    """
+    List of filepaths pointing towards particle gun productions on /eos/
+
+    This is just the raw stuff - e.g. not /2018_dw/, or anything
+
+    """
+    assert sign in {"dcs", "cf", "false"}
+    if sign == "dcs":
+        path = WS_PGUN_SOURCE_DIR
+    elif sign == "cf":
+        path = RS_PGUN_SOURCE_DIR
+    else:
+        path = FALSE_SIGN_SOURCE_DIR
+
+    return glob(f"{path}[0-9]*/")
