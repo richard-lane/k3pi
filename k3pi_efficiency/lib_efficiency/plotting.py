@@ -2,7 +2,10 @@
 Functions for plotting things
 
 """
+import sys
+import pathlib
 from typing import Tuple, List
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -10,7 +13,10 @@ from scipy.optimize import curve_fit
 from scipy.spatial import ConvexHull
 
 from . import phsp_binning
-from .metrics import _counts
+
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
+
+from lib_data import stats
 
 
 def phsp_labels() -> Tuple:
@@ -77,7 +83,7 @@ def _plot_shaded_area(
     )
 
     # Display gradient on the plot
-    ax.text(2.0, 0.85, rf"{opt[0]:.4f}$\pm${err[0]:.4f}")
+    # ax.text(2.0, 0.85, rf"{opt[0]:.4f}$\pm${err[0]:.4f}")
 
 
 def _plot_ratio(
@@ -98,8 +104,8 @@ def _plot_ratio(
     centres = (bins[1:] + bins[:-1]) / 2
     widths = (bins[1:] - bins[:-1]) / 2
 
-    num_counts, num_errs = _counts(numerator, num_wt, bins)
-    denom_counts, denom_errs = _counts(denominator, denom_wt, bins)
+    num_counts, num_errs = stats.counts(numerator, bins, num_wt)
+    denom_counts, denom_errs = stats.counts(denominator, bins, denom_wt)
 
     # Scale
     scale_factor = np.sum(num_counts) / np.sum(denom_counts)

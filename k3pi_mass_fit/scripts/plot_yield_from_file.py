@@ -70,6 +70,7 @@ def main(
             xerr=widths / 2,
             yerr=ratio_err,
             label=f"Phsp bin {phsp_bin}",
+            fmt="+",
         )
 
     axes[2].legend()
@@ -81,7 +82,7 @@ def main(
 
     axes[0].set_ylim([0.0, 3e6])
     axes[1].set_ylim([0.0, 10000])
-    axes[2].set_ylim([0.0022, 0.0036])
+    axes[2].set_ylim([0.0022, 0.0040])
 
     fig.tight_layout()
     fig.savefig(

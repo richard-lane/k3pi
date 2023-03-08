@@ -8,6 +8,8 @@ import glob
 import pickle
 import pathlib
 from typing import Generator, Iterable
+
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -100,6 +102,18 @@ def absolute_efficiency(sign: str) -> int:
 
     """
     return len(particle_gun(sign)) / pgun_n_generated(sign)
+
+
+def abs_eff_err(sign: str) -> int:
+    """
+    Get the statistical error on absolute efficiency from
+    particle gun dataframes
+
+    """
+    num = len(particle_gun(sign))
+    denom = pgun_n_generated(sign)
+
+    return num * np.sqrt(1 / num + 1 / denom) / denom
 
 
 def false_sign(show_progress: bool = False) -> pd.DataFrame:
