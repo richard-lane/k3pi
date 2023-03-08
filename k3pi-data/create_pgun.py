@@ -8,6 +8,7 @@ The particle gun files live on lxplus; this script should therefore be run on lx
 """
 import os
 import pickle
+import pathlib
 import argparse
 import uproot
 import numpy as np
@@ -76,59 +77,40 @@ def main(sign: str, n_files: int) -> None:
     if not definitions.pgun_dir(sign).is_dir():
         os.mkdir(definitions.pgun_dir(sign))
 
-    source_dir = (
-        definitions.RS_PGUN_SOURCE_DIR
-        if sign == "cf"
-        else definitions.WS_PGUN_SOURCE_DIR
-    )
-
-    # Keep track of which folders broke - this might be expected
-    broken_folders = []
-
     # Generator for train/test RNG
     gen = np.random.default_rng()
 
     generated = []
 
     # Iterate over input files
-    for folder in tqdm(tuple(source_dir.glob("*"))[:n_files]):
+    for path in tqdm(definitions.pgun_filepaths(sign)[:n_files]):
+        dump_path = definitions.pgun_dump_fromfile(path, sign)
+
         # If the dump already exists, do nothing
-        dump_path = definitions.pgun_dump(sign, folder.name)
         if dump_path.is_file():
             continue
 
         # Otherwise read the right trees
-        data_path = folder / "pGun_TRACK.root"
-        hlt_path = folder / "Hlt1TrackMVA.root"
-        try:
-            with uproot.open(data_path) as data_f, uproot.open(hlt_path) as hlt_f:
-                data_tree = data_f["Dstp2D0pi/DecayTree"]
-                hlt_tree = hlt_f["DecayTree"]
-                mc_tree = data_f["MCDstp2D0pi/MCDecayTree"]
+        data_path = pathlib.Path(path) / "pGun_TRACK.root"
+        hlt_path = pathlib.Path(path) / "Hlt1TrackMVA.root"
 
-                # Create the dataframe
-                dataframe, n_gen = _pgun_df(gen, data_tree, hlt_tree, mc_tree)
+        with uproot.open(str(data_path)) as data_f, uproot.open(str(hlt_path)) as hlt_f:
+            data_tree = data_f["Dstp2D0pi/DecayTree"]
+            hlt_tree = hlt_f["DecayTree"]
+            mc_tree = data_f["MCDstp2D0pi/MCDecayTree"]
 
-                generated.append(n_gen)
-                print(n_gen)
+            # Create the dataframe
+            dataframe, n_gen = _pgun_df(gen, data_tree, hlt_tree, mc_tree)
 
-            # Dump it
-            with open(dump_path, "wb") as dump_f:
-                pickle.dump(dataframe, dump_f)
+            generated.append(n_gen)
+            print(n_gen)
 
-        except FileNotFoundError:
-            print(str(folder), "broke")
-            broken_folders.append(str(folder))
-            continue
-
-    if broken_folders:
-        print(f"Failed to read from dirs:\n\t{broken_folders}")
-        print(
-            "This may be expected, e.g. there may be already merged files also in the dir"
-        )
+        # Dump it
+        with open(dump_path, "wb") as dump_f:
+            pickle.dump(dataframe, dump_f)
 
     print("writing info about n gen to file")
-    with open(str(n_gen_file), "w") as gen_f:
+    with open(str(n_gen_file), "w", encoding="utf8") as gen_f:
         gen_f.write("\n".join(str(n) for n in generated))
 
 
