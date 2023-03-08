@@ -54,17 +54,13 @@ dcs_mc_dump, cf_mc_dump = (
     definitions.mc_dump(year, sign, magnetisation) for sign in ("dcs", "cf")
 )
 
-# Find the right particle gun dirs - these are ones that are just numbers
-dcs_pgun_dirs = definitions.pgun_dirs("dcs")
-cf_pgun_dirs = definitions.pgun_dirs("cf")
-false_pgun_dirs = definitions.pgun_dirs("false")
+# Particle gun analyis productions
+dcs_pgun_files = definitions.pgun_filepaths("dcs")
+cf_pgun_files = definitions.pgun_filepaths("cf")
 
 # Particle gun dumps
-dcs_pgun_dumps = [definitions.pgun_dump("dcs", folder.name) for folder in dcs_pgun_dirs]
-cf_pgun_dumps = [definitions.pgun_dump("cf", folder.name) for folder in dcs_pgun_dirs]
-false_pgun_dumps = [
-    definitions.pgun_dump("false", folder.name) for folder in dcs_pgun_dirs
-]
+dcs_pgun_dumps = [definitions.pgun_dump_fromfile(path, "dcs") for path in dcs_pgun_files]
+cf_pgun_dumps = [definitions.pgun_dump_fromfile(path, "cf") for path in cf_pgun_files]
 
 # AmpGen dumps
 dcs_ampgen_dump = definitions.ampgen_dump("dcs")
