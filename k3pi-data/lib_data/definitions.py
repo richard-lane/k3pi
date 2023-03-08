@@ -1,6 +1,7 @@
 """
 """
 import pathlib
+import logging
 from typing import List
 from glob import glob
 
@@ -244,6 +245,11 @@ def pgun_dirs(sign: str) -> List[pathlib.Path]:
     This is just the raw stuff - e.g. not /2018_dw/, or anything
 
     """
+    logging.warning(
+        "Use the pgun_filepaths and pgun_dump_fromfile fcns instead",
+        exc_info=DeprecationWarning(),
+    )
+
     assert sign in {"dcs", "cf", "false"}
     if sign == "dcs":
         path = WS_PGUN_SOURCE_DIR
@@ -253,3 +259,43 @@ def pgun_dirs(sign: str) -> List[pathlib.Path]:
         path = FALSE_SIGN_SOURCE_DIR
 
     return glob(f"{path}[0-9]*/")
+
+
+def pgun_filepaths(sign: str) -> List[str]:
+    """
+    Paths to particle gun analysis productions on lxplus (or the grid maybe).
+
+    :param sign: "dcs" or "cf"
+    :returns: list of paths as strings
+
+    """
+    assert sign in {"dcs", "cf"}
+
+    # File holding locations of productions
+    pfn_file = (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "production_locations"
+        / "pgun"
+        / f"{sign}.txt"
+    )
+
+    with open(pfn_file, "r") as f:
+        return [line.strip() for line in f.readlines()]
+
+
+def pgun_dump_fromfile(pgun_file: str, sign: str) -> pathlib.Path:
+    """
+    Paths to the pickle dump corresponding to a particle gun analysis production file.
+    Idea is to pass a file returned from `pgun_filepaths()` as `data_file`
+
+    :param data_file: location of analysis production, e.g. as returned by data_files()
+    :param sign: "cf" or "dcs"
+
+    :returns: path to the dump location
+
+    """
+    assert sign in {"cf", "dcs"}
+
+    pgun_file = pathlib.Path(pgun_file)
+
+    return pgun_dir(sign) / f"{pgun_file.name}.pkl"
