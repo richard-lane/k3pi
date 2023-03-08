@@ -76,16 +76,17 @@ def main(args: argparse.Namespace):
     # Just to check stuff let's plot some projections
     plotting.projections(mc_pts, ag_pts)
     suffix = f"{'_fit' if args.fit else ''}{'_cut' if args.cut else ''}"
+    path = f"training_proj_{args.year}_{args.sign}_{args.magnetisation}_{args.k_sign}{suffix}.png"
     plt.savefig(
-        f"training_proj_{args.year}_{args.sign}_{args.magnetisation}_{args.k_sign}{suffix}.png"
+            path
     )
-    print("saved fig")
+    print(f"saved {path}")
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 350,
+        "n_estimators": 400,
         "max_depth": 3,
-        "learning_rate": 0.08,
+        "learning_rate": 0.15,
         "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(

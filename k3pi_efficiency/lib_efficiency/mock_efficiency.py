@@ -22,8 +22,10 @@ def time_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
 
     """
     # Straight line
-    scale = 1.0
-    return factor * dataframe["time"] / scale - MIN_TIME * factor / scale
+    # scale = 1.0
+    # retval = factor * dataframe["time"] / scale - MIN_TIME * factor / scale
+    # retval[retval > 1.0] = 1.0
+    # return retval
 
     times = dataframe["time"]
     retvals = (
@@ -36,6 +38,13 @@ def time_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
     assert np.min(retvals) >= 0.0
 
     return retvals
+
+
+def kpt_eff(k_pt: np.ndarray, factor: float) -> np.ndarray:
+    """
+    The efficiency in terms of k pT
+    """
+    return 1.0 - 0.25 * factor * np.sin(np.pi * k_pt / 1000)
 
 
 def phsp_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
@@ -53,8 +62,7 @@ def phsp_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
     # Find the transverse momentum of the kaon
     k_pt = np.sqrt(dataframe["Kplus_Px"] ** 2 + dataframe["Kplus_Py"] ** 2)
 
-    # Efficiency is this
-    efficiency = 1.0 - 0.25 * factor * np.sin(np.pi * k_pt / 1000)
+    efficiency = kpt_eff(k_pt, factor)
 
     assert np.max(efficiency < 1.0)
     assert np.min(efficiency > 0.0)
