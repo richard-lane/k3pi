@@ -144,6 +144,20 @@ def _dataframes(
     )
 
 
+def _abs_eff(sign: str, time_range: Tuple[float, float]) -> float:
+    """
+    Get the absolute efficiency, accepting only times in the provided range
+
+    """
+    n_gen = get.pgun_n_generated(sign)
+
+    times = get.particle_gun(sign)["time"]
+    low, high = time_range
+    accepted = (low < times) & (times < high)
+
+    return np.sum(accepted) / n_gen
+
+
 def main(
     *,
     year: str,
@@ -193,29 +207,35 @@ def main(
     # If the file already exists, appending to it might have unexpected results
     yield_file_path.touch(exist_ok=False)
 
+    # Find the absolute efficiency of the events in our time acceptance range
+    dcs_eff = _abs_eff("dcs", (time_bins[0], time_bins[1]))
+    cf_eff = _abs_eff("cf", (time_bins[0], time_bins[1]))
+
     for i, (low_t, high_t) in enumerate(zip(time_bins[:-1], time_bins[1:])):
-        # Get generators of dataframes
-        cf_dfs = _dataframes(
-            year, magnetisation, phsp_bin, "cf", low_t, high_t, bdt_clf, bdt_cut
+        print("finding cf counts - no efficiency")
+        cf_count, cf_err = mass_util.delta_m_counts(
+            _dataframes(
+                year, magnetisation, phsp_bin, "cf", low_t, high_t, bdt_clf, bdt_cut
+            ),
+            mass_bins,
         )
-        dcs_dfs = _dataframes(
-            year, magnetisation, phsp_bin, "dcs", low_t, high_t, bdt_clf, bdt_cut
+        print("finding dcs counts - no efficiency")
+        dcs_count, dcs_err = mass_util.delta_m_counts(
+            _dataframes(
+                year, magnetisation, phsp_bin, "dcs", low_t, high_t, bdt_clf, bdt_cut
+            ),
+            mass_bins,
         )
 
         # Find efficiency weights if necessary
-        # Get new generators to avoid using the old ones up
-        cf_wts = (
-            wts_generator(
+        if efficiency:
+            cf_wts = wts_generator(
                 _dataframes(
                     year, magnetisation, phsp_bin, "cf", low_t, high_t, bdt_clf, bdt_cut
                 ),
                 cf_weighter,
             )
-            if efficiency
-            else None
-        )
-        dcs_wts = (
-            wts_generator(
+            dcs_wts = wts_generator(
                 _dataframes(
                     year,
                     magnetisation,
@@ -228,16 +248,41 @@ def main(
                 ),
                 dcs_weighter,
             )
-            if efficiency
-            else None
-        )
 
-        # Find counts
-        print("finding cf counts")
-        cf_count, cf_err = mass_util.delta_m_counts(cf_dfs, mass_bins, cf_wts)
+            print("finding cf counts - with efficiency")
+            cf_count_eff, cf_err = mass_util.delta_m_counts(
+                _dataframes(
+                    year, magnetisation, phsp_bin, "cf", low_t, high_t, bdt_clf, bdt_cut
+                ),
+                mass_bins,
+                cf_wts,
+            )
+            print("finding dcs counts - with efficiency")
+            dcs_count_eff, dcs_err = mass_util.delta_m_counts(
+                _dataframes(
+                    year,
+                    magnetisation,
+                    phsp_bin,
+                    "dcs",
+                    low_t,
+                    high_t,
+                    bdt_clf,
+                    bdt_cut,
+                ),
+                mass_bins,
+                dcs_wts,
+            )
 
-        print("finding dcs counts")
-        dcs_count, dcs_err = mass_util.delta_m_counts(dcs_dfs, mass_bins, dcs_wts)
+            # scale the dcs counts to account for absolute efficiency
+            scale_factor = np.sum(cf_count_eff) / np.sum(dcs_count_eff)
+            scale_factor *= np.sum(dcs_count) / np.sum(cf_count)
+            scale_factor *= cf_eff / dcs_eff
+            print(f"{scale_factor=}")
+
+            dcs_count = dcs_count_eff * scale_factor
+            dcs_err = dcs_err * scale_factor
+
+            cf_count = cf_count_eff
 
         chi2, n_rs, err_rs, n_ws, err_ws = _fit(
             cf_count,

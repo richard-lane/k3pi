@@ -94,6 +94,14 @@ def pgun_n_generated(sign: str) -> int:
     return n_tot
 
 
+def absolute_efficiency(sign: str) -> int:
+    """
+    Get the absolute efficiency from particle gun dataframes
+
+    """
+    return len(particle_gun(sign)) / pgun_n_generated(sign)
+
+
 def false_sign(show_progress: bool = False) -> pd.DataFrame:
     """
     Get the false sign particle gun dataframes, concatenate them and return

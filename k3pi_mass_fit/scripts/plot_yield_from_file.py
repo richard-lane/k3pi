@@ -79,6 +79,10 @@ def main(
     axes[1].set_ylabel("WS")
     axes[2].set_ylabel(r"$\frac{WS}{RS}$")
 
+    axes[0].set_ylim([0.0, 3e6])
+    axes[1].set_ylim([0.0, 10000])
+    axes[2].set_ylim([0.0022, 0.0036])
+
     fig.tight_layout()
     fig.savefig(
         f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png"
