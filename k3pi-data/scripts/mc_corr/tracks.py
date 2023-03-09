@@ -1,5 +1,5 @@
 """
-Show MC correction reweighting
+Show MC correction reweighting in the number of tracks + related vars
 
 """
 import sys
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
 from lib_data import get, corrections, plotting
 
@@ -27,41 +27,31 @@ def _track_hists(
 
     """
     hist_ax, pull_ax = axes
-    plotting.hist(hist_ax, bins, mc_tracks, label="MC", fmt="r:")
-    plotting.hist(
-        hist_ax,
-        bins,
-        data_tracks,
-        label="Data",
-        fmt="g:",
-    )
-    plotting.hist(
-        hist_ax,
-        bins,
-        mc_tracks,
-        weights=weights,
-        label="MC (Reweighted)",
-        fmt="b:",
+    hist_kw = {"histtype": "step", "bins": bins}
+    hist_ax.hist(mc_tracks, label="MC", color="r", **hist_kw)
+    hist_ax.hist(data_tracks, label="Data", color="g", **hist_kw)
+    hist_ax.hist(
+        mc_tracks, label="MC (Reweighted)", color="b", **hist_kw, weights=weights
     )
 
-    plotting.pull(
-        pull_ax,
-        bins,
-        (mc_tracks, data_tracks),
-        (None, None),
-        fmt="k.",
-        markersize=0.5,
-        label="Before",
-    )
-    plotting.pull(
-        pull_ax,
-        bins,
-        (mc_tracks, data_tracks),
-        (weights, None),
-        fmt="r.",
-        markersize=0.5,
-        label="After",
-    )
+    # plotting.pull(
+    #     pull_ax,
+    #     bins,
+    #     (mc_tracks, data_tracks),
+    #     (None, None),
+    #     fmt="k.",
+    #     markersize=0.5,
+    #     label="Before",
+    # )
+    # plotting.pull(
+    #     pull_ax,
+    #     bins,
+    #     (mc_tracks, data_tracks),
+    #     (weights, None),
+    #     fmt="r.",
+    #     markersize=0.5,
+    #     label="After",
+    # )
 
 
 def _ntrack_hists(mc_tracks, mc_train, data_tracks, data_train, train_wt, test_wt):

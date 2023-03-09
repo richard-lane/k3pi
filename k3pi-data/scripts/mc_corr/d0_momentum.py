@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_mass_fit"))
 
 from lib_data import get, d0_mc_corrections
 from libFit import fit, pdfs, definitions, plotting, sweighting, util as mass_util

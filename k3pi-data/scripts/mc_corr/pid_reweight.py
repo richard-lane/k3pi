@@ -11,7 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import boost_histogram as bh
 
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
 from lib_data import corrections, get, util
 
@@ -46,12 +46,13 @@ def _eta_and_momenta(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
     Get K3pi eta and momentum from a dataframe
 
     """
+    pion_suffices = ("1minus", "2minus", "3plus")
     k_eta = util.eta(
         dataframe["Kplus_Px"], dataframe["Kplus_Py"], dataframe["Kplus_Pz"]
     )
     pi_eta = tuple(
         util.eta(dataframe[f"pi{s}_Px"], dataframe[f"pi{s}_Py"], dataframe[f"pi{s}_Pz"])
-        for s in ("1minus", "2minus", "3plus")
+        for s in pion_suffices
     )
     etas = np.row_stack((k_eta, *pi_eta))
 
@@ -66,7 +67,7 @@ def _eta_and_momenta(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
             + dataframe[f"pi{s}_Py"] ** 2
             + dataframe[f"pi{s}_Pz"] ** 2
         )
-        for s in ("1minus", "2minus", "3plus")
+        for s in pion_suffices
     )
     momenta = np.row_stack((k_p, *pi_p))
 
