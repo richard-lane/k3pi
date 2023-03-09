@@ -16,7 +16,7 @@ lib_efficiency/amplitude_models/dcs.cpp
 *.err
 
 # Environment
-workflow/envs/d2k3py/*
+workflow/envs/conda_created
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
