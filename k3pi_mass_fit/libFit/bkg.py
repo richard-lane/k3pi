@@ -35,7 +35,7 @@ def dump_dir(
     return (
         pathlib.Path(__file__).resolve().parents[1]
         / "bkg_dumps"
-        / f"{year}_{magnetisation}_{sign}/"
+        / f"{year}_{magnetisation}_{sign}{'_cut' if bdt_cut else ''}/"
     )
 
 
