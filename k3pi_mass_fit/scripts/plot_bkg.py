@@ -62,16 +62,22 @@ def main(*, year: str, magnetisation: str, bdt_cut: bool):
         label="CF",
     )
 
-    fig.suptitle(f"Background {year} {magnetisation} {bdt_cut=}")
-
     axis.legend()
 
     axis.set_xlabel(r"$\Delta M$")
-    axis.set_ylabel("density")
+    axis.set_ylabel("count / MeV")
+
+    upper = pdfs.domain()[1]
+    axis.axvline(upper, color="k", alpha=0.8)
+    axis.arrow(upper, 0.06, -2, 0.0, color="k", head_length=0.5)
+    axis.text(upper - 5, 0.0625, "Fit region", color="k", alpha=0.8)
 
     fig.tight_layout()
 
-    plt.show()
+    path = f"bkg_shape{'_cut' if bdt_cut else ''}.png"
+
+    print(f"plotting {path}")
+    fig.savefig(path)
 
 
 if __name__ == "__main__":
