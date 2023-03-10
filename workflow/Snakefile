@@ -13,7 +13,7 @@ year, magnetisation = "2018", "magdown"
 
 # Number of data files to use for real data, upper mass
 # since this is by far the slowest step
-n_files = 8
+n_files = 1
 
 # Number of parallel processes for creating data dumps
 n_procs = 2
