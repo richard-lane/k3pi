@@ -15,6 +15,9 @@ year, magnetisation = "2018", "magdown"
 # since this is by far the slowest step
 n_files = 8
 
+# Number of parallel processes for creating data dumps
+n_procs = 2
+
 # Other things
 # ----
 # Track whether we've set up the python environment
@@ -241,7 +244,7 @@ rule create_uppermass:
         real_data_files,
     output:
         dcs_uppermass_dumps,
-    threads: 8
+    threads: n_procs
     conda:
         "d2k3py"
     log:
@@ -256,13 +259,13 @@ rule create_dcs_real:
         real_data_files,
     output:
         dcs_data_dumps,
-    threads: 8
+    threads: n_procs
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_real.log",
     shell:
-        f"python k3pi-data/create_real.py {year} dcs {magnetisation} -n {n_files} >> {{log}} 2>&1"
+        f"python k3pi-data/create_real.py {year} dcs {magnetisation} -n {n_files} --n_procs {n_procs} >> {{log}} 2>&1"
 
 
 rule create_cf_real:
@@ -271,13 +274,13 @@ rule create_cf_real:
         real_data_files,
     output:
         cf_data_dumps,
-    threads: 8
+    threads: n_procs
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_real.log",
     shell:
-        f"python k3pi-data/create_real.py {year} cf {magnetisation} -n {n_files} >> {{log}} 2>&1"
+        f"python k3pi-data/create_real.py {year} cf {magnetisation} -n {n_files} --n_procs {n_procs} >> {{log}} 2>&1"
 
 
 # Do MC corrections - TODO, decide what this is
