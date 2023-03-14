@@ -13,11 +13,25 @@ import matplotlib.pyplot as plt
 from scipy.integrate import quad
 
 from iminuit import Minuit
+from iminuit.cost import ExtendedUnbinnedNLL
 from iminuit.util import make_func_code
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 from . import stats
 from libFit import pdfs
+
+
+class IPFitError(Exception):
+    """
+    Something went wrong
+
+    """
+
+
+class IPFitZeroCountsError(IPFitError):
+    """
+    0 Counts encountered
+    """
 
 
 def domain() -> Tuple[float, float]:
@@ -56,6 +70,21 @@ def norm_peak(
     return pdfs.signal(x, centre, width_l, width_r, alpha_l, alpha_r, beta) / area
 
 
+def secondary_peak(
+    x: np.ndarray, centre: float, width: float, alpha: float, beta: float
+) -> np.ndarray:
+    """
+    Peak for the secondary model for the IPCHI2 fit
+
+    """
+    area = quad(
+        lambda x: pdfs.signal_base(x, centre, width, alpha, beta),
+        *domain(),
+    )[0]
+
+    return pdfs.signal_base(x, centre, width, alpha, beta) / area
+
+
 def model(
     x: np.ndarray,
     n_sig: float,
@@ -67,21 +96,17 @@ def model(
     alpha_r_sig: float,
     beta_sig: float,
     centre_bkg: float,
-    width_l_bkg: float,
-    width_r_bkg: float,
-    alpha_l_bkg: float,
-    alpha_r_bkg: float,
+    width_bkg: float,
+    alpha_bkg: float,
     beta_bkg: float,
 ) -> np.ndarray:
     """
-    Double Cruijff model thing for fitting log(D0 IPCHI2) distributions
+    Cruijff model for prompt, modified Gaussian for secondary
 
     """
     return n_sig * norm_peak(
         x, centre_sig, width_l_sig, width_r_sig, alpha_l_sig, alpha_r_sig, beta_sig
-    ) + n_bkg * norm_peak(
-        x, centre_bkg, width_l_bkg, width_r_bkg, alpha_l_bkg, alpha_r_bkg, beta_bkg
-    )
+    ) + n_bkg * secondary_peak(x, centre_bkg, width_bkg, alpha_bkg, beta_bkg)
 
 
 class BinnedChi2:
@@ -109,10 +134,8 @@ class BinnedChi2:
                 "alpha_r_sig",
                 "beta_sig",
                 "centre_bkg",
-                "width_l_bkg",
-                "width_r_bkg",
-                "alpha_l_bkg",
-                "alpha_r_bkg",
+                "width_bkg",
+                "alpha_bkg",
                 "beta_bkg",
             ]
         )
@@ -135,10 +158,8 @@ class BinnedChi2:
         alpha_r_sig,
         beta_sig,
         centre_bkg,
-        width_l_bkg,
-        width_r_bkg,
-        alpha_l_bkg,
-        alpha_r_bkg,
+        width_bkg,
+        alpha_bkg,
         beta_bkg,
     ):
         predicted = stats.areas(
@@ -154,10 +175,8 @@ class BinnedChi2:
                 alpha_r_sig,
                 beta_sig,
                 centre_bkg,
-                width_l_bkg,
-                width_r_bkg,
-                alpha_l_bkg,
-                alpha_r_bkg,
+                width_bkg,
+                alpha_bkg,
                 beta_bkg,
             ),
         )
@@ -196,9 +215,11 @@ def fit(
     assert 0.0 <= signal_frac_guess <= 1.0
 
     # Check for zeros since this breaks stuff
-    assert not np.any(counts == 0.0), f"{counts=}"
-    if errors is not None:
-        assert not np.any(errors == 0.0), f"{errors=}"
+    if np.any(counts == 0.0):
+        raise IPFitZeroCountsError(f"{counts=}")
+
+    if errors is not None and np.any(errors == 0.0):
+        raise IPFitZeroCountsError(f"{errors=}")
 
     # Defaults
     total = np.sum(counts)
@@ -220,10 +241,8 @@ def fit(
     }
     bkg_limits = {
         "centre_bkg": (2.5, 8.0),
-        "width_l_bkg": (0.5, 4.0),
-        "width_r_bkg": (0.5, 4.0),
-        "alpha_l_bkg": (0.0, 2.0),
-        "alpha_r_bkg": (0.0, 2.0),
+        "width_bkg": (0.5, 4.0),
+        "alpha_bkg": (0.0, 2.0),
         "beta_bkg": (None, None),
     }
 
@@ -234,8 +253,8 @@ def fit(
     fitter.limits["n_sig"] = (0.0, total)
     fitter.limits["n_bkg"] = (0.0, total)
 
-    fitter.fixed["beta_sig"] = True
-    fitter.fixed["beta_bkg"] = True
+    # fitter.fixed["beta_sig"] = True
+    # fitter.fixed["beta_bkg"] = True
 
     fitter.migrad()
 
@@ -274,7 +293,9 @@ def plot(
         / bin_widths
     )
     predicted_bkg = (
-        fit_params[1] * stats.areas(bins, norm_peak(bins, *fit_params[8:])) / bin_widths
+        fit_params[1]
+        * stats.areas(bins, secondary_peak(bins, *fit_params[8:]))
+        / bin_widths
     )
 
     axes[0].plot(centres, predicted)
@@ -304,3 +325,99 @@ def plot(
     axes[0].set_ylabel("N/bin width")
     axes[1].set_xlabel(r"D0 IP$\chi^2$")
     axes[1].set_ylabel(r"$\sigma$")
+
+
+def ext_model(
+    x: np.ndarray,
+    n_sig: float,
+    n_bkg: float,
+    centre_sig: float,
+    width_l_sig: float,
+    width_r_sig: float,
+    alpha_l_sig: float,
+    alpha_r_sig: float,
+    beta_sig: float,
+    centre_bkg: float,
+    width_bkg: float,
+    alpha_bkg: float,
+    beta_bkg: float,
+) -> Tuple[float, np.ndarray]:
+    """
+    Cruijff model for prompt, modified Gaussian for secondary
+
+    Also returns total count
+
+    """
+    return n_sig + n_bkg, model(
+        x,
+        n_sig,
+        n_bkg,
+        centre_sig,
+        width_l_sig,
+        width_r_sig,
+        alpha_l_sig,
+        alpha_r_sig,
+        beta_sig,
+        centre_bkg,
+        width_bkg,
+        alpha_bkg,
+        beta_bkg,
+    )
+
+
+def unbinned_fit(
+    log_ipchi2: np.ndarray,
+    signal_frac_guess: float,
+    sig_defaults: dict,
+    bkg_defaults: dict,
+) -> Minuit:
+    """
+    Perform an unbinned fit, return the fitter
+
+    Beta params are fixed to the values passed in
+
+    :param log_ipchi2: array of ipchi2 values
+    :param signal_frac_guess: initial guess at the signal fraction
+    :param sig_defaults: dict of initial guesses
+    :param bkg_defaults: dict of initial guesses
+
+    :returns: fitter after performing the fit
+
+    """
+    assert 0.0 <= signal_frac_guess <= 1.0
+
+    # Defaults
+    total = len(log_ipchi2)
+    n_sig = total * signal_frac_guess
+    n_bkg = total * (1 - signal_frac_guess)
+
+    cost_fcn = ExtendedUnbinnedNLL(log_ipchi2, ext_model)
+
+    fitter = Minuit(cost_fcn, n_sig=n_sig, n_bkg=n_bkg, **sig_defaults, **bkg_defaults)
+
+    # Limits
+    sig_limits = {
+        "centre_sig": (-1.5, 1.5),
+        "width_l_sig": (0.5, 3.0),
+        "width_r_sig": (0.5, 3.0),
+        "alpha_l_sig": (0.0, 2.0),
+        "alpha_r_sig": (0.0, 2.0),
+        "beta_sig": (None, None),
+    }
+    bkg_limits = {
+        "centre_bkg": (2.5, 8.0),
+        "width_bkg": (0.5, 4.0),
+        "alpha_bkg": (0.0, 2.0),
+        "beta_bkg": (None, None),
+    }
+
+    for lims in sig_limits, bkg_limits:
+        for name, vals in lims.items():
+            fitter.limits[name] = vals
+
+    fitter.limits["n_sig"] = (0.0, total)
+    fitter.limits["n_bkg"] = (0.0, total)
+
+    fitter.migrad()
+
+    return fitter

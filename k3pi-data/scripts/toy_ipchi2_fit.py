@@ -21,11 +21,20 @@ def _generate(rng: np.random.Generator, n_gen: int, params: Tuple) -> np.ndarray
 
     """
     low, high = ipchi2_fit.domain()
-    max_ = 1.05 * np.max(ipchi2_fit.norm_peak(np.linspace(low, high, 100), *params))
+    if len(params) == 6:
+        print(f"gen {n_gen} prompt")
+        fcn = ipchi2_fit.norm_peak
+    elif len(params) == 4:
+        print(f"gen {n_gen} sec")
+        fcn = ipchi2_fit.secondary_peak
+    else:
+        raise ValueError(f"{len(params)=}")
+
+    max_ = 1.05 * np.max(fcn(np.linspace(low, high, 100), *params))
 
     x = low + (high - low) * rng.random(n_gen)
     y = max_ * rng.random(n_gen)
-    vals = ipchi2_fit.norm_peak(x, *params)
+    vals = fcn(x, *params)
     assert (vals < max_).all()
 
     return x[y < vals]
@@ -49,15 +58,13 @@ def main():
         "beta_sig": 0.0,
     }
     bkg_defaults = {
-        "centre_bkg": 7.0,
-        "width_l_bkg": 3.0,
-        "width_r_bkg": 2.5,
-        "alpha_l_bkg": 0.1,
-        "alpha_r_bkg": 0.1,
+        "centre_bkg": 5.0,
+        "width_bkg": 2.0,
+        "alpha_bkg": 0.1,
         "beta_bkg": 0.0,
     }
-    sig = _generate(rng, 750_000, tuple(sig_defaults.values()))
-    bkg = _generate(rng, 100_000, tuple(bkg_defaults.values()))
+    sig = _generate(rng, 7_500_00, tuple(sig_defaults.values()))
+    bkg = _generate(rng, 1_000_00, tuple(bkg_defaults.values()))
 
     bins = np.unique(
         np.concatenate(
@@ -76,11 +83,20 @@ def main():
 
     counts = sig_counts + bkg_counts
 
-    fitter = ipchi2_fit.fit(counts, bins, 0.6, sig_defaults, bkg_defaults)
+    # binned_fitter = ipchi2_fit.fit(counts, bins, 0.6, sig_defaults, bkg_defaults)
+    unbinned_fitter = ipchi2_fit.unbinned_fit(
+        np.concatenate((sig, bkg)),
+        len(sig) / (len(sig) + len(bkg)),
+        sig_defaults,
+        bkg_defaults,
+    )
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(8, 10))
+    # ipchi2_fit.plot(
+    #     (axes["A"], axes["B"]), bins, counts, np.sqrt(counts), binned_fitter.values
+    # )
     ipchi2_fit.plot(
-        (axes["A"], axes["B"]), bins, counts, np.sqrt(counts), fitter.values
+        (axes["A"], axes["B"]), bins, counts, np.sqrt(counts), unbinned_fitter.values
     )
 
     axes["A"].errorbar(
