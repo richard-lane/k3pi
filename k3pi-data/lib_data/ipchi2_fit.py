@@ -6,11 +6,12 @@ For assessing the secondary systematic
 """
 import sys
 import pathlib
-from typing import Tuple
+from typing import Tuple, Callable
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
+from scipy.linalg import solve
 
 from iminuit import Minuit
 from iminuit.cost import ExtendedUnbinnedNLL
@@ -418,6 +419,53 @@ def unbinned_fit(
     fitter.limits["n_sig"] = (0.0, total)
     fitter.limits["n_bkg"] = (0.0, total)
 
+    print("initial fit")
+    fitter.fixed["beta_sig"] = True
+    fitter.fixed["beta_bkg"] = True
+    fitter.migrad()
+
+    print("beta fit")
+    fitter.fixed["beta_sig"] = False
+    fitter.fixed["beta_bkg"] = False
     fitter.migrad()
 
     return fitter
+
+
+def sweight_fcn(params: Tuple) -> Callable:
+    """
+    Find a function that gives weights to project out
+    the prompt events from an IP fit
+
+    """
+
+    # Fcns given these params
+    def prompt(x):
+        return norm_peak(x, *params[2:8])
+
+    def sec(x):
+        return secondary_peak(x, *params[8:])
+
+    # Need this to be normalised
+    def overall(x):
+        return model(x, *params) / (params[0] + params[1])
+
+    # Evaluate signal, bkg + both across the domain
+    pts = np.linspace(*domain(), 1000)
+    prompt_vals = prompt(pts)
+    secondary_vals = sec(pts)
+    model_vals = overall(pts)
+
+    # Construct W matrix
+    w_matrix = np.zeros((2, 2))
+    w_matrix[0, 0] = np.trapz(prompt_vals**2 / model_vals, x=pts)
+    w_matrix[1, 1] = np.trapz(secondary_vals**2 / model_vals, x=pts)
+    w_matrix[0, 1] = w_matrix[1, 0] = np.trapz(
+        prompt_vals * secondary_vals / model_vals, x=pts
+    )
+
+    # Find some params by inverting this matrix or something
+    alpha = solve(w_matrix, [1, 0])
+
+    # Construct the weighting function
+    return lambda x: (alpha[0] * prompt(x) + alpha[1] * sec(x)) / overall(x)

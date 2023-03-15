@@ -7,6 +7,7 @@ import sys
 import pathlib
 import argparse
 from typing import Tuple, Callable, Iterable
+from itertools import islice
 
 import numpy as np
 import pandas as pd
@@ -15,55 +16,57 @@ import matplotlib.pyplot as plt
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi_mass_fit"))
 
-from lib_data import get, d0_mc_corrections
-from libFit import fit, pdfs, definitions, plotting, sweighting, util as mass_util
+from lib_data import get, d0_mc_corrections, ipchi2_fit
+from libFit import util as mass_util, pdfs
 
 
-def _massfit(
-    dataframes: Iterable[pd.DataFrame],
-) -> Tuple[Tuple, np.ndarray, np.ndarray]:
+def _dataframe(year: str, magnetisation: str) -> pd.DataFrame:
     """
-    Perform a massfit to CF dataframes without BDT cut
-
-    Returns params, bins, fit range, counts
+    Get the right dataframe - sliced
 
     """
-    low, high = pdfs.domain()
-    fit_range = pdfs.reduced_domain()
+    n_dfs = 3
+    retval = pd.concat(list(islice(get.data(year, "cf", magnetisation), n_dfs)))
 
-    n_underflow = 3
-    mass_bins = definitions.nonuniform_mass_bins(
-        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 200, 300, 200)
-    )
+    low_t, high_t = (0.0, 19.0)
+    keep = (low_t < retval["time"]) & (retval["time"] < high_t)
 
-    counts, _ = mass_util.delta_m_counts(
-        dataframes,
-        mass_bins,
-    )
-
-    total = np.sum(counts)
-    initial_guess = (
-        0.9 * total,
-        0.1 * total,
-        *mass_util.signal_param_guess(),
-        *mass_util.sqrt_bkg_param_guess("cf"),
-    )
-
-    fitter = fit.binned_fit(
-        counts[n_underflow:],
-        mass_bins[n_underflow:],
-        initial_guess,
-        fit_range,
-        errors=None,  # Unweighted; assume Poisson errors
-    )
-    assert fitter.valid
-
-    return fitter.values, mass_bins, fit_range, counts
+    return retval[keep]
 
 
-def _sweight_fcn(
-    year: str, magnetisation: str
-) -> Tuple[Callable, plt.Figure, Iterable[plt.Axes]]:
+def _ipchi2s(dataframe: pd.DataFrame) -> np.ndarray:
+    """
+    ipchi2
+
+    """
+    return np.log(dataframe["D0 ipchi2"])
+
+
+def _ip_fit(ipchi2s: np.ndarray) -> Tuple[Tuple, np.ndarray]:
+    """
+    Returns fit params + ipchi2s
+
+    """
+    sig_defaults = {
+        "centre_sig": 0.9,
+        "width_l_sig": 1.6,
+        "width_r_sig": 0.9,
+        "alpha_l_sig": 0.0,
+        "alpha_r_sig": 0.0,
+        "beta_sig": 0.0,
+    }
+    bkg_defaults = {
+        "centre_bkg": 4.5,
+        "width_bkg": 1.8,
+        "alpha_bkg": 0.0,
+        "beta_bkg": 0.0,
+    }
+    fitter = ipchi2_fit.unbinned_fit(ipchi2s, 0.6, sig_defaults, bkg_defaults)
+
+    return fitter.values, ipchi2s
+
+
+def _sweight_fcn(ipchi2: np.ndarray) -> Tuple[Callable, plt.Figure, Iterable[plt.Axes]]:
     """
     Find a unary function that projects signal out, given
     delta M
@@ -73,44 +76,24 @@ def _sweight_fcn(
     Also plots information relating to the mass fit and returns the figure and axes
 
     """
-    # Don't want the BDT cut here,
-    # since the corrections are used as input for the bdt cut
-    cf_dataframes = get.data(year, "cf", magnetisation)
-
-    # Do the mass fit, get parameters and mass fit counts
-    fit_values, mass_bins, fit_range, counts = _massfit(cf_dataframes)
+    # Do the ip fit, get parameters and array of ipchi2s used for the fit
+    fit_values, ipchi2s = _ip_fit(ipchi2)
 
     # Plot the fit on Axes
     fig, axes = plt.subplot_mosaic(
-        "AAAAACCC\nAAAAACCC\nAAAAADDD\nBBBBBDDD", figsize=(15, 12)
+        "AAAACC\nAAAACC\nAAAADD\nAAAADD\nAAAAEE\nBBBBEE", figsize=(15, 12)
     )
-    plotting.mass_fit(
+    ip_bins = np.linspace(*ipchi2_fit.domain(), 100)
+    counts, _ = np.histogram(ipchi2s, ip_bins)
+    ipchi2_fit.plot(
         (axes["A"], axes["B"]),
+        ip_bins,
         counts,
         np.sqrt(counts),
-        mass_bins,
-        fit_range,
         fit_values,
     )
 
-    # Find the sWeighting function
-    sweight_fcn = sweighting.signal_weight_fcn(fit_values, fit_range)
-
-    # Return the function, figure and axes
-    return sweight_fcn, fig, axes
-
-
-def _sweight_gen(
-    sweight_fcn: Callable, year: str, magnetisation: str
-) -> Iterable[np.ndarray]:
-    """
-    Get a generator of sWeights for the CF dataframes
-
-    """
-    return (
-        sweight_fcn(mass_util.delta_m(dataframe))
-        for dataframe in get.data(year, "cf", magnetisation)
-    )
+    return ipchi2_fit.sweight_fcn(fit_values), fig, axes
 
 
 def _plot_d0_points(
@@ -145,25 +128,41 @@ def _plot_d0_points(
 
 def main(*, year: str, magnetisation: str):
     """
-    Get particle gun, MC and data dataframes
+    Get particle gun, MC and data dataframe
     Make 1 and 2d histograms of D0 eta and P
     Plot and show them
 
     """
-    # Do + plot mass fit, find sWeighting fcn
-    sweight_fcn, fig, axes = _sweight_fcn(year, magnetisation)
+    cf_df = _dataframe(year, magnetisation)
+    print(f"{len(cf_df)=}")
 
-    # get a generator of sWeights for the CF dataframes
-    sweights = np.concatenate(list(_sweight_gen(sweight_fcn, year, magnetisation)))
+    # Do + plot IP fit, find sWeighting fcn
+    ipchi2 = _ipchi2s(cf_df)
+    sweight_fcn, fig, axes = _sweight_fcn(ipchi2)
+
+    # get sWeights for the CF dataframe
+    # training data - but probably fine?
+    sweights = sweight_fcn(ipchi2)
+
+    # Get histogram of delta M counts, plot it on one of the axes
+    delta_m = mass_util.delta_m(cf_df)
+    hist_kw = {
+        "x": delta_m,
+        "bins": np.linspace(*pdfs.domain(), 250),
+        "histtype": "step",
+    }
+    axes["E"].hist(**hist_kw, color="k")
+    axes["E"].hist(**hist_kw, color="r", weights=sweights)
+    axes["E"].set_xlabel(r"$\Delta M$ / MeV")
 
     # Get the D0 eta and P points
-    data_pts = d0_mc_corrections.d0_points(get.data(year, "cf", magnetisation))
+    data_pts = d0_mc_corrections.d0_points(cf_df)
 
     # Plot these, sweighted/otherwise on the figure
     _plot_d0_points((axes["C"], axes["D"]), data_pts, sweights)
 
     # Save the figure
-    fig.suptitle(f"RS {year} {magnetisation} sWeight Mass Fit")
+    fig.suptitle(f"RS {year} {magnetisation} sWeight IP$\\chi^2$ fit")
     fig.tight_layout()
     path = f"d0_mc_corr_{year}_{magnetisation}_sweight_fit.png"
     print(f"plotting {path}")
@@ -214,7 +213,7 @@ def main(*, year: str, magnetisation: str):
     axes[1].set_ylim(0.0, 1.2 * np.max(counts))
     axes[0].legend()
 
-    fig.suptitle(f"D0 reweighting (train)")
+    fig.suptitle("D0 reweighting (train)")
     fig.tight_layout()
     fig.savefig("d0_correction_data_to_pgun.png")
 

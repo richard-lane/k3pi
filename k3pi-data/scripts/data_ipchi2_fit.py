@@ -37,6 +37,7 @@ def main(*, sign: str):
     """
     low_ip, high_ip = ipchi2_fit.domain()
     time_bins = definitions.TIME_BINS
+    time_bins = [0.0, 19.0]
 
     sec_frac_guesses = [
         0.0,
@@ -52,11 +53,12 @@ def main(*, sign: str):
         0.75,
         0.95,
     ]
+    sec_frac_guesses = [0.4]
     for i, (low_t, high_t, frac_guess) in tqdm(
         enumerate(zip(time_bins[:-1], time_bins[1:], sec_frac_guesses))
     ):
         # Get counts in the bins
-        ipchi2s = _ipchi2s(sign, (low_t, high_t))
+        ipchi2s = _ipchi2s(sign, (low_t, high_t))[:500000]
 
         # fit
         sig_defaults = {
@@ -79,7 +81,7 @@ def main(*, sign: str):
 
         # plot
         fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(8, 10))
-        ip_bins = np.linspace(low_ip, high_ip, 500)
+        ip_bins = np.linspace(low_ip, high_ip, 250)
         counts, _ = np.histogram(ipchi2s, ip_bins)
         ipchi2_fit.plot(
             (axes["A"], axes["B"]), ip_bins, counts, np.sqrt(counts), fitter.values
