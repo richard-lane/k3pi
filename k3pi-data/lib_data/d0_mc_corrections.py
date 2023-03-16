@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from hep_ml.reweight import BinsReweighter
 
+from . import get
+
 
 class EtaPWeighter:
     """
@@ -253,7 +255,7 @@ def d0_points(dfs: Union[Iterable[pd.DataFrame], pd.DataFrame]) -> np.ndarray:
     return retval
 
 
-def _dir():
+def weighter_dir() -> pathlib.Path:
     """
     Directory where the dumps live
 
@@ -277,7 +279,7 @@ def pgun_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     assert sign in {"dcs", "cf"}
     assert magnetisation in {"magdown", "magup"}
 
-    return _dir() / f"pgun2data_{year}_{sign}_{magnetisation}.pkl"
+    return weighter_dir() / f"pgun2data_{year}_{sign}_{magnetisation}.pkl"
 
 
 def mc_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
@@ -296,7 +298,7 @@ def mc_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     assert sign in {"dcs", "cf"}
     assert magnetisation in {"magdown", "magup"}
 
-    return _dir() / f"mc2data_{year}_{sign}_{magnetisation}.pkl"
+    return weighter_dir() / f"mc2data_{year}_{sign}_{magnetisation}.pkl"
 
 
 def get_pgun(year: str, sign: str, magnetisation: str) -> EtaPWeighter:
@@ -304,8 +306,8 @@ def get_pgun(year: str, sign: str, magnetisation: str) -> EtaPWeighter:
     Unpickle a reweighter from a dump
 
     """
-    with open(pgun_path, "rb", encoding="utf8"):
-        return pickle.load(pgun_path(year, sign, magnetisation))
+    with open(pgun_path(year, sign, magnetisation), "rb") as dump_f:
+        return pickle.load(dump_f)
 
 
 def get_mc(year: str, sign: str, magnetisation: str) -> EtaPWeighter:
@@ -313,35 +315,25 @@ def get_mc(year: str, sign: str, magnetisation: str) -> EtaPWeighter:
     Unpickle a reweighter from a dump
 
     """
-    with open(pgun_path, "rb", encoding="utf8"):
-        return pickle.load(mc_path(year, sign, magnetisation))
+    with open(mc_path(year, sign, magnetisation), "rb") as dump_f:
+        return pickle.load(dump_f)
 
 
-def pgun_weights(
-    dfs: Union[Iterable[pd.DataFrame], pd.DataFrame],
-    year: str,
-    sign: str,
-    magnetisation: str,
-) -> np.ndarray:
+def pgun_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     """
     Weights for particle gun -> data
 
     """
-    weighter = get_pgun(year, sign, magnetisation)
+    weighter = get_pgun(year, "cf", magnetisation)
 
-    return weighter.weights(d0_points(dfs))
+    return weighter.weights(d0_points(get.particle_gun(sign)))
 
 
-def mc_weights(
-    dfs: Union[Iterable[pd.DataFrame], pd.DataFrame],
-    year: str,
-    sign: str,
-    magnetisation: str,
-) -> np.ndarray:
+def mc_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     """
     Weights for MC -> data
 
     """
-    weighter = get_mc(year, sign, magnetisation)
+    weighter = get_mc(year, "cf", magnetisation)
 
-    return weighter.weights(d0_points(dfs))
+    return weighter.weights(d0_points(get.mc(year, sign, magnetisation)))

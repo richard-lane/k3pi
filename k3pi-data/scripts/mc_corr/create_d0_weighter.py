@@ -4,6 +4,7 @@ show them and save to a dump somewhere
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Tuple, Callable, Iterable
@@ -25,7 +26,7 @@ def _dataframe(year: str, magnetisation: str) -> pd.DataFrame:
     Get the right dataframe - sliced
 
     """
-    n_dfs = 3
+    n_dfs = 1
     retval = pd.concat(list(islice(get.data(year, "cf", magnetisation), n_dfs)))
 
     low_t, high_t = (0.0, 19.0)
@@ -126,13 +127,14 @@ def _plot_d0_points(
     axes[0].legend()
 
 
-def main(*, year: str, magnetisation: str):
+def main(*, year: str, magnetisation: str, mc_type: str):
     """
     Get particle gun, MC and data dataframe
     Make 1 and 2d histograms of D0 eta and P
     Plot and show them
 
     """
+    # Real data dataframe
     cf_df = _dataframe(year, magnetisation)
     print(f"{len(cf_df)=}")
 
@@ -164,17 +166,19 @@ def main(*, year: str, magnetisation: str):
     # Save the figure
     fig.suptitle(f"RS {year} {magnetisation} sWeight IP$\\chi^2$ fit")
     fig.tight_layout()
-    path = f"d0_mc_corr_{year}_{magnetisation}_sweight_fit.png"
+    path = f"d0_mc_corr_{year}_{magnetisation}_to_{mc_type}_sweight_fit.png"
     print(f"plotting {path}")
     fig.savefig(path)
     plt.close(fig)
 
-    # Bins for plotting
-    # The reweighter doesn't use these bins, it finds its own
-    bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
-
     # Weight pgun -> data as a test
-    pgun_pts = d0_mc_corrections.d0_points(get.particle_gun("cf"))
+    mc_dfs = (
+        get.particle_gun("cf")
+        if mc_type == "pgun"
+        else get.mc(year, "cf", magnetisation)
+    )
+    pgun_pts = d0_mc_corrections.d0_points(mc_dfs)
+
     weighter = d0_mc_corrections.EtaPWeighter(
         data_pts,
         pgun_pts,
@@ -183,39 +187,16 @@ def main(*, year: str, magnetisation: str):
         n_neighs=2.0,
     )
 
-    weighter.plot_distribution("target", bins, "d0_correction_data.png")
-    weighter.plot_distribution("original", bins, "d0_correction_pgun.png")
-    weighter.plot_ratio(bins, "d0_correction_data_pgun_ratio.png")
+    # Store the reweighter in a pickle dump
+    d0_mc_corrections.weighter_dir().mkdir(exist_ok=True)
 
-    # Make plots showing the reweighting with the training set
-    # mc_pts = d0_mc_corrections.d0_points(get.mc(year, "cf", magnetisation))
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    plot_kw = {"histtype": "step", "density": True}
-    axes[0].hist(pgun_pts[0], bins=bins[0], label="mc", **plot_kw)
-    axes[0].hist(data_pts[0], bins=bins[0], label="data", **plot_kw)
-    axes[0].hist(
-        pgun_pts[0],
-        bins=bins[0],
-        label="weighted",
-        weights=weighter.weights(pgun_pts),
-        **plot_kw,
+    dump_path = (
+        d0_mc_corrections.pgun_path(year, "cf", magnetisation)
+        if mc_type == "pgun"
+        else d0_mc_corrections.mc_path(year, "cf", magnetisation)
     )
-
-    axes[1].hist(pgun_pts[1], bins=bins[1], label="mc", **plot_kw)
-    counts, _, _ = axes[1].hist(data_pts[1], bins=bins[1], label="data", **plot_kw)
-    axes[1].hist(
-        pgun_pts[1],
-        bins=bins[1],
-        label="weighted",
-        weights=weighter.weights(pgun_pts),
-        **plot_kw,
-    )
-    axes[1].set_ylim(0.0, 1.2 * np.max(counts))
-    axes[0].legend()
-
-    fig.suptitle("D0 reweighting (train)")
-    fig.tight_layout()
-    fig.savefig("d0_correction_data_to_pgun.png")
+    with open(str(dump_path), "wb") as weighter_f:
+        pickle.dump(weighter, weighter_f)
 
 
 if __name__ == "__main__":
@@ -225,6 +206,9 @@ if __name__ == "__main__":
     parser.add_argument("year", type=str, help="data taking year", choices={"2018"})
     parser.add_argument(
         "magnetisation", type=str, help="mag direction", choices={"magup", "magdown"}
+    )
+    parser.add_argument(
+        "mc_type", type=str, help="full MC or pgun MC", choices={"pgun", "MC"}
     )
 
     main(**vars(parser.parse_args()))
