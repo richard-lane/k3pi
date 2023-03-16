@@ -469,3 +469,20 @@ def sweight_fcn(params: Tuple) -> Callable:
 
     # Construct the weighting function
     return lambda x: (alpha[0] * prompt(x) + alpha[1] * sec(x)) / overall(x)
+
+
+def sec_frac_below_cut(fit_vals: Tuple, cut_val: float) -> float:
+    """
+    Find the fraction of secondaries below the cut value
+    from a fit
+
+    """
+    pts = np.linspace(domain()[0], cut_val, 1_000_000)
+
+    # Find prompt integral up to the cut
+    prompt = stats.integral(pts, fit_vals[0] * norm_peak(pts, *fit_vals[2:8]))
+
+    # Find secondary integral up to the cut
+    secondary = stats.integral(pts, fit_vals[1] * secondary_peak(pts, *fit_vals[8:]))
+
+    return secondary / (secondary + prompt)

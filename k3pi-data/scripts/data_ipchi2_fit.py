@@ -6,6 +6,8 @@ import sys
 import pathlib
 import argparse
 from typing import Tuple
+from itertools import islice
+
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -21,10 +23,13 @@ def _ipchi2s(sign: str, time_range: Tuple[float, float]) -> np.ndarray:
     ipchi2 in the given time range
 
     """
+    # Make it run faster; set to None for all
+    n_dfs = None
+
     low_t, high_t = time_range
     dfs = (
         dataframe[(low_t < dataframe["time"]) & (dataframe["time"] < high_t)]
-        for dataframe in get.data("2018", sign, "magdown")
+        for dataframe in islice(get.data("2018", sign, "magdown"), n_dfs)
     )
     return np.concatenate([np.log(dataframe["D0 ipchi2"]) for dataframe in dfs])
 
@@ -37,7 +42,7 @@ def main(*, sign: str):
     """
     low_ip, high_ip = ipchi2_fit.domain()
     time_bins = definitions.TIME_BINS
-    time_bins = [0.0, 19.0]
+    ip_cut = 9.0
 
     sec_frac_guesses = [
         0.0,
@@ -53,7 +58,7 @@ def main(*, sign: str):
         0.75,
         0.95,
     ]
-    sec_frac_guesses = [0.4]
+    sec_fracs = []
     for i, (low_t, high_t, frac_guess) in tqdm(
         enumerate(zip(time_bins[:-1], time_bins[1:], sec_frac_guesses))
     ):
@@ -87,19 +92,42 @@ def main(*, sign: str):
             (axes["A"], axes["B"]), ip_bins, counts, np.sqrt(counts), fitter.values
         )
         axes["A"].legend()
+        axes["A"].axvline(x=np.log(ip_cut), color="r")
 
-        path = f"{sign}_data_ipchi2_fit_{i}.png"
-        print(f"plotting {path}")
         f_sec = (
             100
             * fitter.values["n_bkg"]
             / (fitter.values["n_sig"] + fitter.values["n_bkg"])
         )
+
+        # Append the secondary fraction (below the cut) to the list
+        sec_frac = ipchi2_fit.sec_frac_below_cut(fitter.values, np.log(ip_cut))
+        sec_fracs.append(sec_frac)
+
         fig.suptitle(
-            f"${low_t} < \\frac{{t}}{{\\tau}} < {high_t}$\n$f_\mathrm{{sec}}=${f_sec:.2f}%\n{fitter.valid=}"
+            f"${low_t} < \\frac{{t}}{{\\tau}} < {high_t}$\n$f_\mathrm{{sec}}=${100 * sec_frac:.2f}%\n{fitter.valid=}"
         )
+
+        path = f"{sign}_data_ipchi2_fit_{i}.png"
+        print(f"plotting {path}")
         fig.savefig(path)
         plt.close(fig)
+
+    sec_fracs = np.array(sec_fracs)
+
+    # Plot secondary fractions
+    time_centres = (time_bins[1:] + time_bins[:-1]) / 2
+    time_widths = (time_bins[1:] - time_bins[:-1]) / 2
+
+    fig, axis = plt.subplots()
+    axis.errorbar(time_centres, 100 * sec_fracs, xerr=time_widths, fmt="k+")
+
+    axis.set_xlabel(r"t/$\tau$")
+    axis.set_ylabel(r"$f_\mathrm{sec}$ / %")
+    axis.set_title("Secondary Leakage")
+    path = f"{sign}_data_ipchi2_leakage.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
 
 if __name__ == "__main__":
