@@ -21,7 +21,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
 from libFit import plotting, definitions, pdfs
 from libFit.fit import binned_simultaneous_fit
-from libFit.util import rs_ws_params
+from libFit import util
 from lib_data import get, stats
 
 
@@ -44,7 +44,7 @@ def _plot(
     count, _ = np.histogram(delta_m, bins)
     err = np.sqrt(count)
 
-    plotting.mass_fit(axes, count, err, bins, params)
+    plotting.mass_fit(axes, count, err, bins, (bins[0], bins[-1]), params)
 
 
 def _ws_bkg(
@@ -57,7 +57,11 @@ def _ws_bkg(
     Fitted background component for WS data
 
     """
-    return scale * (1 - signal_fraction) * pdfs.normalised_bkg(domain, *bkg_params)
+    return (
+        scale
+        * (1 - signal_fraction)
+        * pdfs.normalised_bkg(domain, *bkg_params, pdfs.domain())
+    )
 
 
 def _rs_signal(
@@ -70,7 +74,11 @@ def _rs_signal(
     Fitted signal component for RS data, scaled using the amplitude ratio ^ 2
 
     """
-    return scale * signal_fraction * pdfs.normalised_signal(domain, *sig_params[1:])
+    return (
+        scale
+        * signal_fraction
+        * pdfs.normalised_signal(domain, *sig_params[1:], pdfs.domain())
+    )
 
 
 def _rs_plot(
@@ -133,7 +141,7 @@ def _plot_fit(
 
     signal_region = np.linspace(144, 147, 200)
     # scales assume equally spaced bins
-    rs_params, ws_params = rs_ws_params(params)
+    rs_params, ws_params = util.rs_ws_params(params)
 
     rs_scale = len(rs) * (bins[1] - bins[0])
     _rs_plot((ax["A"], ax["C"]), rs, bins, rs_params, rs_scale, signal_region)
@@ -223,15 +231,35 @@ def main():
     """
     bins = definitions.mass_bins()
 
-    rs = stats.counts_generator(
+    rs_count, rs_err = stats.counts_generator(
         (_delta_m(dataframe) for dataframe in get.data("2018", "cf", "magdown")), bins
     )
-    ws = stats.counts_generator(
+    ws_count, ws_err = stats.counts_generator(
         (_delta_m(dataframe) for dataframe in get.data("2018", "dcs", "magdown")), bins
     )
 
-    fitter = binned_simultaneous_fit(rs, ws, bins, 5)
-    fig, _ = _plot_fit(rs, ws, fitter.values)
+    # TODO do this fit with proper bins
+    rs_total = np.sum(rs_count)
+    ws_total = np.sum(ws_count)
+    initial_guess = (
+        rs_total * 0.9,
+        rs_total * 0.1,
+        ws_total * 0.05,
+        ws_total * 0.95,
+        *util.signal_param_guess(5),
+        *util.sqrt_bkg_param_guess("cf"),
+        *util.sqrt_bkg_param_guess("dcs"),
+    )
+    fitter = binned_simultaneous_fit(
+        rs_count,
+        ws_count,
+        bins,
+        initial_guess,
+        (bins[0], bins[-1]),
+        rs_errors=rs_err,
+        ws_errors=ws_err,
+    )
+    fig, _ = _plot_fit(rs_count, ws_count, fitter.values)
 
     fig.tight_layout()
 
