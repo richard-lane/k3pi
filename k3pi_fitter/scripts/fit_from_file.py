@@ -63,17 +63,17 @@ def main(
             for j, im_z in enumerate(allowed_imz):
                 these_params = util.ScanParams(*initial_rdxy, re_z, im_z)
 
-                # LHCb only fit
-                lhcb_fitter = fitter.scan_fit(
+                combined_fitter = fitter.combined_fit(
                     ratio,
                     ratio_err,
                     time_bins,
                     these_params,
                     xy_err,
                     xy_corr,
+                    phsp_bin,
                 )
-                chi2s[j, i] = lhcb_fitter.fval
-                fit_vals = lhcb_fitter.values
+                chi2s[j, i] = combined_fitter.fval
+                fit_vals = combined_fitter.values
                 fit_params[j, i] = util.ScanParams(
                     r_d=fit_vals[0],
                     x=fit_vals[1],
