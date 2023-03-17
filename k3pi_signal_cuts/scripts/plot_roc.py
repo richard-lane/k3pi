@@ -14,7 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts import util
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars
+from lib_data import get, training_vars, d0_mc_corrections
 
 
 def _best_threshhold(fpr, tpr, threshhold):
@@ -40,7 +40,11 @@ def main():
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
+    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    mc_corr_wts /= np.mean(mc_corr_wts)
+
     # We only want the testing data here
+    mc_corr_wts = mc_corr_wts[~sig_df["train"]]
     sig_df = sig_df[~sig_df["train"]]
     bkg_df = bkg_df[~bkg_df["train"]]
 
@@ -48,7 +52,9 @@ def main():
     # in the data
     sig_frac = 0.0969
     keep_frac = util.weight(
-        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))), sig_frac
+        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))),
+        sig_frac,
+        np.concatenate((mc_corr_wts, np.ones(len(bkg_df)))),
     )
     sig_keep = np.random.default_rng().random(len(sig_df)) < keep_frac
 
@@ -67,16 +73,16 @@ def main():
     # Find the threshhold closest to the top left corner
     best_fpr, best_tpr, best_threshhold = _best_threshhold(fpr, tpr, threshholds)
 
-    fig, ax = plt.subplots()
-    ax.plot(fpr, tpr, label=f"score={score:.4f}")
-    ax.plot([0, 1], [0, 1], "k--")
-    ax.set_xlabel("false positive rate")
-    ax.set_ylabel("true positive rate")
+    fig, axis = plt.subplots()
+    axis.plot(fpr, tpr, label=f"score={score:.4f}")
+    axis.plot([0, 1], [0, 1], "k--")
+    axis.set_xlabel("false positive rate")
+    axis.set_ylabel("true positive rate")
 
     # Plot the best threshhold
-    ax.plot([best_fpr], [best_tpr], "ro", label=f"threshhold: {best_threshhold:.3f}")
+    axis.plot([best_fpr], [best_tpr], "ro", label=f"threshhold: {best_threshhold:.3f}")
 
-    ax.legend()
+    axis.legend()
     fig.tight_layout()
 
     plt.savefig("roc.png")

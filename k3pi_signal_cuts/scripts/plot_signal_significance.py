@@ -14,7 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
 from lib_cuts import util, metrics
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars
+from lib_data import get, training_vars, d0_mc_corrections
 
 
 def main():
@@ -34,15 +34,20 @@ def main():
     year, sign, magnetisation = "2018", "dcs", "magdown"
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
+    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    mc_corr_wts /= np.mean(mc_corr_wts)
 
     # We only want the testing data here
+    mc_corr_wts = mc_corr_wts[~sig_df["train"]]
     sig_df = sig_df[~sig_df["train"]]
     bkg_df = bkg_df[~bkg_df["train"]]
 
     # Throw away data to get a realistic proportion of each
     sig_frac = 0.0852  # Got this number from k3pi_signal_cuts/scripts/mass_fit.py
     keep_frac = util.weight(
-        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))), sig_frac
+        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))),
+        sig_frac,
+        np.concatenate((mc_corr_wts, np.ones(len(bkg_df)))),
     )
     sig_keep = np.random.default_rng().random(len(sig_df)) < keep_frac
     print(f"keeping {np.sum(sig_keep)} of {len(sig_keep)}")

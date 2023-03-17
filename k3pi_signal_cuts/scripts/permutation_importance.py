@@ -14,7 +14,7 @@ from sklearn.metrics import roc_auc_score
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
-from lib_data import training_vars, get
+from lib_data import training_vars, get, d0_mc_corrections
 from lib_cuts.get import classifier as get_clf
 from lib_cuts import metrics, util
 
@@ -80,23 +80,23 @@ def _violplot(importances: List[List[float]], path: str) -> Tuple[plt.Figure, pl
     Make a violin plot of permutation importances
 
     """
-    fig, ax = plt.subplots()
+    fig, axis = plt.subplots()
 
-    ax.violinplot(importances)
+    axis.violinplot(importances)
 
     labels = training_vars.training_var_names()
-    ax.set_xticks([i + 1 for i, _ in enumerate(labels)])
-    ax.set_xticklabels(labels, rotation=90)
+    axis.set_xticks([i + 1 for i, _ in enumerate(labels)])
+    axis.set_xticklabels(labels, rotation=90)
 
-    ax.plot(np.linspace(*ax.get_xlim()), np.zeros(50), "k--")
+    axis.plot(np.linspace(*axis.get_xlim()), np.zeros(50), "k--")
 
     fig.suptitle("Feature Importance")
-    ax.set_ylabel(r"$\Delta x$")
+    axis.set_ylabel(r"$\Delta x$")
 
     fig.tight_layout()
     fig.savefig(path)
 
-    return fig, ax
+    return fig, axis
 
 
 def _delta_significance(
@@ -171,8 +171,11 @@ def main():
     year, sign, magnetisation = "2018", "dcs", "magdown"
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
+    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    mc_corr_wts /= np.mean(mc_corr_wts)
 
     # We only want the testing data here
+    mc_corr_wts = mc_corr_wts[~sig_df["train"]]
     sig_df = sig_df[~sig_df["train"]]
     bkg_df = bkg_df[~bkg_df["train"]]
 
@@ -180,7 +183,9 @@ def main():
     # in the data
     sig_frac = 0.0969
     keep_frac = util.weight(
-        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))), sig_frac
+        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))),
+        sig_frac,
+        np.concatenate((mc_corr_wts, np.ones(len(bkg_df)))),
     )
     sig_keep = np.random.default_rng().random(len(sig_df)) < keep_frac
 
