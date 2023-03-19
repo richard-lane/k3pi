@@ -263,7 +263,9 @@ def main(year: str, sign: str, magnetisation: str):
     _plot_train_vars(train_df, train_label, train_weights, train_d0_wts)
 
     # Type is defined in lib_cuts.definitions
-    clf = definitions.Classifier()
+    clf = definitions.Classifier(
+        n_estimators=150, max_depth=8, learning_rate=0.15
+    )
 
     # We only want to use some of our variables for training
     training_labels = list(training_vars.training_var_names())
