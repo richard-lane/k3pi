@@ -39,7 +39,7 @@ def _bins(n_underflow: int = 3) -> np.ndarray:
     gen_low, gen_high = pdfs.domain()
 
     return definitions.nonuniform_mass_bins(
-        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
+        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 20, 50, 20)
     )
 
 
@@ -86,7 +86,8 @@ def _gen(rng: np.random.Generator, n_sig: int, n_bkg: int, sign: str):
     sig = toy_utils.gen_sig(rng, n_sig, _sig_params())
     bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, _bkg_params(sign))
 
-    return np.concatenate((sig, bkg))
+    low_fit, _ = pdfs.reduced_domain()
+    return np.concatenate((sig, bkg)), np.sum(sig > low_fit), np.sum(bkg > low_fit)
 
 
 def _pull(
@@ -101,17 +102,17 @@ def _pull(
     Returns array of pulls
 
     """
-    rs_n_sig, ws_n_sig, n_bkg = 15_600_000, 55000, 50000
+    rs_n_sig, ws_n_sig, n_bkg = 18_000_000, 55000, 50000
 
     # Perform fit
-    rs_combined = _gen(rng, rs_n_sig, n_bkg, "cf")
-    ws_combined = _gen(rng, ws_n_sig, n_bkg, "dcs")
+    rs_combined, rs_sig_expected, rs_bkg_expected = _gen(rng, rs_n_sig, n_bkg, "cf")
+    ws_combined, ws_sig_expected, ws_bkg_expected = _gen(rng, ws_n_sig, n_bkg, "dcs")
 
-    rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, fit_range, _sig_params())
-    rs_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("cf"))
+    # rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, fit_range, _sig_params())
+    # rs_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("cf"))
 
-    ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, fit_range, _sig_params())
-    ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("dcs"))
+    # ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, fit_range, _sig_params())
+    # ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("dcs"))
 
     true_params = np.array(
         (
@@ -287,8 +288,8 @@ def _do_pull_study():
         "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
     )
 
-    n_procs = 6
-    n_experiments = 5
+    n_procs = 5
+    n_experiments = 25
     procs = [
         Process(
             target=_pull_study,

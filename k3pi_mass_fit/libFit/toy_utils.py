@@ -223,7 +223,7 @@ def n_expected_sig(n_gen: int, domain: Tuple[float, float], signal_params: Tuple
     """
     # Find the integral of the PDF in domain
     # The PDF is normalised along the whole of pdfs.domain()
-    pts = np.linspace(*domain, 100_000)
+    pts = np.linspace(*domain, 10_000_000)
     integral = stats.integral(
         pts, pdfs.normalised_signal(pts, *signal_params, pdfs.domain())
     )
@@ -249,7 +249,7 @@ def n_expected_bkg(n_gen: int, domain: Tuple[float, float], bkg_params: Tuple):
     """
     # Find the integral of the PDF in domain
     # The PDF is normalised along the whole of pdfs.domain()
-    pts = np.linspace(*domain, 100_000)
+    pts = np.linspace(*domain, 10_000_000)
     integral = stats.integral(pts, pdfs.normalised_bkg(pts, *bkg_params, pdfs.domain()))
 
     return _n_expected(

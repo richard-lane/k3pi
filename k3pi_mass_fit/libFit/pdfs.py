@@ -116,9 +116,11 @@ def normalised_signal(
     right_args = (centre, width_r, alpha_r, beta)
     low, high = pdf_domain
 
+    eps = 1e-10
+    quad_args = {"epsabs": eps, "epsrel": eps, "points": [centre]}
     area = (
-        quad(signal_base, low, centre, args=left_args)[0]
-        + quad(signal_base, centre, high, args=right_args)[0]
+        quad(signal_base, low, centre, args=left_args, **quad_args)[0]
+        + quad(signal_base, centre, high, args=right_args, **quad_args)[0]
     )
 
     return signal(x, centre, width_l, width_r, alpha_l, alpha_r, beta) / area
