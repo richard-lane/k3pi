@@ -41,17 +41,20 @@ def main(*, sign: str):
 
     """
     low_ip, high_ip = ipchi2_fit.domain()
-    time_bins = definitions.TIME_BINS
+
+    # Only want the second+ time bins, since we fixed the shape
+    # of the prompt peak from the first time bin
+    time_bins = definitions.TIME_BINS[2:]
     ip_cut = 9.0
 
     sec_frac_guesses = [
-        # 0.05,
-        # 0.05,
-        # 0.05,
-        # 0.10,
-        # 0.15,
-        # 0.20,
-        # 0.30,
+        0.05,
+        0.05,
+        0.05,
+        0.10,
+        0.15,
+        0.20,
+        0.30,
         0.40,
         0.45,
         0.75,
@@ -59,10 +62,10 @@ def main(*, sign: str):
     ]
     sec_fracs = []
     for i, (low_t, high_t, frac_guess) in tqdm(
-        enumerate(zip(time_bins[7:-1], time_bins[8:], sec_frac_guesses))
+        enumerate(zip(time_bins[:-1], time_bins[1:], sec_frac_guesses))
     ):
         # Get counts in the bins
-        ipchi2s = _ipchi2s(sign, (low_t, high_t))
+        ipchi2s = _ipchi2s(sign, (low_t, high_t))[:50000]
 
         # Get rid of points outside domain where the PDF is defined
         low_ip, high_ip = ipchi2_fit.domain()
@@ -105,8 +108,6 @@ def main(*, sign: str):
         axes["A"].legend()
         axes["A"].axvline(x=np.log(ip_cut), color="r")
 
-        print(fitter)
-
         f_sec = (
             100
             * fitter.values["n_bkg"]
@@ -114,7 +115,9 @@ def main(*, sign: str):
         )
 
         # Append the secondary fraction (below the cut) to the list
-        sec_frac = ipchi2_fit.sec_frac_below_cut(fitter.values, np.log(ip_cut))
+        sec_frac = ipchi2_fit.sec_frac_below_cut(
+            sig_defaults, fitter.values, np.log(ip_cut)
+        )
         sec_fracs.append(sec_frac)
 
         fig.suptitle(

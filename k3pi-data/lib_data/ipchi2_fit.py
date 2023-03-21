@@ -468,7 +468,7 @@ def sweight_fcn(params: Tuple) -> Callable:
     return lambda x: (alpha[0] * prompt(x) + alpha[1] * sec(x)) / overall(x)
 
 
-def sec_frac_below_cut(fit_vals: Tuple, cut_val: float) -> float:
+def sec_frac_below_cut(prompt_params: dict, fit_vals: Tuple, cut_val: float) -> float:
     """
     Find the fraction of secondaries below the cut value
     from a fit
@@ -477,10 +477,12 @@ def sec_frac_below_cut(fit_vals: Tuple, cut_val: float) -> float:
     pts = np.linspace(domain()[0], cut_val, 1_000_000)
 
     # Find prompt integral up to the cut
-    prompt = stats.integral(pts, fit_vals[0] * norm_peak(pts, *fit_vals[2:8]))
+    prompt = stats.integral(
+        pts, fit_vals[0] * norm_peak(pts, *tuple(prompt_params.values()))
+    )
 
     # Find secondary integral up to the cut
-    secondary = stats.integral(pts, fit_vals[1] * secondary_peak(pts, *fit_vals[8:]))
+    secondary = stats.integral(pts, fit_vals[1] * norm_peak(pts, *fit_vals[2:]))
 
     return secondary / (secondary + prompt)
 
@@ -557,7 +559,7 @@ def fixed_prompt_unbinned_fit(
     fitter.limits["alpha_l"] = (0.0, 2.0)
     fitter.limits["alpha_r"] = (0.0, 2.0)
 
-    fitter.fixed["beta"] = True
+    # fitter.fixed["beta"] = True
 
     fitter.migrad()
 
