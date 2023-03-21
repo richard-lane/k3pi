@@ -30,7 +30,11 @@ def _fit(log_ipchi2s: np.ndarray, param_guess: dict) -> Minuit:
 
     fitter = Minuit(cost_fcn, **param_guess)
 
-    fitter.migrad()
+    fitter.fixed["beta"] = True
+    fitter.migrad(ncall=5000)
+
+    fitter.fixed["beta"] = False
+    fitter.migrad(ncall=5000)
 
     return fitter
 
@@ -69,12 +73,12 @@ def main(*, sign: str):
     fitter = _fit(
         ipchi2s,
         {
-            "centre": 2.0,
+            "centre": 1.5,
             "width_l": 2.5,
             "width_r": 2.5,
             "alpha_l": 0.1,
             "alpha_r": 0.1,
-            "beta": 0.1,
+            "beta": 0.0,
         },
     )
 
@@ -119,6 +123,7 @@ def main(*, sign: str):
     print(fitter)
     fig.suptitle(
         str(dict(zip(fitter.parameters, [f"{float(x):.3f}" for x in fitter.values])))
+        + f"\n{fitter.valid=}"
     )
 
     fig.savefig(f"ipchi2_fit_lowtime_{sign}.png")

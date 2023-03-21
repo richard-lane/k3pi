@@ -3,6 +3,7 @@ Fit to D0 IPCHI2 histogram
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Tuple
@@ -44,7 +45,7 @@ def main(*, sign: str):
 
     # Only want the second+ time bins, since we fixed the shape
     # of the prompt peak from the first time bin
-    time_bins = definitions.TIME_BINS[2:]
+    time_bins = definitions.TIME_BINS[2:-1]
     ip_cut = 9.0
 
     sec_frac_guesses = [
@@ -58,14 +59,14 @@ def main(*, sign: str):
         0.40,
         0.45,
         0.75,
-        0.95,
+        # 0.95,
     ]
     sec_fracs = []
     for i, (low_t, high_t, frac_guess) in tqdm(
         enumerate(zip(time_bins[:-1], time_bins[1:], sec_frac_guesses))
     ):
         # Get counts in the bins
-        ipchi2s = _ipchi2s(sign, (low_t, high_t))[:50000]
+        ipchi2s = _ipchi2s(sign, (low_t, high_t))[:500000]
 
         # Get rid of points outside domain where the PDF is defined
         low_ip, high_ip = ipchi2_fit.domain()
@@ -73,20 +74,29 @@ def main(*, sign: str):
         ipchi2s = ipchi2s[ipchi2s < high_ip]
 
         # fit
-        sig_defaults = {
-            "centre": 0.977,
-            "width_l": 1.230,
-            "width_r": 0.813,
-            "alpha_l": 0.254,
-            "alpha_r": 0.117,
-            "beta": 0.018,
-        }
+        sig_defaults = (
+            {
+                "centre": 0.977,
+                "width_l": 1.230,
+                "width_r": 0.813,
+                "alpha_l": 0.254,
+                "alpha_r": 0.117,
+                "beta": 0.018,
+            }
+            if sign == "cf"
+            else {
+                "centre": 1.439,
+                "width_l": 1.482,
+                "width_r": 1.248,
+                "alpha_l": 0.091,
+                "alpha_r": -0.025,
+                "beta": 0.001,
+            }
+        )
         bkg_defaults = {
             "centre": 4.5,
-            "width_l": 1.8,
-            "width_r": 1.8,
-            "alpha_l": 0.01,
-            "alpha_r": 0.01,
+            "width": 1.8,
+            "alpha": 0.01,
             "beta": 0.01,
         }
         fitter = ipchi2_fit.fixed_prompt_unbinned_fit(
@@ -107,12 +117,6 @@ def main(*, sign: str):
         )
         axes["A"].legend()
         axes["A"].axvline(x=np.log(ip_cut), color="r")
-
-        f_sec = (
-            100
-            * fitter.values["n_bkg"]
-            / (fitter.values["n_sig"] + fitter.values["n_bkg"])
-        )
 
         # Append the secondary fraction (below the cut) to the list
         sec_frac = ipchi2_fit.sec_frac_below_cut(
@@ -144,6 +148,10 @@ def main(*, sign: str):
     path = f"{sign}_data_ipchi2_leakage.png"
     print(f"plotting {path}")
     fig.savefig(path)
+
+    # Dump secondary fraction to file
+    with open(str(ipchi2_fit.sec_frac_file(sign)), "wb") as dump_f:
+        pickle.dump(sec_fracs, dump_f)
 
 
 if __name__ == "__main__":

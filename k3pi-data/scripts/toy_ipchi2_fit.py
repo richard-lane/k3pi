@@ -21,12 +21,20 @@ def _generate(rng: np.random.Generator, n_gen: int, params: Tuple) -> np.ndarray
 
     """
     low, high = ipchi2_fit.domain()
+    if len(params) == 6:
+        print(f"gen {n_gen} prompt")
+        fcn = ipchi2_fit.norm_peak
+    elif len(params) == 4:
+        print(f"gen {n_gen} sec")
+        fcn = ipchi2_fit.secondary_peak
+    else:
+        raise ValueError(f"{len(params)=}")
 
-    max_ = 1.05 * np.max(ipchi2_fit.norm_peak(np.linspace(low, high, 100), *params))
+    max_ = 1.05 * np.max(fcn(np.linspace(low, high, 100), *params))
 
     x = low + (high - low) * rng.random(n_gen)
     y = max_ * rng.random(n_gen)
-    vals = ipchi2_fit.norm_peak(x, *params)
+    vals = fcn(x, *params)
     assert (vals < max_).all()
 
     return x[y < vals]
@@ -51,10 +59,8 @@ def main():
     }
     bkg_defaults = {
         "centre": 5.0,
-        "width_l": 3.0,
-        "width_r": 2.0,
-        "alpha_l": 0.1,
-        "alpha_r": 0.2,
+        "width": 2.0,
+        "alpha": 0.2,
         "beta": 0.001,
     }
     sig = _generate(rng, 750_000, tuple(sig_defaults.values()))
@@ -79,7 +85,7 @@ def main():
 
     unbinned_fitter = ipchi2_fit.fixed_prompt_unbinned_fit(
         np.concatenate((sig, bkg)),
-        0.9*len(sig) / (len(sig) + len(bkg)),
+        0.9 * len(sig) / (len(sig) + len(bkg)),
         sig_defaults,
         bkg_defaults,
     )
