@@ -21,20 +21,12 @@ def _generate(rng: np.random.Generator, n_gen: int, params: Tuple) -> np.ndarray
 
     """
     low, high = ipchi2_fit.domain()
-    if len(params) == 6:
-        print(f"gen {n_gen} prompt")
-        fcn = ipchi2_fit.norm_peak
-    elif len(params) == 4:
-        print(f"gen {n_gen} sec")
-        fcn = ipchi2_fit.secondary_peak
-    else:
-        raise ValueError(f"{len(params)=}")
 
-    max_ = 1.05 * np.max(fcn(np.linspace(low, high, 100), *params))
+    max_ = 1.05 * np.max(ipchi2_fit.norm_peak(np.linspace(low, high, 100), *params))
 
     x = low + (high - low) * rng.random(n_gen)
     y = max_ * rng.random(n_gen)
-    vals = fcn(x, *params)
+    vals = ipchi2_fit.norm_peak(x, *params)
     assert (vals < max_).all()
 
     return x[y < vals]
@@ -50,21 +42,23 @@ def main():
     """
     rng = np.random.default_rng()
     sig_defaults = {
-        "centre_sig": 0.0,
-        "width_l_sig": 1.5,
-        "width_r_sig": 1.5,
-        "alpha_l_sig": 0.1,
-        "alpha_r_sig": 0.1,
-        "beta_sig": 0.0,
+        "centre": 0.0,
+        "width_l": 1.5,
+        "width_r": 1.5,
+        "alpha_l": 0.1,
+        "alpha_r": 0.1,
+        "beta": 0.0,
     }
     bkg_defaults = {
-        "centre_bkg": 5.0,
-        "width_bkg": 2.0,
-        "alpha_bkg": 0.1,
-        "beta_bkg": 0.0,
+        "centre": 5.0,
+        "width_l": 3.0,
+        "width_r": 2.0,
+        "alpha_l": 0.1,
+        "alpha_r": 0.2,
+        "beta": 0.001,
     }
-    sig = _generate(rng, 7_500_00, tuple(sig_defaults.values()))
-    bkg = _generate(rng, 1_000_00, tuple(bkg_defaults.values()))
+    sig = _generate(rng, 750_000, tuple(sig_defaults.values()))
+    bkg = _generate(rng, 100_000, tuple(bkg_defaults.values()))
 
     bins = np.unique(
         np.concatenate(
@@ -83,20 +77,21 @@ def main():
 
     counts = sig_counts + bkg_counts
 
-    # binned_fitter = ipchi2_fit.fit(counts, bins, 0.6, sig_defaults, bkg_defaults)
-    unbinned_fitter = ipchi2_fit.unbinned_fit(
+    unbinned_fitter = ipchi2_fit.fixed_prompt_unbinned_fit(
         np.concatenate((sig, bkg)),
-        len(sig) / (len(sig) + len(bkg)),
+        0.9*len(sig) / (len(sig) + len(bkg)),
         sig_defaults,
         bkg_defaults,
     )
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(8, 10))
-    # ipchi2_fit.plot(
-    #     (axes["A"], axes["B"]), bins, counts, np.sqrt(counts), binned_fitter.values
-    # )
-    ipchi2_fit.plot(
-        (axes["A"], axes["B"]), bins, counts, np.sqrt(counts), unbinned_fitter.values
+    ipchi2_fit.plot_fixed_prompt(
+        (axes["A"], axes["B"]),
+        bins,
+        counts,
+        np.sqrt(counts),
+        unbinned_fitter.values,
+        sig_defaults,
     )
 
     axes["A"].errorbar(
@@ -121,7 +116,7 @@ def main():
     axes["A"].set_title("Toy")
 
     plt.tight_layout()
-    plt.savefig("toy_ipchi2_fit.png")
+    fig.savefig("toy_ipchi2_fit.png")
     plt.show()
 
 
