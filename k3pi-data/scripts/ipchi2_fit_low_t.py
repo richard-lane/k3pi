@@ -79,7 +79,7 @@ def main(*, sign: str):
     )
 
     # plot the fit
-    fig, axes = plt.subplot_mosaic("AAA\n" * 3 + "BBB")
+    fig, axes = plt.subplot_mosaic("AAA\n" * 3 + "BBB", figsize=(15, 15))
 
     bins = np.linspace(low_ip, high_ip, 250)
     centres = (bins[1:] + bins[:-1]) / 2
@@ -116,7 +116,12 @@ def main(*, sign: str):
 
     fig.tight_layout()
 
-    plt.show()
+    print(fitter)
+    fig.suptitle(
+        str(dict(zip(fitter.parameters, [f"{float(x):.3f}" for x in fitter.values])))
+    )
+
+    fig.savefig(f"ipchi2_fit_lowtime_{sign}.png")
 
 
 if __name__ == "__main__":

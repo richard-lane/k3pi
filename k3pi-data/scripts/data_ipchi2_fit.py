@@ -45,14 +45,13 @@ def main(*, sign: str):
     ip_cut = 9.0
 
     sec_frac_guesses = [
-        0.0,
-        0.05,
-        0.05,
-        0.05,
-        0.10,
-        0.15,
-        0.20,
-        0.30,
+        # 0.05,
+        # 0.05,
+        # 0.05,
+        # 0.10,
+        # 0.15,
+        # 0.20,
+        # 0.30,
         0.40,
         0.45,
         0.75,
@@ -60,27 +59,34 @@ def main(*, sign: str):
     ]
     sec_fracs = []
     for i, (low_t, high_t, frac_guess) in tqdm(
-        enumerate(zip(time_bins[:-1], time_bins[1:], sec_frac_guesses))
+        enumerate(zip(time_bins[7:-1], time_bins[8:], sec_frac_guesses))
     ):
         # Get counts in the bins
-        ipchi2s = _ipchi2s(sign, (low_t, high_t))[:500000]
+        ipchi2s = _ipchi2s(sign, (low_t, high_t))
+
+        # Get rid of points outside domain where the PDF is defined
+        low_ip, high_ip = ipchi2_fit.domain()
+        ipchi2s = ipchi2s[ipchi2s > low_ip]
+        ipchi2s = ipchi2s[ipchi2s < high_ip]
 
         # fit
         sig_defaults = {
-            "centre_sig": 0.9,
-            "width_l_sig": 1.6,
-            "width_r_sig": 0.9,
-            "alpha_l_sig": 0.0,
-            "alpha_r_sig": 0.0,
-            "beta_sig": 0.0,
+            "centre": 0.977,
+            "width_l": 1.230,
+            "width_r": 0.813,
+            "alpha_l": 0.254,
+            "alpha_r": 0.117,
+            "beta": 0.018,
         }
         bkg_defaults = {
-            "centre_bkg": 4.5,
-            "width_bkg": 1.8,
-            "alpha_bkg": 0.0,
-            "beta_bkg": 0.0,
+            "centre": 4.5,
+            "width_l": 1.8,
+            "width_r": 1.8,
+            "alpha_l": 0.01,
+            "alpha_r": 0.01,
+            "beta": 0.01,
         }
-        fitter = ipchi2_fit.unbinned_fit(
+        fitter = ipchi2_fit.fixed_prompt_unbinned_fit(
             ipchi2s, 1 - frac_guess, sig_defaults, bkg_defaults
         )
 
@@ -88,11 +94,18 @@ def main(*, sign: str):
         fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(8, 10))
         ip_bins = np.linspace(low_ip, high_ip, 250)
         counts, _ = np.histogram(ipchi2s, ip_bins)
-        ipchi2_fit.plot(
-            (axes["A"], axes["B"]), ip_bins, counts, np.sqrt(counts), fitter.values
+        ipchi2_fit.plot_fixed_prompt(
+            (axes["A"], axes["B"]),
+            ip_bins,
+            counts,
+            np.sqrt(counts),
+            fitter.values,
+            sig_defaults,
         )
         axes["A"].legend()
         axes["A"].axvline(x=np.log(ip_cut), color="r")
+
+        print(fitter)
 
         f_sec = (
             100
