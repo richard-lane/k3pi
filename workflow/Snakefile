@@ -13,7 +13,10 @@ year, magnetisation = "2018", "magdown"
 
 # Number of data files to use for real data, upper mass
 # since this is by far the slowest step
-n_files = 8
+n_files = 1
+
+# Number of parallel processes for creating data dumps
+n_procs = 2
 
 # Other things
 # ----
@@ -68,12 +71,12 @@ cf_ampgen_dump = definitions.ampgen_dump("cf")
 
 # Classifier for BDT cut
 # TODO get programatically
-bdt_clf = ("k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl",)
+bdt_clf = "k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl"
 
 # Efficiency reweighters
 # TODO get programatically
-cf_eff_weighter = ("k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl",)
-dcs_eff_weighter = ("k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl",)
+cf_eff_weighter = "k3pi_efficiency/reweighter/2018_cf_magdown_both.pkl"
+dcs_eff_weighter = "k3pi_efficiency/reweighter/2018_dcs_magdown_both.pkl"
 
 analysis_plots = (
     f"fits_{year}_{magnetisation}_bdt_cut=True_efficiency=False_0_alt_bkg=False.png",
@@ -147,7 +150,7 @@ rule validation:
 
 
 # Set up the python environment
-rule setup_python:
+rule create_python:
     output:
         # Special file that flags whether the conda environment
         # has been created by this script
@@ -165,8 +168,7 @@ rule setup_python:
 # Create dataframes - AmpGen, pGun, MC, data
 rule create_ampgen:
     input:
-        # Could mark these as ancient, because they will be; but just in case
-        conda_flag,
+        ancient(conda_flag),
     output:
         dcs_ampgen_dump,
         cf_ampgen_dump,
@@ -182,7 +184,7 @@ rule create_ampgen:
 rule create_dcs_pgun:
     # TODO have an input directive pointing at the analysis productions
     input:
-        conda_flag,
+        ancient(conda_flag),
     output:
         *dcs_pgun_dumps,
     log:
@@ -196,7 +198,7 @@ rule create_dcs_pgun:
 rule create_cf_pgun:
     # TODO have an input directive pointing at the analysis productions
     input:
-        conda_flag,
+        ancient(conda_flag),
     output:
         *cf_pgun_dumps,
     conda:
@@ -210,7 +212,7 @@ rule create_cf_pgun:
 rule create_cf_mc:
     # TODO have an input directive pointing at the analysis productions
     input:
-        conda_flag,
+        ancient(conda_flag),
     output:
         cf_mc_dump,
     conda:
@@ -224,7 +226,7 @@ rule create_cf_mc:
 rule create_dcs_mc:
     # TODO have an input directive pointing at the analysis productions
     input:
-        conda_flag,
+        ancient(conda_flag),
     output:
         dcs_mc_dump,
     conda:
@@ -237,11 +239,11 @@ rule create_dcs_mc:
 
 rule create_uppermass:
     input:
-        conda_flag,
+        ancient(conda_flag),
         real_data_files,
     output:
         dcs_uppermass_dumps,
-    threads: 8
+    threads: n_procs
     conda:
         "d2k3py"
     log:
@@ -252,32 +254,32 @@ rule create_uppermass:
 
 rule create_dcs_real:
     input:
-        conda_flag,
+        ancient(conda_flag),
         real_data_files,
     output:
         dcs_data_dumps,
-    threads: 8
+    threads: n_procs
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_real.log",
     shell:
-        f"python k3pi-data/create_real.py {year} dcs {magnetisation} -n {n_files} >> {{log}} 2>&1"
+        f"python k3pi-data/create_real.py {year} dcs {magnetisation} -n {n_files} --n_procs {n_procs} >> {{log}} 2>&1"
 
 
 rule create_cf_real:
     input:
-        conda_flag,
+        ancient(conda_flag),
         real_data_files,
     output:
         cf_data_dumps,
-    threads: 8
+    threads: n_procs
     conda:
         "d2k3py"
     log:
         "logs/create_dcs_real.log",
     shell:
-        f"python k3pi-data/create_real.py {year} cf {magnetisation} -n {n_files} >> {{log}} 2>&1"
+        f"python k3pi-data/create_real.py {year} cf {magnetisation} -n {n_files} --n_procs {n_procs} >> {{log}} 2>&1"
 
 
 # Do MC corrections - TODO, decide what this is
@@ -419,7 +421,7 @@ rule validation_efficiency:
 # Mass fit toy plots
 rule massfit_toys:
     input:
-        conda_flag,
+        ancient(conda_flag),
     output:
         "toy_mass_fit_alt_bkg=False.png",
         "toy_mass_fit_alt_bkg=True.png",
@@ -435,7 +437,7 @@ rule massfit_toys:
 # Toy plots for the time fitter
 rule charmfit_toys:
     input:
-        conda_flag,
+        ancient(conda_flag),
     output:
         "unconstrained_example.png",
         "toy_scan.png",

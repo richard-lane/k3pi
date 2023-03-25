@@ -72,7 +72,6 @@ def _create_dump(
         dataframe = _real_df(data_f[tree_name])
 
     # Dump it
-    print(f"dumping {dump_path}")
     with open(dump_path, "wb") as dump_f:
         pickle.dump(dataframe, dump_f)
 
@@ -97,7 +96,7 @@ def main(args: argparse.Namespace) -> None:
     # Ugly - also have a list of tree names so i can use a starmap to iterate over both in parallel
     tree_names = [definitions.data_tree(sign) for _ in dump_paths]
 
-    with Pool(processes=8) as pool:
+    with Pool(args.n_procs) as pool:
         tqdm(
             pool.starmap(_create_dump, zip(data_paths, dump_paths, tree_names)),
             total=len(dump_paths),
@@ -130,6 +129,13 @@ if __name__ == "__main__":
         type=int,
         default=None,
         help="number of files to process; defaults to all of them",
+    )
+
+    parser.add_argument(
+            "--n_procs",
+            type=int,
+            default=2,
+            help="number of processes"
     )
 
     main(parser.parse_args())
