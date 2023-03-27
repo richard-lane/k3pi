@@ -324,3 +324,42 @@ def ratio_err(
     err = ratio * np.sqrt((num_err / numerator) ** 2 + (denom_err / denominator) ** 2)
 
     return ratio, err
+
+
+def relative_angle(p_1: np.ndarray, p_2: np.ndarray) -> np.ndarray:
+    """
+    Find the angle between two particles
+
+    :param p_1: shape (3, N) array of particle momenta
+    :param p_2: shape (3, N) array of particle momenta
+
+    :returns: N array of angles, in degrees
+
+    """
+    mod_1 = np.sqrt(np.sum(p_1**2, axis=0))
+    mod_2 = np.sqrt(np.sum(p_2**2, axis=0))
+    print(mod_1)
+
+    dot_product = np.sum(p_1 * p_2, axis=0)
+
+    return 180.0 * np.arccos(dot_product / (mod_1 * mod_2)) / np.pi
+
+
+def relative_angle_branches(tree, prefix_1: str, prefix_2) -> np.ndarray:
+    """
+    Find the angle between two brances in a ROOT file, assuming that the
+    momentum suffices are PX PY PZ
+
+    :param tree: ROOT file tree
+    :param p_1: ROOT file branch prefix
+    :param p_2: ROOT file branch prefix
+
+    :returns: N array of angles, in degrees
+
+    """
+    suffices = "PX", "PY", "PZ"
+
+    p_1 = np.row_stack((f"{prefix_1}_{suffix}" for suffix in suffices))
+    p_2 = np.row_stack((f"{prefix_2}_{suffix}" for suffix in suffices))
+
+    return relative_angle(p_1, p_2)

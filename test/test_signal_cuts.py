@@ -74,8 +74,9 @@ def test_sig_frac_overflow():
     n_sig = 100
     n_bkg = 500
     labels = np.concatenate((np.ones(n_sig), np.zeros(n_bkg)))
+    wts = np.ones_like(labels)
 
     desired_sig_frac = 0.5
 
     with pytest.raises(AssertionError):
-        util.weight(labels, desired_sig_frac)
+        util.weight(labels, desired_sig_frac, wts)

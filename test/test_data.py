@@ -12,7 +12,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
 
 from lib_data import definitions
 from lib_data import stats
-from lib_data.util import flip_momenta, inv_mass
+from lib_data.util import flip_momenta, inv_mass, relative_angle
 
 
 def test_flip_momenta():
@@ -281,3 +281,32 @@ def test_integral_varying_width():
         stats.integral(points, fcn),
         1 / 3 * points[-1] ** 3,
     )
+
+
+def test_angle_axes():
+    """
+    Check the angle between axes is right
+
+    """
+    x_axis = np.array([[1], [0], [0]])
+    y_axis = np.array([[0], [1], [0]])
+
+    expected_angle = 90
+
+    angle = relative_angle(x_axis, y_axis)
+    assert len(angle) == 1
+
+    assert np.isclose(angle[0], expected_angle)
+
+
+def test_angles():
+    """
+    Check the angle between vectors is right
+
+    """
+    x_axis = np.array([[1, 2], [0, 3], [4, 6]])
+    y_axis = np.array([[4, 6], [2, 6], [5, 9]])
+
+    expected_angles = np.array([29.805, 14.036])
+
+    assert np.allclose(relative_angle(x_axis, y_axis), expected_angles, atol=0.001)

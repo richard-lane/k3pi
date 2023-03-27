@@ -21,6 +21,15 @@ MOMENTUM_COLUMNS = [
     *(f"slowpi_{s}" for s in MOMENTUM_SUFFICES),
 ]
 
+# ROOT file branch prefices
+DATA_BRANCH_PREFICES = (
+    "Dst_ReFit_D0_Kplus",
+    "Dst_ReFit_D0_piplus",
+    "Dst_ReFit_D0_piplus_0",
+    "Dst_ReFit_D0_piplus_1",
+    "Dst_ReFit_piplus",
+)
+
 # Particle gun directories
 RS_PGUN_SOURCE_DIR = pathlib.Path(
     "/eos/lhcb/user/n/njurik/D02Kpipipi/PGun/Tuples/27165071/"
