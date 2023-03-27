@@ -338,7 +338,6 @@ def relative_angle(p_1: np.ndarray, p_2: np.ndarray) -> np.ndarray:
     """
     mod_1 = np.sqrt(np.sum(p_1**2, axis=0))
     mod_2 = np.sqrt(np.sum(p_2**2, axis=0))
-    print(mod_1)
 
     dot_product = np.sum(p_1 * p_2, axis=0)
 
@@ -359,7 +358,17 @@ def relative_angle_branches(tree, prefix_1: str, prefix_2) -> np.ndarray:
     """
     suffices = "PX", "PY", "PZ"
 
-    p_1 = np.row_stack((f"{prefix_1}_{suffix}" for suffix in suffices))
-    p_2 = np.row_stack((f"{prefix_2}_{suffix}" for suffix in suffices))
+    p_1 = np.row_stack(
+        [
+            tree[f"{prefix_1}_{suffix}"].array(library="ak")[:, 0].to_numpy()
+            for suffix in suffices
+        ]
+    )
+    p_2 = np.row_stack(
+        [
+            tree[f"{prefix_2}_{suffix}"].array(library="ak")[:, 0].to_numpy()
+            for suffix in suffices
+        ]
+    )
 
     return relative_angle(p_1, p_2)
