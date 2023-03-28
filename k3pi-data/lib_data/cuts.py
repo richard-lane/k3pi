@@ -13,6 +13,8 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit
 
 from libFit import pdfs
 
+ANGLE_CUT_DEG = 0.03
+
 
 def d0_mass(tree) -> np.ndarray:
     """
