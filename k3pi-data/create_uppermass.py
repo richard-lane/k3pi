@@ -183,11 +183,6 @@ if __name__ == "__main__":
         help="number of files to process; defaults to all of them",
     )
 
-    parser.add_argument(
-            "--n_procs",
-            type=int,
-            default=2,
-            help="number of processes"
-    )
+    parser.add_argument("--n_procs", type=int, default=2, help="number of processes")
 
     main(parser.parse_args())

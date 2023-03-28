@@ -33,26 +33,22 @@ def _gen(
     """
     sign, time_bin = "cf", 5
 
-    # NB these are the total number generated BEFORE we do the accept reject
-    # The bkg acc-rej is MUCH more efficient than the signal!
-    n_sig, n_bkg = 2_000_000, 5_000_000
+    n_sig, n_bkg = 3_000, 25_000
 
     sig_params = util.signal_param_guess(time_bin)
     sqrt_bkg_params = util.sqrt_bkg_param_guess(sign)
     alt_bkg_params = (0, 0, 0)
 
     rng = np.random.default_rng()
-    sig = toy_utils.gen_sig(rng, n_sig, sig_params, verbose=True)
+    sig = toy_utils.gen_sig(rng, n_sig, sig_params, pdfs.reduced_domain(), verbose=True)
     if not alt_bkg:
-        bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, sqrt_bkg_params, verbose=True)
+        bkg = toy_utils.gen_bkg_sqrt(
+            rng, n_bkg, sqrt_bkg_params, pdfs.reduced_domain(), verbose=True
+        )
     else:
         # Hard coded for now
         bkg_pdf = lib_bkg.pdf(bins, "2018", "magdown", "dcs", bdt_cut=False)
         bkg = toy_utils.gen_alt_bkg(rng, n_bkg, bkg_pdf, alt_bkg_params, domain)
-
-    # Number we expect to generate
-    n_sig = toy_utils.n_expected_sig(n_sig, domain, sig_params)
-    n_bkg = toy_utils.n_expected_bkg(n_bkg, domain, sqrt_bkg_params)
 
     return (
         np.concatenate((sig, bkg)),

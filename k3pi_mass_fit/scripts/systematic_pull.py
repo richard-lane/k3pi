@@ -88,7 +88,9 @@ def _bkg(
     Background counts with Poisson errors from the PDF
 
     """
-    points = toy_utils.gen_bkg_sqrt(rng, n_gen, mass_util.sqrt_bkg_param_guess(sign))
+    points = toy_utils.gen_bkg_sqrt(
+        rng, n_gen, pdfs.reduced_domain(), mass_util.sqrt_bkg_param_guess(sign)
+    )
 
     counts, _ = stats.counts(points, bins)
 
@@ -100,9 +102,7 @@ def _n_bkg_expected(n_gen: int, fit_region: Tuple[float, float], sign: str) -> f
     The number of bkg events we expect to accept, given a number generated
 
     """
-    return toy_utils.n_expected_bkg(
-        n_gen, fit_region, mass_util.sqrt_bkg_param_guess(sign)
-    )
+    return n_gen
 
 
 def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.ndarray:

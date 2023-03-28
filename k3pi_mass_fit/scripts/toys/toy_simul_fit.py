@@ -6,8 +6,9 @@ Generate some points with accept/reject, fit to them and show the fit
 import sys
 import pathlib
 import argparse
-import numpy as np
 from typing import Tuple
+
+import numpy as np
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
@@ -36,12 +37,10 @@ def _gen(
     sig_params = util.signal_param_guess(time_bin)
     bkg_params = util.sqrt_bkg_param_guess(sign)
 
-    sig = toy_utils.gen_sig(rng, n_sig, sig_params, verbose=True)
-    bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, bkg_params, verbose=True)
-
-    # Number we expect to generate
-    n_sig = toy_utils.n_expected_sig(n_sig, fit_region, sig_params)
-    n_bkg = toy_utils.n_expected_bkg(n_bkg, fit_region, bkg_params)
+    sig = toy_utils.gen_sig(rng, n_sig, sig_params, pdfs.reduced_domain(), verbose=True)
+    bkg = toy_utils.gen_bkg_sqrt(
+        rng, n_bkg, bkg_params, pdfs.reduced_domain(), verbose=True
+    )
 
     return np.concatenate((sig, bkg)), (n_sig, n_bkg, *sig_params, *bkg_params)
 
@@ -51,7 +50,7 @@ def main():
     just do 1 fit
 
     """
-    n_rs_sig, n_ws_sig, n_bkg = 20_000_000, 100_000, 300_000
+    n_rs_sig, n_ws_sig, n_bkg = 800_000, 2_200, 30_000
 
     rng = np.random.default_rng()
 

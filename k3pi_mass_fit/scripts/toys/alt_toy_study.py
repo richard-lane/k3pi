@@ -113,7 +113,7 @@ def _gen(
     Same signal model, slightly different bkg models
 
     """
-    sig = toy_utils.gen_sig(rng, n_sig, _sig_params())
+    sig = toy_utils.gen_sig(rng, n_sig, pdfs.reduced_domain(), _sig_params())
 
     # Get bkg pdf across the whole generator region
     bkg_pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
@@ -150,29 +150,11 @@ def _pull(
     ws_combined = _gen(rng, ws_n_sig, n_bkg, sign="dcs", **gen_params)
 
     # Perform fit
-    rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, fit_range, _sig_params())
-    rs_bkg_expected = toy_utils.n_expected_alt_bkg(
-        n_bkg,
-        fit_range,
-        _bkg_params("cf"),
-        bins,
-        "2018",
-        "cf",
-        "magdown",
-        bdt_cut=False,
-    )
-
-    ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, fit_range, _sig_params())
-    ws_bkg_expected = toy_utils.n_expected_alt_bkg(
-        n_bkg,
-        fit_range,
-        _bkg_params("dcs"),
-        bins,
-        "2018",
-        "dcs",
-        "magdown",
-        bdt_cut=False,
-    )
+    # TODO change these
+    rs_sig_expected = rs_n_sig
+    rs_bkg_expected = n_bkg
+    ws_sig_expected = ws_n_sig
+    ws_bkg_expected = n_bkg
 
     true_params = np.array(
         (

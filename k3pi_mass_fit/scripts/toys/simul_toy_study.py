@@ -39,7 +39,7 @@ def _bins(n_underflow: int = 3) -> np.ndarray:
     gen_low, gen_high = pdfs.domain()
 
     return definitions.nonuniform_mass_bins(
-        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 20, 50, 20)
+        (gen_low, fit_low, gen_high), (n_underflow, 350)
     )
 
 
@@ -83,16 +83,18 @@ def _gen(rng: np.random.Generator, n_sig: int, n_bkg: int, sign: str):
     Same signal model, slightly different bkg models
 
     """
-    sig = toy_utils.gen_sig(rng, n_sig, _sig_params())
-    bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, _bkg_params(sign))
+    sig = toy_utils.gen_sig(
+        rng, n_sig, _sig_params(), pdfs.reduced_domain(), verbose=True
+    )
+    bkg = toy_utils.gen_bkg_sqrt(
+        rng, n_bkg, _bkg_params(sign), pdfs.reduced_domain(), verbose=True
+    )
 
-    low_fit, _ = pdfs.reduced_domain()
-    return np.concatenate((sig, bkg)), np.sum(sig > low_fit), np.sum(bkg > low_fit)
+    return np.concatenate((sig, bkg))
 
 
 def _pull(
     rng: np.random.Generator,
-    time_bin: int,
     fit_range: Tuple[float, float],
     out_dict: dict,
 ) -> np.ndarray:
@@ -102,24 +104,19 @@ def _pull(
     Returns array of pulls
 
     """
-    rs_n_sig, ws_n_sig, n_bkg = 18_000_000, 55000, 50000
+    rs_n_sig, ws_n_sig, n_bkg = 800_000, 2_200, 30_000
 
     # Perform fit
-    rs_combined, rs_sig_expected, rs_bkg_expected = _gen(rng, rs_n_sig, n_bkg, "cf")
-    ws_combined, ws_sig_expected, ws_bkg_expected = _gen(rng, ws_n_sig, n_bkg, "dcs")
-
-    # rs_sig_expected = toy_utils.n_expected_sig(rs_n_sig, fit_range, _sig_params())
-    # rs_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("cf"))
-
-    # ws_sig_expected = toy_utils.n_expected_sig(ws_n_sig, fit_range, _sig_params())
-    # ws_bkg_expected = toy_utils.n_expected_bkg(n_bkg, fit_range, _bkg_params("dcs"))
+    # Draw the number to generate from a Poisson distribution
+    rs_combined = _gen(rng, rng.poisson(rs_n_sig), rng.poisson(n_bkg), "cf")
+    ws_combined = _gen(rng, rng.poisson(ws_n_sig), rng.poisson(n_bkg), "dcs")
 
     true_params = np.array(
         (
-            rs_sig_expected,
-            rs_bkg_expected,
-            ws_sig_expected,
-            ws_bkg_expected,
+            rs_n_sig,
+            n_bkg,
+            ws_n_sig,
+            n_bkg,
             *_sig_params(),
             *_bkg_params("cf"),
             *_bkg_params("dcs"),
@@ -162,7 +159,6 @@ def _pull(
 
 def _pull_study(
     n_experiments: int,
-    time_bin: int,
     fit_range: Tuple[float, float],
     out_list: list,
     out_dict: dict,
@@ -184,7 +180,6 @@ def _pull_study(
             try:
                 pulls = _pull(
                     rng,
-                    time_bin,
                     fit_range,
                     out_dict,
                 )
@@ -276,7 +271,6 @@ def _do_pull_study():
     Do the pull study
 
     """
-    time_bin = 5
     fit_range = pdfs.reduced_domain()
 
     manager = Manager()
@@ -289,13 +283,12 @@ def _do_pull_study():
     )
 
     n_procs = 5
-    n_experiments = 25
+    n_experiments = 50
     procs = [
         Process(
             target=_pull_study,
             args=(
                 n_experiments,
-                time_bin,
                 fit_range,
                 out_list,
                 out_dict,
@@ -304,14 +297,14 @@ def _do_pull_study():
         for _ in range(n_procs)
     ]
 
-    for p in procs:
-        p.start()
+    for proc in procs:
+        proc.start()
 
         # So the processes start at a different time and have different seeds
         time.sleep(1)
 
-    for p in procs:
-        p.join()
+    for proc in procs:
+        proc.join()
 
     pulls = np.concatenate(out_list, axis=1)
 
