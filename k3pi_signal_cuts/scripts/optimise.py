@@ -1,7 +1,7 @@
 """
 Train several classifiers with different parameters,
-record the ROC AUC score at each, make some plots
-+ cache the hyperparameters + ROC
+record the signal significance at each, make some plots
++ cache the hyperparameters + significance
 
 """
 import os
@@ -16,12 +16,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from sklearn.metrics import roc_auc_score
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
-from lib_cuts import definitions, util
+from lib_cuts import definitions, util, metrics
 from lib_data import get, training_vars, d0_mc_corrections
 
 
@@ -92,17 +91,28 @@ def _run_study(
         training_cols = list(training_vars.training_var_names())
         clf.fit(train_df[training_cols], train_labels, train_wts)
 
-        # Find the training ROC AUC score
-        train_score = roc_auc_score(train_labels, clf.predict(train_df[training_cols]))
+        # Find the training signal significance
+        train_pred_sig = clf.predict(train_df[training_cols]) == 1
+        train_score = metrics.signal_significance(
+            np.sum(train_wts[(train_labels == 1) & train_pred_sig]),
+            np.sum(train_wts[(train_labels == 0) & train_pred_sig]),
+        )
 
-        # Find the testing ROC AUC score
-        test_score = roc_auc_score(test_labels, clf.predict(test_df[training_cols]))
+        # Find the testing signal significance
+        test_pred_sig = clf.predict(test_df[training_cols]) == 1
+        test_score = metrics.signal_significance(
+            np.sum((test_labels == 1) & test_pred_sig),
+            np.sum((test_labels == 0) & test_pred_sig),
+        )
 
-        # Make a dict of the training parameters and ROC AUC scores
-
+        # Make a dict of the training parameters and significances
         # Append to a list of dicts
         results.append(
-            {**train_params, "train_roc_auc": train_score, "test_roc_auc": test_score}
+            {
+                **train_params,
+                "train_significance": train_score,
+                "test_significance": test_score,
+            }
         )
 
     # When we're done store the list of params to the out dict
@@ -117,58 +127,68 @@ def _dict2arrs(scores: dict) -> tuple:
     n_estimators = []
     learning_rate = []
     max_depth = []
-    train_roc = []
-    test_roc = []
+    train_significance = []
+    test_significance = []
 
     for dict_ in scores.values():
         n_estimators.append([d_["n_estimators"] for d_ in dict_])
         learning_rate.append([d_["learning_rate"] for d_ in dict_])
         max_depth.append([d_["max_depth"] for d_ in dict_])
-        train_roc.append([d_["train_roc_auc"] for d_ in dict_])
-        test_roc.append([d_["test_roc_auc"] for d_ in dict_])
+        train_significance.append([d_["train_significance"] for d_ in dict_])
+        test_significance.append([d_["test_significance"] for d_ in dict_])
 
     # Concatenate into arrays
     return (
         np.concatenate(n_estimators),
         np.concatenate(learning_rate),
         np.concatenate(max_depth),
-        np.concatenate(train_roc),
-        np.concatenate(test_roc),
+        np.concatenate(train_significance),
+        np.concatenate(test_significance),
     )
 
 
 def _plot_scores(scores: dict) -> None:
     """
-    Plot bar/line charts showing the ROC score in testing/training o
+    Plot bar/line charts showing the signal significance in testing/training
 
     """
     # Get arrays of params from the dict
-    n_estimators, learning_rate, max_depth, train_roc, test_roc = _dict2arrs(scores)
+    (
+        n_estimators,
+        learning_rate,
+        max_depth,
+        train_significance,
+        test_significance,
+    ) = _dict2arrs(scores)
 
     fig, axes = plt.subplots(2, 3, sharey=True)
-    axes[0, 0].scatter(n_estimators, train_roc, color="r", label="Train")
-    axes[1, 0].scatter(n_estimators, test_roc, color="b", label="Train")
+    axes[0, 0].scatter(n_estimators, train_significance, color="r", label="Train")
+    axes[1, 0].scatter(n_estimators, test_significance, color="b", label="Train")
     axes[1, 0].set_xlabel("n_estimators")
 
-    axes[0, 1].scatter(learning_rate, train_roc, color="r")
-    axes[1, 1].scatter(learning_rate, test_roc, color="b")
+    axes[0, 1].scatter(learning_rate, train_significance, color="r")
+    axes[1, 1].scatter(learning_rate, test_significance, color="b")
     axes[1, 1].set_xlabel("learning_rate")
 
-    axes[0, 2].scatter(max_depth, train_roc, color="r")
-    axes[1, 2].scatter(max_depth, test_roc, color="b")
+    axes[0, 2].scatter(max_depth, train_significance, color="r")
+    axes[1, 2].scatter(max_depth, test_significance, color="b")
     axes[1, 2].set_xlabel("max_depth")
+
+    axes[0, 0].set_ylabel("Train")
+    axes[1, 0].set_ylabel("Test")
 
     # Find the top 5 params
     n_max = 5
-    indices = np.argpartition(test_roc, -n_max)[-n_max:]
-    print("Test ROC\tTrain ROC\tn est\tlearn rate\tdepth")
+    not_nan = ~np.isnan(test_significance)
+    indices = np.argpartition(test_significance[not_nan], -n_max)[-n_max:]
+    print("Test Sig\tTrain Sig\tn est\tlearn rate\tdepth")
     for index in indices:
         print(
-            f"{test_roc[index]:.3f}\t",
-            f"{train_roc[index]:.3f}\t",
-            n_estimators[index],
-            f"{learning_rate[index]:.3f}\t",
-            max_depth[index],
+            f"{test_significance[not_nan][index]:.3f}\t",
+            f"{train_significance[not_nan][index]:.3f}\t",
+            n_estimators[not_nan][index],
+            f"{learning_rate[not_nan][index]:.3f}\t",
+            max_depth[not_nan][index],
             sep="\t",
         )
 
@@ -227,13 +247,14 @@ def main(*, n_procs: int, n_repeats: int):
 
     # Start the processes at different times so they have
     # different seeds
-    for p in procs:
-        p.start()
+    for proc in procs:
+        proc.start()
         time.sleep(0.01)
-    for p in procs:
-        p.join()
 
-    # Plot the ROC scores vs hyperparams
+    for proc in procs:
+        proc.join()
+
+    # Plot the signal significance vs hyperparams
     _plot_scores(out_dict)
 
     # Cache the dict of lists of dicts to disk so i can recover it later if i want
