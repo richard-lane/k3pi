@@ -336,12 +336,12 @@ def relative_angle(p_1: np.ndarray, p_2: np.ndarray) -> np.ndarray:
     :returns: N array of angles, in degrees
 
     """
-    mod_1 = np.sqrt(np.sum(p_1**2, axis=0))
-    mod_2 = np.sqrt(np.sum(p_2**2, axis=0))
-
+    # This avoids error magnification by avoiding the need to find
+    # norms of the vectors, and by taking the cosine of a small angle
     dot_product = np.sum(p_1 * p_2, axis=0)
+    cross_product = np.linalg.norm(np.cross(p_1.T, p_2.T), axis=1)
 
-    return 180.0 * np.arccos(dot_product / (mod_1 * mod_2)) / np.pi
+    return 180.0 * np.arctan2(cross_product, dot_product) / np.pi
 
 
 def relative_angle_branches(tree, prefix_1: str, prefix_2) -> np.ndarray:
