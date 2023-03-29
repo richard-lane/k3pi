@@ -2,18 +2,11 @@
 PDFs, CDF, integrals etc. for mass fit signal and background shapes
 
 """
-import sys
-import pathlib
-import logging
-import traceback
 from typing import Tuple, Callable
 import numpy as np
 from scipy.integrate import quad
 from iminuit import Minuit
 from iminuit.util import make_func_code
-
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
-from lib_data import stats
 
 
 class ZeroCountsError(Exception):
@@ -197,6 +190,21 @@ class BinnedChi2:
         self._bins = bins
         self._domain = pdf_domain
 
+        # For evaluating the integral of the PDF over the bins
+        # This gives us n_pts_per_bin pts between bin edges
+        self._n_pts_per_bin = 51
+
+        # This is slow but only gets called once
+        self._integral_pts = np.unique(
+            np.concatenate(
+                [
+                    np.linspace(a, b, self._n_pts_per_bin + 2)
+                    for a, b in zip(self._bins[:-1], self._bins[1:])
+                ]
+            )
+        )
+        self._integral_h = self._integral_pts[1:] - self._integral_pts[:-1]
+
     def __call__(
         self,
         n_sig: float,
@@ -216,22 +224,25 @@ class BinnedChi2:
         """
         # In each bin [a, b] the predicted number
         # is int_a^b f(x) dx where f(x) is our model fcn
-        predicted = stats.areas(
-            self._bins,
-            model(
-                self._bins,
-                n_sig,
-                n_bkg,
-                centre,
-                width_l,
-                width_r,
-                alpha_l,
-                alpha_r,
-                beta,
-                a,
-                b,
-                self._domain,
-            ),
+        # Find this integral by evaluating the function at lots of points
+        integral_vals = model(
+            self._integral_pts,
+            n_sig,
+            n_bkg,
+            centre,
+            width_l,
+            width_r,
+            alpha_l,
+            alpha_r,
+            beta,
+            a,
+            b,
+            self._domain,
+        )
+
+        areas = 0.5 * (integral_vals[1:] + integral_vals[:-1]) * self._integral_h
+        predicted = np.sum(
+            areas.reshape(len(self._bins) - 1, self._n_pts_per_bin + 1), axis=1
         )
 
         return np.sum((self._counts - predicted) ** 2 / self._error**2)

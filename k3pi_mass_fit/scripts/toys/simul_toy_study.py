@@ -39,7 +39,7 @@ def _bins(n_underflow: int = 3) -> np.ndarray:
     gen_low, gen_high = pdfs.domain()
 
     return definitions.nonuniform_mass_bins(
-        (gen_low, fit_low, gen_high), (n_underflow, 350)
+        (gen_low, fit_low, gen_high), (n_underflow, 200)
     )
 
 
@@ -283,7 +283,7 @@ def _do_pull_study():
     )
 
     n_procs = 5
-    n_experiments = 50
+    n_experiments = 25
     procs = [
         Process(
             target=_pull_study,
