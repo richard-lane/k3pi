@@ -220,19 +220,6 @@ def add_k_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     dataframe["K ID"] = tree["Dst_ReFit_D0_Kplus_ID"].array(library="ak")[:, 0][keep]
 
 
-def add_masses(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
-    """
-    Add ReFit D0 and D* masses to the dataframe in place
-
-    """
-    dataframe["D0 mass"] = (
-        tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0][keep].to_numpy()
-    )
-    dataframe["D* mass"] = (
-        tree["Dst_ReFit_M"].array(library="ak")[:, 0][keep].to_numpy()
-    )
-
-
 def add_slowpi_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     """
     Add a slow pion ID branch (after ReFit)
@@ -267,13 +254,12 @@ def eta(p_x: np.ndarray, p_y: np.ndarray, p_z: np.ndarray) -> np.ndarray:
     return np.arctanh(p_z / np.sqrt(p_x**2 + p_y**2 + p_z**2))
 
 
-def add_d0_eta(dataframe, tree, keep: np.ndarray) -> None:
+def add_d0_eta(dataframe: pd.DataFrame) -> None:
     """
     Add D0 eta from its momenta
 
     """
-    eta_ = eta(*[tree[f"D0_P{var}"].array(library="np") for var in ("X", "Y", "Z")])
-    dataframe["D0 eta"] = eta_[keep]
+    dataframe["D0 eta"] = eta(*[dataframe[f"D0_P{var}"] for var in ("X", "Y", "Z")])
 
 
 def inv_mass(*particles: np.ndarray) -> np.ndarray:

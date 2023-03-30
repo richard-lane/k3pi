@@ -7,6 +7,7 @@ The data lives on lxplus; this script should therefore be run on lxplus.
 
 """
 import os
+import time
 import pickle
 import pathlib
 import argparse
@@ -15,11 +16,7 @@ import pandas as pd
 from tqdm import tqdm
 import uproot
 
-from lib_data import definitions
-from lib_data import cuts
-from lib_data import util
-from lib_data import corrections
-from lib_data import training_vars
+from lib_data import definitions, cuts, util, corrections, training_vars, read
 
 
 def _real_df(tree) -> pd.DataFrame:
@@ -27,32 +24,16 @@ def _real_df(tree) -> pd.DataFrame:
     Populate a pandas dataframe with momenta, time and other arrays from the provided trees
 
     """
-    dataframe = pd.DataFrame()
+    # Convert the right branches into a dataframe
+    start = time.time()
+    dataframe = tree.arrays(read.branches("data"), library="pd")
+    read_time = start - time.time()
 
-    keep = cuts.data_keep(tree)
+    start = time.time()
+    keep = cuts.data_keep(dataframe)
+    cut_time = start - time.time()
 
-    # Read momenta into the dataframe
-    util.add_momenta(dataframe, tree, keep)
-
-    util.add_refit_times(dataframe, tree, keep)
-
-    # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    training_vars.add_vars(dataframe, tree, keep)
-    util.add_k_id(dataframe, tree, keep)
-
-    # D, D* masses
-    util.add_masses(dataframe, tree, keep)
-
-    # Slow pi ID
-    util.add_slowpi_id(dataframe, tree, keep)
-
-    # D0 IPCHI2 for secondary study
-    util.add_d0_ipchi2(dataframe, tree, keep)
-
-    # MC correction stuff
-    corrections.add_multiplicity_columns(tree, dataframe, keep)
-    util.add_d0_momentum(dataframe, tree, keep)
-    util.add_d0_eta(dataframe, tree, keep)
+    print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
     return dataframe
 

@@ -5,6 +5,8 @@ Utilities for reading data and stuff
 import pathlib
 from typing import List
 
+import pandas as pd
+
 
 def _branch_file() -> pathlib.Path:
     """
@@ -28,15 +30,12 @@ def branches(data_type: str) -> List[str]:
         lines = [line.strip() for line in txt_f.readlines()]
 
     if data_type == "data":
-        # Keep first 39 lines
-        return lines[:39]
+        return lines[:41]
 
     elif data_type == "pgun":
-        # Keep first 37, then last 4
-        return lines[:37] + lines[-4:]
+        return lines[:39] + lines[-4:]
 
-    # Keep first 40 for MC
-    return lines[:40]
+    return lines[:42]
 
 
 def remove_refit(dataframe: pd.DataFrame) -> pd.DataFrame:
