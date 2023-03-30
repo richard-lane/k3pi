@@ -35,6 +35,12 @@ Uses the AmpGen models
 ### Real Data
 **Used for:** the analysis
 
+## List of branches
+I've put the branches in the analysis production ROOT files that are needed in a file called `branch_names.txt`.
+Not all of these exist in every type of file, so there's a function that slices the right ones and returns a list
+of strings for you. probably
+
+
 ## Creating the dataframes
 Run the `create_data.py`, `create_mc.py` scripts etc. to create the dataframes.
 I haven't set everything up yet so some options aren't yet available - so far I've mostly been working with
