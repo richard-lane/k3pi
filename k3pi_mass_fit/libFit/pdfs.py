@@ -119,6 +119,35 @@ def normalised_signal(
     return signal(x, centre, width_l, width_r, alpha_l, alpha_r, beta) / area
 
 
+def bin_areas(fcn: Callable, bins: np.ndarray, pts_per_bin: int = 10) -> np.ndarray:
+    """
+    Areas of a function in bins
+
+    :param fcn: unary fcn to evaluate area for
+    :param bins: bins to use
+    :param pts_per_bin: number of points in each bin used for evaluating the integral
+
+    :returns: area under function in each bin
+
+    """
+    # Interpolate in the bins to get lots of points
+    pts = np.unique(
+        np.concatenate(
+            [np.linspace(a, b, pts_per_bin + 2) for a, b in zip(bins[:-1], bins[1:])]
+        )
+    )
+    pts_h = pts[1:] - pts[:-1]
+
+    # Evaluate the function at these points
+    integral_vals = fcn(pts)
+
+    # Find the areas of the slices
+    areas = 0.5 * (integral_vals[1:] + integral_vals[:-1]) * pts_h
+
+    # Sum them in each bin
+    return np.sum(areas.reshape(len(bins) - 1, pts_per_bin + 1), axis=1)
+
+
 def model(
     x: np.ndarray,
     n_sig: float,
@@ -190,21 +219,6 @@ class BinnedChi2:
         self._bins = bins
         self._domain = pdf_domain
 
-        # For evaluating the integral of the PDF over the bins
-        # This gives us n_pts_per_bin pts between bin edges
-        self._n_pts_per_bin = 51
-
-        # This is slow but only gets called once
-        self._integral_pts = np.unique(
-            np.concatenate(
-                [
-                    np.linspace(a, b, self._n_pts_per_bin + 2)
-                    for a, b in zip(self._bins[:-1], self._bins[1:])
-                ]
-            )
-        )
-        self._integral_h = self._integral_pts[1:] - self._integral_pts[:-1]
-
     def __call__(
         self,
         n_sig: float,
@@ -222,27 +236,23 @@ class BinnedChi2:
         Objective function
 
         """
-        # In each bin [a, b] the predicted number
-        # is int_a^b f(x) dx where f(x) is our model fcn
-        # Find this integral by evaluating the function at lots of points
-        integral_vals = model(
-            self._integral_pts,
-            n_sig,
-            n_bkg,
-            centre,
-            width_l,
-            width_r,
-            alpha_l,
-            alpha_r,
-            beta,
-            a,
-            b,
-            self._domain,
-        )
-
-        areas = 0.5 * (integral_vals[1:] + integral_vals[:-1]) * self._integral_h
-        predicted = np.sum(
-            areas.reshape(len(self._bins) - 1, self._n_pts_per_bin + 1), axis=1
+        predicted = bin_areas(
+            lambda pts: model(
+                pts,
+                n_sig,
+                n_bkg,
+                centre,
+                width_l,
+                width_r,
+                alpha_l,
+                alpha_r,
+                beta,
+                a,
+                b,
+                self._domain,
+            ),
+            self._bins,
+            21,
         )
 
         return np.sum((self._counts - predicted) ** 2 / self._error**2)

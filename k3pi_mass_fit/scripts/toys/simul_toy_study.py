@@ -39,7 +39,7 @@ def _bins(n_underflow: int = 3) -> np.ndarray:
     gen_low, gen_high = pdfs.domain()
 
     return definitions.nonuniform_mass_bins(
-        (gen_low, fit_low, gen_high), (n_underflow, 200)
+        (gen_low, fit_low, gen_high), (n_underflow, 250)
     )
 
 
@@ -84,10 +84,10 @@ def _gen(rng: np.random.Generator, n_sig: int, n_bkg: int, sign: str):
 
     """
     sig = toy_utils.gen_sig(
-        rng, n_sig, _sig_params(), pdfs.reduced_domain(), verbose=True
+        rng, n_sig, _sig_params(), pdfs.reduced_domain(), verbose=False
     )
     bkg = toy_utils.gen_bkg_sqrt(
-        rng, n_bkg, _bkg_params(sign), pdfs.reduced_domain(), verbose=True
+        rng, n_bkg, _bkg_params(sign), pdfs.reduced_domain(), verbose=False
     )
 
     return np.concatenate((sig, bkg))
@@ -282,8 +282,8 @@ def _do_pull_study():
         "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
     )
 
-    n_procs = 5
-    n_experiments = 25
+    n_procs = 6
+    n_experiments = 50
     procs = [
         Process(
             target=_pull_study,

@@ -66,7 +66,7 @@ def main():
 
     n_underflow = 3
     bins = definitions.nonuniform_mass_bins(
-        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
+        (gen_low, fit_low, gen_high), (n_underflow, 100)
     )
 
     rs_counts, rs_errs = stats.counts(rs_masses, bins)

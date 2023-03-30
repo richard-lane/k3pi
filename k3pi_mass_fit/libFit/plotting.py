@@ -50,16 +50,25 @@ def mass_fit(
         **err_kw,
     )
 
-    predicted = stats.areas(bins, pdfs.model(bins, *fit_params, fit_range)) / bin_widths
+    predicted = (
+        pdfs.bin_areas(lambda pts: pdfs.model(pts, *fit_params, fit_range), bins, 50)
+        / bin_widths
+    )
 
     predicted_signal = (
         fit_params[0]
-        * stats.areas(bins, pdfs.normalised_signal(bins, *fit_params[2:-2], fit_range))
+        * pdfs.bin_areas(
+            lambda pts: pdfs.normalised_signal(pts, *fit_params[2:-2], fit_range),
+            bins,
+            50,
+        )
         / bin_widths
     )
     predicted_bkg = (
         fit_params[1]
-        * stats.areas(bins, pdfs.normalised_bkg(bins, *fit_params[-2:], fit_range))
+        * pdfs.bin_areas(
+            lambda pts: pdfs.normalised_bkg(pts, *fit_params[-2:], fit_range), bins, 50
+        )
         / bin_widths
     )
 
