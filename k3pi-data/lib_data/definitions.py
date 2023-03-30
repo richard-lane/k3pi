@@ -13,13 +13,6 @@ DUMP_DIR = pathlib.Path(__file__).resolve().parents[1] / "dumps"
 
 # Column names for momenta
 MOMENTUM_SUFFICES = "Px", "Py", "Pz", "E"
-MOMENTUM_COLUMNS = [
-    *(f"Kplus_{s}" for s in MOMENTUM_SUFFICES),
-    *(f"pi1minus_{s}" for s in MOMENTUM_SUFFICES),
-    *(f"pi2minus_{s}" for s in MOMENTUM_SUFFICES),
-    *(f"pi3plus_{s}" for s in MOMENTUM_SUFFICES),
-    *(f"slowpi_{s}" for s in MOMENTUM_SUFFICES),
-]
 
 # ROOT file branch prefices
 DATA_BRANCH_PREFICES = (
@@ -28,6 +21,13 @@ DATA_BRANCH_PREFICES = (
     "Dst_ReFit_D0_piplus_0",
     "Dst_ReFit_D0_piplus_1",
     "Dst_ReFit_piplus",
+)
+
+MOMENTUM_COLUMNS = (
+    *[f"{DATA_BRANCH_PREFICES[0]}_{s}" for s in MOMENTUM_SUFFICES],
+    *[f"{DATA_BRANCH_PREFICES[1]}_{s}" for s in MOMENTUM_SUFFICES],
+    *[f"{DATA_BRANCH_PREFICES[2]}_{s}" for s in MOMENTUM_SUFFICES],
+    *[f"{DATA_BRANCH_PREFICES[3]}_{s}" for s in MOMENTUM_SUFFICES],
 )
 
 # Particle gun directories

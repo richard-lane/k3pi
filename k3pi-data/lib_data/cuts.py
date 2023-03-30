@@ -20,86 +20,76 @@ MAX_IPCHI2 = 9.0
 MAX_LIFETIMES = 8.0
 
 
-def d0_mass(tree) -> np.ndarray:
+def d0_mass(dataframe: pd.DataFrame) -> np.ndarray:
     """
-    The best fit mass of the D0 after ReFit
-
-    """
-    # Jagged array; take the first (best-fit) value for each
-    return tree["Dst_ReFit_D0_M"].array(library="ak")[:, 0].to_numpy()
-
-
-def dst_mass(tree) -> np.ndarray:
-    """
-    Best fit mass of D* after ReFit
+    The best fit mass of the D0
 
     """
-    return tree["Dst_ReFit_M"].array(library="ak")[:, 0].to_numpy()
+    return dataframe["Dst_ReFit_D0_M"]
 
 
-# ==== Individual, branch level cuts
-def _d0_mass_keep(tree) -> np.ndarray:
+def dst_mass(dataframe: pd.DataFrame) -> np.ndarray:
+    """
+    Best fit mass of D*
+
+    """
+    return dataframe["Dst_ReFit_M"]
+
+
+def _d0_mass_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep events near the nominal D0 mass
 
     """
     min_mass, max_mass = 1840.83, 1888.83
-    d0_m = d0_mass(tree)
+    d0_m = d0_mass(dataframe)
 
     return (min_mass < d0_m) & (d0_m < max_mass)
 
 
-def _delta_m_keep(tree) -> np.ndarray:
+def _delta_m_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep events where the D* - D0 mass difference is near the nominal pi mass
 
     """
     min_mass, max_mass = pdfs.domain()
-
-    # Jagged array - take the first (best fit) value for the D* masses
-    delta_m = dst_mass(tree) - d0_mass(tree)
+    delta_m = dst_mass(dataframe) - d0_mass(dataframe)
 
     return (min_mass < delta_m) & (delta_m < max_mass)
 
 
-def _time_keep(tree) -> np.ndarray:
+def _time_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Refit time < the chosen number of lifetimes
 
     """
     return (
-        tree["Dst_ReFit_D0_ctau"].array(library="ak")[:, 0]
-        / (0.3 * definitions.D0_LIFETIME_PS)
+        dataframe["Dst_ReFit_D0_ctau"] / (0.3 * definitions.D0_LIFETIME_PS)
         < MAX_LIFETIMES
     )
 
 
-def _ghost_keep(tree) -> np.ndarray:
+def _ghost_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep events with small ghost probability
 
     """
-    return tree["Dst_pi_ProbNNghost"].array(library="np") < 0.1
+    return dataframe["Dst_pi_ProbNNghost"] < 0.1
 
 
-def _angle_keep(tree) -> np.ndarray:
+def _angle_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep events with large angles between hadrons
 
     """
     # Start by assuming we will keep everything
-    retval = np.ones(tree.num_entries, dtype=bool)
+    retval = np.ones(len(dataframe), dtype=bool)
 
     # Find 3-momenta of each species
     suffices = "PX", "PY", "PZ"
 
     momenta = tuple(
-        np.row_stack(
-            [
-                tree[f"{prefix}_{suffix}"].array(library="ak")[:, 0].to_numpy()
-                for suffix in suffices
-            ]
-        )
+        np.row_stack([dataframe[f"{prefix}_{suffix}"] for suffix in suffices])
         for prefix in definitions.DATA_BRANCH_PREFICES
     )
 
@@ -116,35 +106,27 @@ def _angle_keep(tree) -> np.ndarray:
     return retval
 
 
-def _ipchi2_keep(tree) -> np.ndarray:
-    """
-    Keep events where the IPCHI2 for the D0 is small
-
-    """
-    return tree["D0_IPCHI2_OWNPV"].array(library="np") < 9.0
-
-
-def _l0_keep(tree) -> np.ndarray:
+def _l0_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep any events where the global L0 trigger is TIS or hadron trigger is TOS
 
     """
-    return (tree["D0_L0HadronDecision_TOS"].array(library="np") == 1) | (
-        tree["Dst_L0Global_TIS"].array(library="np") == 1
+    return (dataframe["D0_L0HadronDecision_TOS"] == 1) | (
+        dataframe["Dst_L0Global_TIS"] == 1
     )
 
 
-def _hlt_keep(tree) -> np.ndarray:
+def _hlt_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep any events where either the 1 or 2 track HLT1 decision for the D0 is TOS
 
     """
-    return (tree["D0_Hlt1TrackMVADecision_TOS"].array(library="np") == 1) | (
-        tree["D0_Hlt1TwoTrackMVADecision_TOS"].array(library="np") == 1
+    return (dataframe["D0_Hlt1TrackMVADecision_TOS"] == 1) | (
+        dataframe["D0_Hlt1TwoTrackMVADecision_TOS"] == 1
     )
 
 
-def _hlt_keep_pgun(tree) -> np.ndarray:
+def _hlt_keep_pgun(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep any events where either the 1 or 2 track HLT1 decision for the D0 is TOS
 
@@ -153,85 +135,53 @@ def _hlt_keep_pgun(tree) -> np.ndarray:
     """
     # Particle gun D0 HLT branch is named Dplus
     # ask Nathan Jurik if you care about why this is
-    return (tree["Dplus_Hlt1TrackMVADecision_TOS"].array(library="np") == 1) | (
-        tree["Dplus_Hlt1TwoTrackMVADecision_TOS"].array(library="np") == 1
+    return (dataframe["Dplus_Hlt1TrackMVADecision_TOS"] == 1) | (
+        dataframe["Dplus_Hlt1TwoTrackMVADecision_TOS"] == 1
     )
 
 
-def _bkgcat(tree) -> np.ndarray:
+def _bkgcat(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep signal events only by cutting on the D0 and D* background category
 
     """
-    return (tree["D0_BKGCAT"].array(library="np") == 0) & (
-        tree["Dst_BKGCAT"].array(library="np") == 0
-    )
+    return (dataframe["D0_BKGCAT"] == 0) & (dataframe["Dst_BKGCAT"] == 0)
 
 
-def _pid_keep(tree) -> np.ndarray:
+def _pid_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Keep only events with good enough daughter PIDK
 
     """
     # Find kaon and pion probabilities for each daughter,
     # cut on some combination of these
-    retval = np.ones(tree.num_entries, dtype=bool)
+    retval = np.ones(len(dataframe), dtype=bool)
 
     # Kaon
-    retval &= tree["D0_P0_PIDK"].array(library="np") > 8
+    retval &= dataframe["D0_P0_PIDK"] > 8
 
     # Opposite sign pion
-    retval &= tree["D0_P1_PIDK"].array(library="np") < 0
-    retval &= tree["D0_P3_PIDK"].array(library="np") < 0
+    retval &= dataframe["D0_P1_PIDK"] < 0
+    retval &= dataframe["D0_P3_PIDK"] < 0
 
     return retval
 
 
-def _cands_keep(tree) -> np.ndarray:
+def _ipchi2_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
-    Keep only events with nCandidate == 0 because it's easier than
-    choosing them randomly
-
+    IPchi2 keep
     """
-    arr = tree["nCandidate"].array(library="np") == 0
-    print(np.sum(arr), len(arr), sep="/")
-
-    return arr
+    return dataframe["D0_IPCHI2_OWNPV"] < MAX_IPCHI2
 
 
-def _trueorigvtx_keep(tree) -> np.ndarray:
+def _trueorigvtx_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Truth matching cut enforcing that Dst true orig vtx is not 0
 
     For the particle gun
 
     """
-    return tree["Dst_TRUEORIGINVERTEX_X"].array(library="np") != 0.0
-
-
-# ==== Combinations of cuts
-def _sanity_keep(tree) -> np.ndarray:
-    """
-    Boolean mask of events to keep after sanity cuts (just D/D* mass)
-
-    """
-    return np.logical_and.reduce(
-        [
-            fcn(tree)
-            for fcn in (
-                _d0_mass_keep,
-                _delta_m_keep,
-            )
-        ]
-    )
-
-
-def _trigger_keep(tree) -> np.ndarray:
-    """
-    Boolean mask of events to keep after HLT cuts
-
-    """
-    return np.logical_and(_l0_keep(tree), _hlt_keep(tree))
+    return dataframe["Dst_TRUEORIGINVERTEX_X"] != 0.0
 
 
 def uppermass_keep(tree) -> np.ndarray:
@@ -241,27 +191,41 @@ def uppermass_keep(tree) -> np.ndarray:
     PID, trigger and cuts for rejecting multiple candidates
 
     """
-    return _trigger_keep(tree) & _pid_keep(tree) & _cands_keep(tree)
+    return _l0_keep(dataframe) & _hlt_keep(dataframe) & _pid_keep(dataframe)
 
 
-def data_keep(tree) -> np.ndarray:
+def data_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Which events to keep in real data
 
     Same as uppermass but with extra cuts on D0 mass and delta M
 
     """
-    return uppermass_keep(tree) & _sanity_keep(tree)
+    return (
+        _d0_mass_keep(dataframe)
+        & _delta_m_keep(dataframe)
+        & _l0_keep(dataframe)
+        & _hlt_keep(dataframe)
+        & _pid_keep(dataframe)
+    )
 
 
-def simulation_keep(tree) -> np.ndarray:
+def mc_keep(tree) -> np.ndarray:
     """
-    Which events to keep in simulated data
+    Which events to keep for MC
 
-    The same as data cuts, but with BKGCAT cut (truth matching) and D0 ipchi2 cut
+    The same as data cuts, but with BKGCAT cut (truth matching) + IPCHI2
 
     """
-    return _ipchi2_keep(tree) & _sanity_keep(tree) & _trigger_keep(tree) & _bkgcat(tree)
+    return (
+        _d0_mass_keep(dataframe)
+        & _delta_m_keep(dataframe)
+        & _l0_keep(dataframe)
+        & _hlt_keep(dataframe)
+        & _pid_keep(dataframe)
+        & _bkgcat(dataframe)
+        & _ipchi2_keep(dataframe)
+    )
 
 
 def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
@@ -274,16 +238,22 @@ def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
 
     """
     return (
-        _ipchi2_keep(data_tree)
-        & _sanity_keep(data_tree)
-        & _hlt_keep(hlt_tree)
-        & _bkgcat(data_tree)
+        _d0_mass_keep(dataframe)
+        & _delta_m_keep(dataframe)
+        & _hlt_keep_pgun(dataframe)
+        & _pid_keep(dataframe)
+        & _bkgcat(dataframe)
+        & _ipchi2_keep(dataframe)
+        & _trueorigvtx_keep(dataframe)
     )
 
 
 def ipchi2_cut(dataframe: pd.DataFrame) -> pd.DataFrame:
     """
     Perform IPCHI2 cut on dataframe
+
+    Unlike the other fcns in this module, this one is user-facing
+    i.e. operates on the pickled dataframes, not the ones ive sliced straight from the ROOT file
 
     """
     return dataframe[dataframe["D0 ipchi2"] < MAX_IPCHI2]
