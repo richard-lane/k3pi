@@ -7,13 +7,17 @@ Each function returns a boolean mask of which events to keep
 import sys
 import pathlib
 import numpy as np
-from uproot.exceptions import KeyInFileError
+import pandas as pd
+
+from . import util, definitions
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 
 from libFit import pdfs
 
 ANGLE_CUT_DEG = 0.03
+MAX_IPCHI2 = 9.0
+MAX_LIFETIMES = 8.0
 
 
 def d0_mass(tree) -> np.ndarray:
@@ -58,6 +62,60 @@ def _delta_m_keep(tree) -> np.ndarray:
     return (min_mass < delta_m) & (delta_m < max_mass)
 
 
+def _time_keep(tree) -> np.ndarray:
+    """
+    Refit time < the chosen number of lifetimes
+
+    """
+    return (
+        tree["Dst_ReFit_D0_ctau"].array(library="ak")[:, 0]
+        / (0.3 * definitions.D0_LIFETIME_PS)
+        < MAX_LIFETIMES
+    )
+
+
+def _ghost_keep(tree) -> np.ndarray:
+    """
+    Keep events with small ghost probability
+
+    """
+    return tree["Dst_pi_ProbNNghost"].array(library="np") < 0.1
+
+
+def _angle_keep(tree) -> np.ndarray:
+    """
+    Keep events with large angles between hadrons
+
+    """
+    # Start by assuming we will keep everything
+    retval = np.ones(tree.num_entries, dtype=bool)
+
+    # Find 3-momenta of each species
+    suffices = "PX", "PY", "PZ"
+
+    momenta = tuple(
+        np.row_stack(
+            [
+                tree[f"{prefix}_{suffix}"].array(library="ak")[:, 0].to_numpy()
+                for suffix in suffices
+            ]
+        )
+        for prefix in definitions.DATA_BRANCH_PREFICES
+    )
+
+    # Find angle between each one
+    # Require that all angles > minimum value
+    n_particles = 5
+    for i in range(n_particles):
+        for j in range(n_particles):
+            if i == j:
+                continue
+            angle = util.relative_angle(momenta[i], momenta[j])
+            retval &= angle > ANGLE_CUT_DEG
+
+    return retval
+
+
 def _ipchi2_keep(tree) -> np.ndarray:
     """
     Keep events where the IPCHI2 for the D0 is small
@@ -78,27 +136,26 @@ def _l0_keep(tree) -> np.ndarray:
 
 def _hlt_keep(tree) -> np.ndarray:
     """
-    Keep any events where either the 1 or 2 track HLT1 decision for the D* is TOS
-
-    Use this instead of the D0 as there's no D0 info for the
-    particle gun, and we want the cuts to be consistent
-    between all types of data
-
+    Keep any events where either the 1 or 2 track HLT1 decision for the D0 is TOS
 
     """
-    # TODO neaten
-    try:
-        # Data, MC uses this naming convention
-        keep_mask = (tree["Dst_Hlt1TrackMVADecision_TOS"].array(library="np") == 1) | (
-            tree["Dst_Hlt1TwoTrackMVADecision_TOS"].array(library="np") == 1
-        )
-    except KeyInFileError:
-        # Particle gun uses this one
-        keep_mask = (
-            tree["Dplus_Hlt1TrackMVADecision_TOS"].array(library="np") == 1
-        ) | (tree["Dplus_Hlt1TwoTrackMVADecision_TOS"].array(library="np") == 1)
+    return (tree["D0_Hlt1TrackMVADecision_TOS"].array(library="np") == 1) | (
+        tree["D0_Hlt1TwoTrackMVADecision_TOS"].array(library="np") == 1
+    )
 
-    return keep_mask
+
+def _hlt_keep_pgun(tree) -> np.ndarray:
+    """
+    Keep any events where either the 1 or 2 track HLT1 decision for the D0 is TOS
+
+    Different branch naming convention for particle gun means we need this separate function
+
+    """
+    # Particle gun D0 HLT branch is named Dplus
+    # ask Nathan Jurik if you care about why this is
+    return (tree["Dplus_Hlt1TrackMVADecision_TOS"].array(library="np") == 1) | (
+        tree["Dplus_Hlt1TwoTrackMVADecision_TOS"].array(library="np") == 1
+    )
 
 
 def _bkgcat(tree) -> np.ndarray:
@@ -113,23 +170,21 @@ def _bkgcat(tree) -> np.ndarray:
 
 def _pid_keep(tree) -> np.ndarray:
     """
-    Keep only events with good enough slowpi probNNpi and probNNk
+    Keep only events with good enough daughter PIDK
 
     """
     # Find kaon and pion probabilities for each daughter,
     # cut on some combination of these
-    keep = []
-    for i in range(4):
-        pi_prob = tree[f"D0_P{i}_ProbNNpi"].array(library="np")
-        k_prob = tree[f"D0_P{i}_ProbNNk"].array(library="np")
+    retval = np.ones(tree.num_entries, dtype=bool)
 
-        keep.append((pi_prob * (1 - k_prob)) > 0.6)
+    # Kaon
+    retval &= tree["D0_P0_PIDK"].array(library="np") > 8
 
-    # We want the kaon selection criterion to be the opposite of the pions
-    keep[0] = ~keep[0]
+    # Opposite sign pion
+    retval &= tree["D0_P1_PIDK"].array(library="np") < 0
+    retval &= tree["D0_P3_PIDK"].array(library="np") < 0
 
-    # Keep only events which pass all of the PID criteria
-    return np.logical_and.reduce(keep)
+    return retval
 
 
 def _cands_keep(tree) -> np.ndarray:
@@ -142,6 +197,16 @@ def _cands_keep(tree) -> np.ndarray:
     print(np.sum(arr), len(arr), sep="/")
 
     return arr
+
+
+def _trueorigvtx_keep(tree) -> np.ndarray:
+    """
+    Truth matching cut enforcing that Dst true orig vtx is not 0
+
+    For the particle gun
+
+    """
+    return tree["Dst_TRUEORIGINVERTEX_X"].array(library="np") != 0.0
 
 
 # ==== Combinations of cuts
@@ -214,3 +279,11 @@ def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
         & _hlt_keep(hlt_tree)
         & _bkgcat(data_tree)
     )
+
+
+def ipchi2_cut(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """
+    Perform IPCHI2 cut on dataframe
+
+    """
+    return dataframe[dataframe["D0 ipchi2"] < MAX_IPCHI2]
