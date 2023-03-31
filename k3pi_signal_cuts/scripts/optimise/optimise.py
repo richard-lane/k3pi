@@ -201,6 +201,8 @@ def main(*, n_procs: int, n_repeats: int):
     Spawn lots of processes to run the optimisation study, then bring the results back together
 
     """
+    print("hi")
+    assert False
     year, sign, magnetisation = "2018", "dcs", "magdown"
 
     # Label 1 for signal; 0 for bkg

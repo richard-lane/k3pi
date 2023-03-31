@@ -1,4 +1,4 @@
-executable = scripts/optimise/optimise.sh
+executable = k3pi_signal_cuts/scripts/optimise/optimise.sh
 universe   = vanilla
 output     = output.$(cluster).$(process).out
 error      = error.$(cluster).$(process).err
@@ -9,9 +9,11 @@ RequestGpus = 0
 RequestDisk = 12GB
 RequestMemory = 8GB
 
-+JobFlavour = "tomorrow"
++JobFlavour = "espresso"
+
+transfer_input_files = k3pi_signal_cuts/scripts/optimise/optimise.py, lib_data.tar.gz, lib_cuts.tar.gz, python.tar.gz
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
 
-queue 12
+queue 1
