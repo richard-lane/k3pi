@@ -20,5 +20,5 @@ mv optimise.py k3pi_signal_cuts/scripts/optimise
 # debug
 find . -type f -name '*.py'
 
-python optimise.py
+python k3pi_signal_cuts/scripts/optimise/optimise.py
 

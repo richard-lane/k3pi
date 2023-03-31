@@ -19,7 +19,6 @@ from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
-print(sys.path)
 
 from lib_cuts import definitions, util, metrics
 from lib_data import get, training_vars, d0_mc_corrections
@@ -78,7 +77,7 @@ def _run_study(
     for _ in tqdm(range(n_repeats)):
         # Choose hyperparams
         train_params = {
-            "n_estimators": rng.integers(20, 300),
+            "n_estimators": rng.integers(2, 20),
             "learning_rate": rng.random() ** 3,
             "max_depth": rng.integers(2, 13),
             "loss": "exponential",
@@ -148,9 +147,9 @@ def _dict2arrs(scores: dict) -> tuple:
     )
 
 
-def _plot_scores(scores: dict) -> None:
+def _plot_scores(scores: dict, prefix: str) -> None:
     """
-    Plot bar/line charts showing the signal significance in testing/training
+    Plot scatter plots showing the signal significance in testing/training
 
     """
     # Get arrays of params from the dict
@@ -194,7 +193,7 @@ def _plot_scores(scores: dict) -> None:
         )
 
     fig.tight_layout()
-    fig.savefig("bdt_opt.png")
+    fig.savefig(f"{prefix}bdt_opt.png")
 
 
 def main(*, n_procs: int, n_repeats: int):
@@ -202,8 +201,12 @@ def main(*, n_procs: int, n_repeats: int):
     Spawn lots of processes to run the optimisation study, then bring the results back together
 
     """
-    print("hi")
-    assert False
+    try:
+        prefix = f"{os.environ['CONDOR_JOB_ID']}_"
+    except KeyError:
+        prefix = "local_"
+    print(f"{prefix=}")
+
     year, sign, magnetisation = "2018", "dcs", "magdown"
 
     # Label 1 for signal; 0 for bkg
@@ -258,10 +261,10 @@ def main(*, n_procs: int, n_repeats: int):
         proc.join()
 
     # Plot the signal significance vs hyperparams
-    _plot_scores(out_dict)
+    _plot_scores(out_dict, prefix)
 
     # Cache the dict of lists of dicts to disk so i can recover it later if i want
-    with open("bdt_opt.pkl", "wb") as pkl_f:
+    with open(f"{prefix}bdt_opt.pkl", "wb") as pkl_f:
         pickle.dump(dict(out_dict), pkl_f)
 
 

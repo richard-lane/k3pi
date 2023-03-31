@@ -27,16 +27,9 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
 
     t_branch = "Dbar0_decayTime" if sign == "cf" else "D0_decayTime"
 
-    # There are no ReFit variables or any entries in the tree with multiple candidates
-    # so we can just use numpy to read everything in nicely
-    # Simply passing library="np" here seems to do the right thing, since apparently
-    # setting uproot.default_library = "np" didn't work...
-    # TODO: consistent AmpGen time
     df["time"] = (
-        tree[t_branch].array(library="np") * 1000 / 0.41
+        tree[t_branch].array(library="np") * 1000 / definitions.D0_LIFETIME_PS
     )  # Convert to d lifetimes
-    # TODO should use a constant somewhere to encode
-    # the actual AmpGen lifetime
 
     # Expect to have K+3pi AmpGen
     # This is why we have K~ (K+) and two pi# (pi-)

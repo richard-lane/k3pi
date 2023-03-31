@@ -29,6 +29,8 @@ def _real_df(tree) -> pd.DataFrame:
     dataframe = tree.arrays(read.branches("data"), library="pd")
     read_time = time.time() - start
 
+    util.ctau2lifetimes(dataframe)
+
     start = time.time()
     keep = cuts.data_keep(dataframe)
     dataframe = dataframe[keep]

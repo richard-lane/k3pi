@@ -197,19 +197,18 @@ def add_momenta(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
         df[column] = tree[branch].array(library="ak")[:, 0][keep].to_numpy()
 
 
-def add_refit_times(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
+def ctau2lifetimes(dataframe: pd.DataFrame) -> None:
     """
-    Add ReFit decay time in decay lifetimes
+    Converts the dataframe column from ReFit ctau to lifetimes
 
-    Converts from ctau to lifetimes
+    Also renames the column to 'time'
 
     """
     # 0.3 to convert from ctau to ps
     # then convert from ps to lifetimes
     # Take the first (best fit) value from each
-    df["time"] = tree["Dst_ReFit_D0_ctau"].array(library="ak")[:, 0][keep] / (
-        0.3 * definitions.D0_LIFETIME_PS
-    )
+    dataframe.rename(columns={"Dst_ReFit_D0_ctau": "time"}, inplace=True)
+    dataframe["time"] = dataframe["time"] / (0.3 * definitions.D0_LIFETIME_PS)
 
 
 def add_k_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:

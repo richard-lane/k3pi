@@ -77,10 +77,7 @@ def _time_keep(dataframe: pd.DataFrame) -> np.ndarray:
     Refit time < the chosen number of lifetimes
 
     """
-    return (
-        dataframe["Dst_ReFit_D0_ctau"] / (0.3 * definitions.D0_LIFETIME_PS)
-        < MAX_LIFETIMES
-    )
+    return dataframe["time"] < MAX_LIFETIMES
 
 
 def _ghost_keep(dataframe: pd.DataFrame) -> np.ndarray:

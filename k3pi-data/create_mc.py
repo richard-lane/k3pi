@@ -29,6 +29,8 @@ def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     dataframe = tree.arrays(read.branches("MC"), library="pd")
     read_time = time.time() - start
 
+    util.ctau2lifetimes(dataframe)
+
     start = time.time()
     keep = cuts.mc_keep(dataframe)
     dataframe = dataframe[keep]
