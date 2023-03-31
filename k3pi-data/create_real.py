@@ -16,7 +16,7 @@ import pandas as pd
 from tqdm import tqdm
 import uproot
 
-from lib_data import definitions, cuts, util, corrections, training_vars, read
+from lib_data import definitions, cuts, util, read
 
 
 def _real_df(tree) -> pd.DataFrame:
@@ -31,6 +31,7 @@ def _real_df(tree) -> pd.DataFrame:
 
     start = time.time()
     keep = cuts.data_keep(dataframe)
+    dataframe = dataframe[keep]
     cut_time = start - time.time()
 
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")

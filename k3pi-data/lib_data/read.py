@@ -33,9 +33,9 @@ def branches(data_type: str) -> List[str]:
         return lines[:41]
 
     elif data_type == "pgun":
-        return lines[:39] + lines[-4:]
+        return lines[:39] + lines[-5:]
 
-    return lines[:42]
+    return lines[:43]
 
 
 def remove_refit(dataframe: pd.DataFrame) -> pd.DataFrame:

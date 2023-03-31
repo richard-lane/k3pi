@@ -5,18 +5,16 @@ The MC files live on lxplus; this script should therefore be run on lxplus.
 
 """
 import os
+import time
 import pickle
 import argparse
+
 import uproot
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from lib_data import definitions
-from lib_data import cuts
-from lib_data import training_vars
-from lib_data import util
-from lib_data import corrections
+from lib_data import cuts, definitions, read, util
 
 
 def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
@@ -26,26 +24,17 @@ def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     Provide the data + HLT information trees separately, since they live in different files
 
     """
-    dataframe = pd.DataFrame()
+    # Convert the right branches into a dataframe
+    start = time.time()
+    dataframe = tree.arrays(read.branches("MC"), library="pd")
+    read_time = time.time() - start
 
-    # Mask to perform straight cuts
-    keep = cuts.simulation_keep(tree)
+    start = time.time()
+    keep = cuts.mc_keep(dataframe)
+    dataframe = dataframe[keep]
+    cut_time = time.time() - start
 
-    # Read momenta into the dataframe
-    util.add_momenta(dataframe, tree, keep)
-    util.add_refit_times(dataframe, tree, keep)
-
-    # Read training variables used for the classifier
-    training_vars.add_vars(dataframe, tree, keep)
-
-    # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    util.add_k_id(dataframe, tree, keep)
-    util.add_masses(dataframe, tree, keep)
-
-    # MC correction stuff
-    corrections.add_multiplicity_columns(tree, dataframe, keep)
-    util.add_d0_momentum(dataframe, tree, keep)
-    util.add_d0_eta(dataframe, tree, keep)
+    print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
     # Train test
     util.add_train_column(gen, dataframe)

@@ -184,7 +184,7 @@ def _trueorigvtx_keep(dataframe: pd.DataFrame) -> np.ndarray:
     return dataframe["Dst_TRUEORIGINVERTEX_X"] != 0.0
 
 
-def uppermass_keep(tree) -> np.ndarray:
+def uppermass_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Which events to keep for upper mass sideband
 
@@ -210,7 +210,7 @@ def data_keep(dataframe: pd.DataFrame) -> np.ndarray:
     )
 
 
-def mc_keep(tree) -> np.ndarray:
+def mc_keep(dataframe: pd.DataFrame) -> np.ndarray:
     """
     Which events to keep for MC
 
