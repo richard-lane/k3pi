@@ -27,12 +27,12 @@ def _real_df(tree) -> pd.DataFrame:
     # Convert the right branches into a dataframe
     start = time.time()
     dataframe = tree.arrays(read.branches("data"), library="pd")
-    read_time = start - time.time()
+    read_time = time.time() - start
 
     start = time.time()
     keep = cuts.data_keep(dataframe)
     dataframe = dataframe[keep]
-    cut_time = start - time.time()
+    cut_time = time.time() - start
 
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 

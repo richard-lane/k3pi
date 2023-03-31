@@ -8,38 +8,17 @@ The data lives on lxplus; this script should therefore be run on lxplus.
 
 """
 import os
+import time
 import pickle
 import pathlib
 import argparse
-from multiprocessing import Pool
+
 import uproot
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from lib_data import definitions
-from lib_data import cuts
-from lib_data import training_vars
-from lib_data import util
-
-
-def _bkg_keep(d_mass: np.ndarray, delta_m: np.ndarray) -> np.ndarray:
-    """
-    Mask of events to keep after background mass cuts
-
-    """
-    # Keep points far enough away from the nominal mass
-    d_mass_width = 24
-    d_mass_range = (
-        definitions.D0_MASS_MEV - d_mass_width,
-        definitions.D0_MASS_MEV + d_mass_width,
-    )
-    d_mass_mask = (d_mass < d_mass_range[0]) | (d_mass_range[1] < d_mass)
-
-    # AND within the delta M upper mass sideband
-    delta_m_mask = (152 < delta_m) & (delta_m < 157)
-
-    return d_mass_mask & delta_m_mask
+from lib_data import cuts, definitions, read, util
 
 
 def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
@@ -47,29 +26,17 @@ def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     Populate a pandas dataframe information used for the classification
 
     """
-    dataframe = pd.DataFrame()
+    # Convert the right branches into a dataframe
+    start = time.time()
+    dataframe = tree.arrays(read.branches("data"), library="pd")
+    read_time = time.time() - start
 
-    keep = cuts.uppermass_keep(tree)
+    start = time.time()
+    keep = cuts.data_keep(dataframe)
+    dataframe = dataframe[keep]
+    cut_time = time.time() - start
 
-    # Keep only events in the upper mass sideband
-    d_mass = cuts.d0_mass(tree)
-    dst_mass = cuts.dst_mass(tree)
-    keep &= _bkg_keep(d_mass, dst_mass - d_mass)
-
-    # Store the D masses
-    util.add_masses(dataframe, tree, keep)
-
-    # Read other things that we want to keep for training the signal cut BDT
-    training_vars.add_vars(dataframe, tree, keep)
-
-    # Read other variables - for e.g. the BDT cuts, kaon signs, etc.
-    util.add_k_id(dataframe, tree, keep)
-    util.add_slowpi_id(dataframe, tree, keep)
-
-    util.add_refit_times(dataframe, tree, keep)
-
-    # Also want momenta
-    util.add_momenta(dataframe, tree, keep)
+    print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
     # Train test
     util.add_train_column(gen, dataframe)
@@ -138,14 +105,8 @@ def main(args: argparse.Namespace) -> None:
         for path in data_paths
     ][:n_files]
 
-    # Ugly - also have a list of tree names so i can use a starmap
-    tree_names = [definitions.data_tree(sign) for _ in dump_paths][:n_files]
-
-    with Pool(processes=args.n_procs) as pool:
-        tqdm(
-            pool.starmap(_create_dump, zip(data_paths, dump_paths, tree_names)),
-            total=len(dump_paths),
-        )
+    for data_path, dump_path in tqdm(zip(data_paths, dump_paths)):
+        _create_dump(data_path, dump_path, definitions.data_tree(sign))
 
 
 if __name__ == "__main__":

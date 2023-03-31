@@ -18,6 +18,7 @@ from libFit import pdfs
 ANGLE_CUT_DEG = 0.03
 MAX_IPCHI2 = 9.0
 MAX_LIFETIMES = 8.0
+MIN_D0_MASS, MAX_D0_MASS = 1840.83, 1888.83
 
 
 def d0_mass(dataframe: pd.DataFrame) -> np.ndarray:
@@ -41,10 +42,23 @@ def _d0_mass_keep(dataframe: pd.DataFrame) -> np.ndarray:
     Keep events near the nominal D0 mass
 
     """
-    min_mass, max_mass = 1840.83, 1888.83
     d0_m = d0_mass(dataframe)
 
-    return (min_mass < d0_m) & (d0_m < max_mass)
+    return (MIN_D0_MASS < d0_m) & (d0_m < MAX_D0_MASS)
+
+
+def _uppermass_mass_keep(dataframe: pd.DataFrame) -> np.ndarray:
+    """
+    Keep events in the upper delta M sideband and D0 mass sidebands
+
+    """
+    d0_m = d0_mass(dataframe)
+    delta_m = dst_mass(dataframe) - d0_m
+
+    d0_keep = (d0_m < MIN_D0_MASS) | (d0_m > MAX_D0_MASS)
+    dst_keep = (152.0 < delta_m) & (delta_m < 157.0)
+
+    return d0_keep & dst_keep
 
 
 def _delta_m_keep(dataframe: pd.DataFrame) -> np.ndarray:
@@ -191,7 +205,12 @@ def uppermass_keep(dataframe: pd.DataFrame) -> np.ndarray:
     PID, trigger and cuts for rejecting multiple candidates
 
     """
-    return _l0_keep(dataframe) & _hlt_keep(dataframe) & _pid_keep(dataframe)
+    return (
+        _uppermass_mass_keep(dataframe)
+        & _l0_keep(dataframe)
+        & _hlt_keep(dataframe)
+        & _pid_keep(dataframe)
+    )
 
 
 def data_keep(dataframe: pd.DataFrame) -> np.ndarray:

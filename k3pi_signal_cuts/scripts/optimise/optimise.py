@@ -19,6 +19,7 @@ from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
+print(sys.path)
 
 from lib_cuts import definitions, util, metrics
 from lib_data import get, training_vars, d0_mc_corrections
