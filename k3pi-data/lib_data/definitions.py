@@ -112,16 +112,18 @@ def mc_dump(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     return MC_DIR / f"{year}_{sign}_{magnetisation}.pkl"
 
 
-def pgun_dir(sign: str) -> pathlib.Path:
+def pgun_dir(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     """
     Returns the location of a directory particle gun dumps
 
     sign should be "cf" or "dcs"
 
     """
+    assert year in {"2016", "2018"}
     assert sign in {"cf", "dcs"}
+    assert magnetisation in {"magdown", "magup"}
 
-    return PGUN_DIR / sign
+    return PGUN_DIR / f"{year}_{sign}_{magnetisation}"
 
 
 def pgun_dump(sign: str, n: int) -> pathlib.Path:
@@ -131,7 +133,8 @@ def pgun_dump(sign: str, n: int) -> pathlib.Path:
     sign should be "cf" or "dcs"
 
     """
-    return pgun_dir(sign) / f"{n}.pkl"
+    assert NotImplementedError
+    # return pgun_dir(sign) / f"{n}.pkl"
 
 
 def false_sign_dump(n: int) -> pathlib.Path:
@@ -270,14 +273,18 @@ def pgun_dirs(sign: str) -> List[pathlib.Path]:
     return glob(f"{path}[0-9]*/")
 
 
-def pgun_filepaths(sign: str) -> List[str]:
+def pgun_data_prods(year: str, sign: str, magnetisation: str) -> List[str]:
     """
     Paths to particle gun analysis productions on lxplus (or the grid maybe).
 
+    :param year: "2018" or "2016"; 2018 covers both 2017 and 18
     :param sign: "dcs" or "cf"
+    :param magnetisation: "magdown" or "magup"
     :returns: list of paths as strings
 
     """
+    assert year in {"2018", "2016"}
+    assert magnetisation in {"magup", "magdown"}
     assert sign in {"dcs", "cf"}
 
     # File holding locations of productions
@@ -285,26 +292,61 @@ def pgun_filepaths(sign: str) -> List[str]:
         pathlib.Path(__file__).resolve().parents[1]
         / "production_locations"
         / "pgun"
-        / f"{sign}.txt"
+        / f"{sign}_{year}_{magnetisation}"
+        / "pGun_TRACK.txt"
     )
 
     with open(pfn_file, "r") as f:
         return [line.strip() for line in f.readlines()]
 
 
-def pgun_dump_fromfile(pgun_file: str, sign: str) -> pathlib.Path:
+def pgun_hlt_prods(year: str, sign: str, magnetisation: str) -> List[str]:
+    """
+    Paths to particle gun HLT info files on lxplus (or the grid maybe).
+
+    :param year: "2018" or "2016"; 2018 covers both 2017 and 18
+    :param sign: "dcs" or "cf"
+    :param magnetisation: "magdown" or "magup"
+    :returns: list of paths as strings
+
+    """
+    assert year in {"2018", "2016"}
+    assert magnetisation in {"magup", "magdown"}
+    assert sign in {"dcs", "cf"}
+
+    # File holding locations of productions
+    pfn_file = (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "production_locations"
+        / "pgun"
+        / f"{sign}_{year}_{magnetisation}"
+        / "Hlt1TrackMVA.txt"
+    )
+
+    with open(pfn_file, "r") as f:
+        return [line.strip() for line in f.readlines()]
+
+
+def pgun_dump_fromfile(
+    pgun_file: str, year: str, sign: str, magnetisation: str
+) -> pathlib.Path:
     """
     Paths to the pickle dump corresponding to a particle gun analysis production file.
-    Idea is to pass a file returned from `pgun_filepaths()` as `data_file`
 
-    :param data_file: location of analysis production, e.g. as returned by data_files()
+    :param data_file: location of analysis production, e.g. as returned by pgun_data_prods()
+    :param year: "2018" or "2016"
     :param sign: "cf" or "dcs"
+    :param magnetisation: "magdown" or "magup"
 
     :returns: path to the dump location
 
     """
+    assert year in {"2018", "2016"}
     assert sign in {"cf", "dcs"}
+    assert magnetisation in {"magdown", "magup"}
 
-    pgun_file = pathlib.Path(pgun_file)
+    # Split by '.' and '/', take the last bit of the path,
+    # append '.pkl' to it to get the pickle dump name
+    filename = "_".join(pgun_file.replace(".", "/").split("/")[5:-1]) + ".pkl"
 
-    return pgun_dir(sign) / f"{pgun_file.name}.pkl"
+    return pgun_dir(year, sign, magnetisation) / filename

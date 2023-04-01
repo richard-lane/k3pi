@@ -244,7 +244,7 @@ def mc_keep(dataframe: pd.DataFrame) -> np.ndarray:
     )
 
 
-def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
+def pgun_keep(dataframe: pd.DataFrame, hlt_df: pd.DataFrame) -> np.ndarray:
     """
     Which events to keep for particle gun
 
@@ -256,7 +256,7 @@ def pgun_keep(data_tree, hlt_tree) -> np.ndarray:
     return (
         _d0_mass_keep(dataframe)
         & _delta_m_keep(dataframe)
-        & _hlt_keep_pgun(dataframe)
+        & _hlt_keep_pgun(hlt_df)
         & _pid_keep(dataframe)
         & _bkgcat(dataframe)
         & _ipchi2_keep(dataframe)

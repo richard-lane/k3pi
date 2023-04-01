@@ -37,16 +37,20 @@ def ampgen(sign: str) -> pd.DataFrame:
         raise err
 
 
-def particle_gun(sign: str, show_progress: bool = False) -> pd.DataFrame:
+def particle_gun(
+    year: str, sign: str, magnetisation: str, show_progress: bool = False
+) -> pd.DataFrame:
     """
     Get the particle gun dataframes, concatenate them and return
 
+    :param year: "2018" or "2016". 2017 is covered by 2018
     :param sign: "cf" or "dcs"
+    :param magnetisation: "magdown" or "magup"
     :param show_progress: whether to display a progress bar
 
     """
     dfs = []
-    paths = glob.glob(str(definitions.pgun_dir(sign) / "*.pkl"))
+    paths = glob.glob(str(definitions.pgun_dir(year, sign, magnetisation) / "*.pkl"))
 
     progress_fcn = tqdm if show_progress else lambda x: x
 
@@ -65,16 +69,18 @@ def particle_gun(sign: str, show_progress: bool = False) -> pd.DataFrame:
     return pd.concat(dfs)
 
 
-def pgun_n_gen_file(sign: str) -> pathlib.Path:
+def pgun_n_gen_file(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     """
     Text file holding information about how many evts
     were generated for each particle gun dataframe
 
+    :param year: year
     :param sign: "cf" or "dcs"
+    :param magnetisation: mag dir
     :returns: path object
 
     """
-    return definitions.pgun_dir(sign) / "n_gen.txt"
+    return definitions.pgun_dir(year, sign, magnetisation) / "n_gen.txt"
 
 
 def pgun_n_generated(sign: str) -> int:

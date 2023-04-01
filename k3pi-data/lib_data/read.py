@@ -16,6 +16,12 @@ def _branch_file() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parents[1] / "branch_names.txt"
 
 
+def _all_branches() -> List[str]:
+    """All branch names of interest"""
+    with open(str(_branch_file()), "r", encoding="utf8") as txt_f:
+        return [line.strip() for line in txt_f.readlines()]
+
+
 def branches(data_type: str) -> List[str]:
     """
     Get the branches we need to skim from a ROOT file
@@ -26,16 +32,25 @@ def branches(data_type: str) -> List[str]:
     """
     assert data_type in {"data", "pgun", "MC"}
 
-    with open(str(_branch_file()), "r", encoding="utf8") as txt_f:
-        lines = [line.strip() for line in txt_f.readlines()]
+    lines = _all_branches()
 
     if data_type == "data":
-        return lines[:41]
+        return lines[:35] + lines[37:43]
 
     elif data_type == "pgun":
-        return lines[:39] + lines[-5:]
+        # No tracking or HLT information in the pgun data files
+        return lines[:37] + lines[-1:]
 
+    # MC
     return lines[:43]
+
+
+def pgun_hlt_branches() -> List[str]:
+    """
+    Get the particle gun HLT branch names
+
+    """
+    return _all_branches()[-3:-1]
 
 
 def remove_refit(dataframe: pd.DataFrame) -> pd.DataFrame:

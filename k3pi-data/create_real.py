@@ -27,6 +27,7 @@ def _real_df(tree) -> pd.DataFrame:
     # Convert the right branches into a dataframe
     start = time.time()
     dataframe = tree.arrays(read.branches("data"), library="pd")
+    dataframe = read.remove_refit(dataframe)
     read_time = time.time() - start
 
     util.ctau2lifetimes(dataframe)
