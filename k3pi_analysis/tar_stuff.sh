@@ -11,23 +11,23 @@ mass_fit_tar=mass_fit.tar.gz
 time_fit_tar=time_fit.tar.gz
 
 if [ ! -f $data_tar ]; then
-    tar -zcvf $data_tar k3pi-data/lib_data
+    tar -zcf $data_tar k3pi-data/lib_data
 fi
 
 if [ ! -f $cuts_tar ]; then
-    tar -zcvf $cuts_tar k3pi_signal_cuts/lib_cuts
+    tar -zcf $cuts_tar k3pi_signal_cuts/lib_cuts
 fi
 
-if [ ! -f $efficiency_tar]; then
-    tar -zcvf $efficiency_tar k3pi_efficiency/lib_efficiency
+if [ ! -f $efficiency_tar ]; then
+    tar -zcf $efficiency_tar k3pi_efficiency/lib_efficiency
 fi
 
-if [ ! -f $mass_fit_tar]; then
-    tar -zcvf $mass_fit_tar k3pi_mass_fit/libFit
+if [ ! -f $mass_fit_tar ]; then
+    tar -zcf $mass_fit_tar k3pi_mass_fit/libFit
 fi
 
-if [ ! -f $time_fit_tar]; then
-    tar -zcvf $time_fit_tar k3pi_fitter/lib_time_fit
+if [ ! -f $time_fit_tar ]; then
+    tar -zcf $time_fit_tar k3pi_fitter/lib_time_fit
 fi
 
 # Tar python
