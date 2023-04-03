@@ -20,7 +20,7 @@ from tqdm import tqdm
 from lib_data import cuts, definitions, get, util, read
 
 
-def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataFrame:
+def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
     """
     Populate a pandas dataframe with momenta, time and other arrays from the provided trees
 
@@ -66,11 +66,14 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataF
 
     print(f"read/cut/shuffle : {read_time:.3f}/{cut_time:.3f}/{shuffle_time:.3f}")
 
+    # Rename branch -> column names
+    util.rename_cols(dataframe)
+
     # Add test/train column
     util.add_train_column(gen, dataframe)
 
     # Also find how many generated events there are + return
-    return dataframe, mc_tree.num_entries
+    return dataframe
 
 
 def main(
@@ -108,14 +111,16 @@ def main(
         with uproot.open(str(data_path)) as data_f, uproot.open(str(hlt_path)) as hlt_f:
             data_tree = data_f["Dstp2D0pi/DecayTree"]
             hlt_tree = hlt_f["DecayTree"]
-            mc_tree = data_f["MCDstp2D0pi/MCDecayTree"]
 
             # Create the dataframe
-            dataframe, n_gen = _pgun_df(gen, data_tree, hlt_tree, mc_tree)
+            dataframe = _pgun_df(gen, data_tree, hlt_tree)
+
+            # Find also the number generated
+            n_gen = data_f["MCDstp2D0pi/MCDecayTree"].num_entries
+            generated.append(n_gen)
+
             if verbose:
                 print(f"{len(dataframe)=}\t{n_gen=}", end="\t")
-
-            generated.append(n_gen)
 
         # Dump it
         with open(dump_path, "wb") as dump_f:

@@ -37,6 +37,9 @@ def _real_df(tree) -> pd.DataFrame:
     dataframe = dataframe[keep]
     cut_time = time.time() - start
 
+    # Rename branch -> column names
+    util.rename_cols(dataframe)
+
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
     return dataframe
