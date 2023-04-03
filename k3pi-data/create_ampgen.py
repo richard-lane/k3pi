@@ -33,15 +33,16 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
 
     # Expect to have K+3pi AmpGen
     # This is why we have K~ (K+) and two pi# (pi-)
+    momentum_suffices = "Px", "Py", "Pz", "E"
     branches = [
-        *(f"_1_K~_{s}" for s in definitions.MOMENTUM_SUFFICES),
-        *(f"_2_pi#_{s}" for s in definitions.MOMENTUM_SUFFICES),
-        *(f"_3_pi#_{s}" for s in definitions.MOMENTUM_SUFFICES),
-        *(f"_4_pi~_{s}" for s in definitions.MOMENTUM_SUFFICES),
+        *(f"_1_K~_{s}" for s in momentum_suffices),
+        *(f"_2_pi#_{s}" for s in momentum_suffices),
+        *(f"_3_pi#_{s}" for s in momentum_suffices),
+        *(f"_4_pi~_{s}" for s in momentum_suffices),
     ]
 
     for branch, column in zip(branches, definitions.MOMENTUM_COLUMNS):
-        df[column] = tree[branch].array() * 1000  # Convert to MeV
+        df[column] = tree[branch].array(library="np") * 1000  # Convert to MeV
 
     util.add_train_column(gen, df)
 
