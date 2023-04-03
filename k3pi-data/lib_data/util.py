@@ -211,6 +211,25 @@ def ctau2lifetimes(dataframe: pd.DataFrame) -> None:
     dataframe["time"] = dataframe["time"] / (0.3 * definitions.D0_LIFETIME_PS)
 
 
+def rename_cols(dataframe: pd.DataFrame) -> None:
+    """
+    Rename the columns in a generated dataframe from the ROOT branch names
+    (inconsistent, sometimes hard to understand but in principle informative)
+    to a more consistent set of branch names
+
+    """
+    dataframe.rename(
+        columns={
+            "Dst_ReFit_D0_Kplus_ID": "K ID",
+            "Dst_ReFit_M": "D* mass",
+            "Dst_ReFit_piplus_ID": "slow pi ID",
+            "D0_IPCHI2_OWNPV": "D0 ipchi2",
+            "D0_P": "D0 P",
+        },
+        inplace=True,
+    )
+
+
 def add_k_id(dataframe: pd.DataFrame, tree, keep: np.ndarray) -> None:
     """
     Add Kaon ID branch (after ReFit)
