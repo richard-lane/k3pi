@@ -17,15 +17,25 @@ set -x
 # Create the right dataframes
 # Need to point the AmpGen scripts at the ROOT files that
 # were generated with AmpGen
-python k3pi-data/create_ampgen.py ./ws_D02piKpipi.root dcs
-python k3pi-data/create_ampgen.py ./rs_Dbar02piKpipi.root cf
+python k3pi-data/create_ampgen.py ./ws_D02piKpipi.root dcs &
+pids[0]=$!
+python k3pi-data/create_ampgen.py ./rs_Dbar02piKpipi.root cf &
+pids[1]=$!
 
 # Only create a few pgun dfs for speed
-python k3pi-data/create_pgun.py 2018 dcs magdown -n 8 -v
-python k3pi-data/create_pgun.py 2018 cf magdown -n 8 -v
+python k3pi-data/create_pgun.py 2018 dcs magdown -n 8 -v &
+pids[2]=$!
+python k3pi-data/create_pgun.py 2018 cf magdown -n 8 -v &
+pids[3]=$!
 
-python k3pi-data/create_mc.py 2018 dcs magdown
-python k3pi-data/create_mc.py 2018 cf magdown
+python k3pi-data/create_mc.py 2018 dcs magdown &
+pids[4]=$!
+python k3pi-data/create_mc.py 2018 cf magdown &
+pids[5]=$!
+
+for pid in ${pids[*]}; do
+    wait $pid
+done
 
 # Only create a few real dfs for speed
 python k3pi-data/create_real.py -n 12 2018 cf magdown --n_procs 6
