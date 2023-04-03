@@ -77,10 +77,10 @@ def main(
     *, year: str, sign: str, magnetisation: str, n_files: int, verbose: bool
 ) -> None:
     """Create a DataFrame holding AmpGen momenta"""
-    # Check if this exists first, to avoid confusion
-    # In case we resume generating later + accidentally overwrite the file
+    # Hopefully it'll be obvious if this is
+    # writing the right info, if we pause generation and
+    # resume later...
     n_gen_file = get.pgun_n_gen_file(year, sign, magnetisation)
-    assert not n_gen_file.is_file()
 
     # If the dir doesnt exist, create it
     if not definitions.PGUN_DIR.is_dir():
@@ -124,7 +124,7 @@ def main(
             pickle.dump(dataframe, dump_f)
 
     print("writing info about n gen to file")
-    with open(str(n_gen_file), "w", encoding="utf8") as gen_f:
+    with open(str(n_gen_file), "a", encoding="utf8") as gen_f:
         gen_f.write("\n".join(str(n) for n in generated))
 
 
