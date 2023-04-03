@@ -6,13 +6,9 @@
 # Also does a few toy studies/tests/etc. to verify that things are working
 
 # Treat unset variables as error
-set -u
-
-# Exit immediately if any script exits non-zero
-set -e
-
 # Print commands and their arguments as they are executed
-set -x
+# Exit immediately if any script exits non-zero
+set -exu
 
 # Create the right dataframes
 # Need to point the AmpGen scripts at the ROOT files that
@@ -41,8 +37,8 @@ unset pids
 
 # Only create a few real dfs for speed
 # Don't run these in parallel since they spawn their own processes
-python k3pi-data/create_real.py -n 12 2018 cf magdown --n_procs 6
-python k3pi-data/create_real.py -n 12 2018 dcs magdown --n_procs 6
+python k3pi-data/create_real.py -n 6 2018 cf magdown --n_procs 6
+python k3pi-data/create_real.py -n 6 2018 dcs magdown --n_procs 6
 
 # Plot projections of data
 python k3pi-data/scripts/plot_parameterisation.py
