@@ -50,6 +50,11 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
 
 def main(path: str, sign: str) -> None:
     """Create a DataFrame holding AmpGen momenta"""
+    # If the dump exists, don't do anything
+    dump_path = definitions.ampgen_dump(sign)
+    if dump_path.is_file():
+        return
+
     # If the dir doesnt exist, create it
     if not definitions.AMPGEN_DIR.is_dir():
         os.mkdir(definitions.AMPGEN_DIR)
@@ -62,7 +67,7 @@ def main(path: str, sign: str) -> None:
         dataframe = _ampgen_df(gen, ag_f["DalitzEventList"], sign)
 
     # Dump it
-    with open(definitions.ampgen_dump(sign), "wb") as f:
+    with open(dump_path, "wb") as f:
         pickle.dump(dataframe, f)
 
 
