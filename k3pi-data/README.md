@@ -58,13 +58,7 @@ already exist.
 Create some histograms for PID calibration using `pidcalib2` on lxplus.  
 This can be done by learning how to do that.
 
-Commands, assuming the cuts look like `(probNNpi * (1 - probNNk)) > 0.6` (for pion; converse for kaon):
-```
-pidcalib2.make_eff_hists --sample Turbo18 --magnet down --particle Pi --pid-cut "MC15TuneV1_ProbNNk * (1 - MC15TuneV1_ProbNNpi) < 0.6" --bin-var P --bin-var ETA
-
-pidcalib2.make_eff_hists --sample Turbo18 --magnet down --particle K --pid-cut "MC15TuneV1_ProbNNk * (1 - MC15TuneV1_ProbNNpi) > 0.6" --bin-var P --bin-var ETA
-
-```
+The commands to create the files are stored in a script: `./k3pi-data/scripts/mc_corr/create_pidcalib_hists.sh`
 
 This will make pi/K efficiency histograms.
 You then simply have to reweight using the right weights, which i will figure out how to do and then
