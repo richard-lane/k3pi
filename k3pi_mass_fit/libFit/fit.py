@@ -6,7 +6,7 @@ from typing import Tuple, Callable
 import numpy as np
 from iminuit import Minuit
 
-from . import pdfs, bkg
+from . import pdfs
 
 
 def binned_fit(
@@ -258,21 +258,23 @@ def alt_simultaneous_fit(
     rs_counts: np.ndarray,
     ws_counts: np.ndarray,
     bins: np.ndarray,
-    year: str,
-    magnetisation: str,
     initial_guess: Tuple,
+    rs_bkg_pdf: Callable,
+    ws_bkg_pdf: Callable,
     *,
     rs_errors: np.ndarray = None,
     ws_errors: np.ndarray = None,
-    bdt_cut: bool = False,
 ) -> Minuit:
     """
     Perform the fit, return the fitter
 
-    :param rs_delta_m: D* - D0 mass difference counts in the bins
-    :param ws_delta_m: D* - D0 mass difference counts in the bins
+    :param rs_counts: D* - D0 mass difference counts in the bins
+    :param ws_counts: D* - D0 mass difference counts in the bins
     :param bins: delta M binning
-    :param time_bin: which time bin we're performing the fit in; this determines the value of beta
+    :param initial_guess: initial guess at params
+    :param rs_bkg_pdf: bkg pdf, normalised in fit region
+    :param ws_bkg_pdf: bkg pdf, normalised in fit region
+
     :param rs_errors: optional bin errors. Poisson errors assumed otherwise
     :param ws_errors: optional bin errors. Poisson errors assumed otherwise
 
@@ -302,15 +304,11 @@ def alt_simultaneous_fit(
     ) = initial_guess
 
     # Get the bkg pdfs from a pickle dump
-    cf_bkg = bkg.pdf(bins, year, magnetisation, "cf", bdt_cut=bdt_cut)
-    dcs_bkg = bkg.pdf(bins, year, magnetisation, "dcs", bdt_cut=bdt_cut)
 
     chi2 = pdfs.SimulAltBkg(
-        cf_bkg, dcs_bkg, rs_counts, ws_counts, bins, rs_errors, ws_errors
+        rs_bkg_pdf, ws_bkg_pdf, rs_counts, ws_counts, bins, rs_errors, ws_errors
     )
 
-    n_rs = np.sum(rs_counts)
-    n_ws = np.sum(ws_counts)
     fitter = Minuit(
         chi2,
         rs_n_sig=rs_n_sig,
@@ -330,6 +328,9 @@ def alt_simultaneous_fit(
         ws_a_1=ws_a1,
         ws_a_2=ws_a2,
     )
+
+    n_rs = np.sum(rs_counts)
+    n_ws = np.sum(ws_counts)
     fitter.limits["rs_n_sig"] = (0, n_rs)
     fitter.limits["ws_n_sig"] = (0, n_ws)
     fitter.limits["rs_n_bkg"] = (0.0, n_rs)
@@ -343,10 +344,5 @@ def alt_simultaneous_fit(
     fitter.fixed["beta"] = True
 
     fitter.migrad(ncall=5000)
-
-    if fitter.valid:
-        fitter.minos()
-    else:
-        print(fitter)
 
     return fitter

@@ -2,14 +2,10 @@
 Plot mass fits
 
 """
-import sys
-import pathlib
 from typing import Tuple, Dict, Callable
 import numpy as np
 import matplotlib.pyplot as plt
 
-sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
-from lib_data import stats
 from . import pdfs, util
 
 
@@ -269,11 +265,9 @@ def alt_bkg_simul(
     ws_errs: np.ndarray,
     bins: np.ndarray,
     fit_range: Tuple[float, float],
+    rs_bkg_pdf: Callable,
+    ws_bkg_pdf: Callable,
     fit_params: Tuple,
-    *,
-    year: str,
-    magnetisation: str,
-    bdt_cut: bool,
 ) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
     """
     Plot a simultaneous RS and WS fit on four Axes - two histograms
@@ -284,11 +278,10 @@ def alt_bkg_simul(
     :param ws_counts: counts in each bin
     :param ws_errs: errors on the counts in each bin
     :param bins: mass bins
+    :param fit_range: domain for fit
+    :param rs_bkg_pdf: bkg pdf, normalised over domain
+    :param ws_bkg_pdf: bkg pdf, normalised over domain
     :param fit_params: fit parameters as returned by the simultaneous fitter
-
-    :param year: for finding the right dump
-    :param magnetisation: for finding the right dump
-    :param bdt_cut: for finding the right dump
 
     :returns: the figure
     :returns: a dict of A/B/C/D and the plot axes
@@ -305,24 +298,18 @@ def alt_bkg_simul(
         rs_counts,
         rs_errs,
         bins,
+        rs_bkg_pdf,
         fit_range,
         rs_params,
-        year=year,
-        magnetisation=magnetisation,
-        sign="cf",
-        bdt_cut=bdt_cut,
     )
     alt_bkg_fit(
         (axes["B"], axes["D"]),
         ws_counts,
         ws_errs,
         bins,
+        ws_bkg_pdf,
         fit_range,
         ws_params,
-        year=year,
-        magnetisation=magnetisation,
-        sign="dcs",
-        bdt_cut=bdt_cut,
     )
 
     axes["A"].legend()
