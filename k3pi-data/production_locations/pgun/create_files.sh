@@ -120,3 +120,9 @@ echo -n .
 sort $DUMP_DIR/dcs_2016_magup/pGun_TRACK.txt > tmp.txt
 mv tmp.txt $DUMP_DIR/dcs_2016_magup/pGun_TRACK.txt
 echo .
+
+# Remove lines for the alt HLT decision files, becuase i don't really know what they are
+# and i'm scared of them
+for f in $(find $DUMP_DIR -name '*.txt'); do
+    sed -i '/althlt/d' $f
+done
