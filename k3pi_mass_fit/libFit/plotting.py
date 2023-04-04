@@ -4,13 +4,13 @@ Plot mass fits
 """
 import sys
 import pathlib
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Callable
 import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 from lib_data import stats
-from . import pdfs, util, bkg
+from . import pdfs, util
 
 
 def mass_fit(
@@ -156,13 +156,9 @@ def alt_bkg_fit(
     counts: np.ndarray,
     errs: np.ndarray,
     bins: np.ndarray,
+    bkg_pdf: Callable,
     fit_range: Tuple[float, float],
     fit_params: Tuple,
-    *,
-    year: str,
-    magnetisation: str,
-    sign: str,
-    bdt_cut: bool,
 ) -> None:
     """
     Plot the mass fit and pulls on an axis, using the alt bkg model
@@ -173,11 +169,9 @@ def alt_bkg_fit(
     :param counts: counts in each bin
     :param errs: errors on the counts in each bin
     :param bins: mass bins
+    :param bkg_pdf: bkg PDF, normalised over the fit region
+    :param fit_range: fit region
     :param fit_params: fit parameters; (sig frac, bkg frac, other params)
-    :param year: for finding the estimated bkg
-    :param magnetisation: for finding the estimated bkg
-    :param sign: for finding the estimated bkg
-    :param bdt_cut: for finding the estimated bkg
 
     """
     centres = (bins[1:] + bins[:-1]) / 2
@@ -199,19 +193,27 @@ def alt_bkg_fit(
         **err_kw,
     )
 
-    bkg_pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
     params = (*fit_params[:8], bkg_pdf, domain, *fit_params[8:])
-    predicted = bin_widths * pdfs.model_alt_bkg(centres, *params) / bin_widths
-
+    predicted = (
+        pdfs.bin_areas(lambda pts: pdfs.model_alt_bkg(pts, *params), bins, 50)
+        / bin_widths
+    )
     predicted_signal = (
-        fit_params[0]
-        * stats.areas(bins, pdfs.normalised_signal(bins, *fit_params[2:8], fit_range))
+        params[0]
+        * pdfs.bin_areas(
+            lambda pts: pdfs.normalised_signal(pts, *params[2:8], fit_range),
+            bins,
+            50,
+        )
         / bin_widths
     )
     predicted_bkg = (
-        fit_params[1]
-        * bin_widths
-        * pdfs.estimated_bkg(centres, bkg_pdf, fit_range, *params[-3:])
+        params[1]
+        * pdfs.bin_areas(
+            lambda pts: pdfs.estimated_bkg(pts, bkg_pdf, fit_range, *params[-3:]),
+            bins,
+            50,
+        )
         / bin_widths
     )
 
@@ -249,7 +251,9 @@ def alt_bkg_fit(
 
     # Plot pull
     diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
-    axes[1].plot(pdfs.domain(), [1, 1], "r-")
+    axes[1].axhline(0, color="k")
+    for pos in (-1, 1):
+        axes[1].axhline(pos, color="r", alpha=0.5)
     axes[1].errorbar(
         centres[fit],
         diff[fit],

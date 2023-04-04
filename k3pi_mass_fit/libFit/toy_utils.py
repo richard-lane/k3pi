@@ -4,17 +4,12 @@ Utilities for doing a toy study
 All generators use the whole domain
 
 """
-import sys
-import pathlib
 from typing import Callable, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from . import pdfs, bkg
-
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
-from lib_data import stats
+from . import pdfs
 
 
 def _max(pdf: Callable) -> float:
@@ -194,8 +189,6 @@ def gen_alt_bkg(
     )
 
     if verbose:
-        print(
-            f"bkg generated: {len(points)}; efficiency {100 * len(points) / n_gen:.2f}%"
-        )
+        print(f"bkg generated: {len(points)}")
 
     return points

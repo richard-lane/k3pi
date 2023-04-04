@@ -446,9 +446,8 @@ class AltBkgBinnedChi2:
         if error is None:
             error = np.sqrt(counts)
 
-        self.counts, self.error = counts, error
-        self.centres = (bins[1:] + bins[:-1]) / 2
-        self.widths = bins[1:] - bins[:-1]
+        self._counts, self._error = counts, error
+        self._bins = bins
         self.pdf = bkg_pdf
         self.domain = bins[0], bins[-1]
 
@@ -470,28 +469,28 @@ class AltBkgBinnedChi2:
         Objective function
 
         """
-        # Can't use stats.areas as that requires us to
-        # evaluate the PDF at each bin edge, which we can't
-        # do for the alt bkg (since it overflows)
-        # Instead evaluate at centres
-        predicted = self.widths * model_alt_bkg(
-            self.centres,
-            n_sig,
-            n_bkg,
-            centre,
-            width_l,
-            width_r,
-            alpha_l,
-            alpha_r,
-            beta,
-            self.pdf,
-            self.domain,
-            a_0,
-            a_1,
-            a_2,
+        predicted = bin_areas(
+            lambda pts: model_alt_bkg(
+                pts,
+                n_sig,
+                n_bkg,
+                centre,
+                width_l,
+                width_r,
+                alpha_l,
+                alpha_r,
+                beta,
+                self.pdf,
+                self.domain,
+                a_0,
+                a_1,
+                a_2,
+            ),
+            self._bins,
+            21,
         )
 
-        return np.sum((self.counts - predicted) ** 2 / self.error**2)
+        return np.sum((self._counts - predicted) ** 2 / self._error**2)
 
 
 class SimulAltBkg:

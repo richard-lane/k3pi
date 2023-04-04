@@ -5,7 +5,7 @@ Generate some points with accept/reject, fit to them and show the fit
 import sys
 import pathlib
 import argparse
-from typing import Tuple
+from typing import Tuple, Callable
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +18,7 @@ from lib_data import stats
 
 
 def _gen(
-    bins: np.ndarray, alt_bkg: bool, domain: Tuple[float, float]
+    bins: np.ndarray, alt_bkg: bool, domain: Tuple[float, float], bkg_pdf: Callable
 ) -> Tuple[np.ndarray, Tuple]:
     """
     Generate points
@@ -40,14 +40,10 @@ def _gen(
     alt_bkg_params = (0, 0, 0)
 
     rng = np.random.default_rng()
-    sig = toy_utils.gen_sig(rng, n_sig, sig_params, pdfs.reduced_domain(), verbose=True)
+    sig = toy_utils.gen_sig(rng, n_sig, sig_params, domain, verbose=True)
     if not alt_bkg:
-        bkg = toy_utils.gen_bkg_sqrt(
-            rng, n_bkg, sqrt_bkg_params, pdfs.reduced_domain(), verbose=True
-        )
+        bkg = toy_utils.gen_bkg_sqrt(rng, n_bkg, sqrt_bkg_params, domain, verbose=True)
     else:
-        # Hard coded for now
-        bkg_pdf = lib_bkg.pdf(bins, "2018", "magdown", "dcs", bdt_cut=False)
         bkg = toy_utils.gen_alt_bkg(rng, n_bkg, bkg_pdf, alt_bkg_params, domain)
 
     return (
@@ -62,19 +58,25 @@ def main(*, alt_bkg: bool):
     just do 1 fit
 
     """
-    # Perform fits to the restricted range
     fit_low, _ = pdfs.reduced_domain()
     gen_low, gen_high = pdfs.domain()
 
+    # Define bins
     n_underflow = 3
     bins = definitions.nonuniform_mass_bins(
-        (gen_low, fit_low, 145.0, 147.0, gen_high), (n_underflow, 30, 50, 30)
+        (gen_low, fit_low, gen_high), (n_underflow, 150)
     )
 
+    # Define the alt bkg pdf in the fit region
+    # Hard coded options for now
+    bkg_pdf = lib_bkg.pdf(bins[n_underflow:], "2018", "magdown", "cf", bdt_cut=True)
+
+    # Generate points in the whole region
     combined, sqrt_initial_guess, alt_initial_guess = _gen(
-        bins, alt_bkg, (fit_low, gen_high)
+        bins, alt_bkg, (gen_low, gen_high), bkg_pdf
     )
 
+    # Bin points
     counts, errs = stats.counts(combined, bins)
 
     # We don't want to fit to the stuff in the underflow bins
@@ -87,11 +89,8 @@ def main(*, alt_bkg: bool):
     alt_bkg_fitter = fit.alt_bkg_fit(
         counts[n_underflow:],
         bins[n_underflow:],
-        "2018",
-        "magdown",
-        "dcs",
         alt_initial_guess,
-        bdt_cut=False,
+        bkg_pdf,
     )
 
     fig, axes = plt.subplot_mosaic(
@@ -110,17 +109,17 @@ def main(*, alt_bkg: bool):
         counts,
         errs,
         bins,
+        bkg_pdf,
         (fit_low, gen_high),
         alt_bkg_fitter.values,
-        year="2018",
-        magnetisation="magdown",
-        sign="dcs",
-        bdt_cut=False,
     )
 
-    axes["B"].set_title("Alt bkg fit")
-
-    axes["A"].set_title("Sqrt bkg fit")
+    axes["A"].set_title(
+        f"Sqrt bkg fit; n_sig={sqrt_fitter.values[0]:.2f}$\pm${sqrt_fitter.errors[0]:.2f}"
+    )
+    axes["B"].set_title(
+        f"Alt bkg fit; n_sig={alt_bkg_fitter.values[0]:.2f}$\pm${alt_bkg_fitter.errors[0]:.2f}"
+    )
 
     fig.suptitle("toy data")
     fig.tight_layout()

@@ -2,7 +2,7 @@
 Function for doing the mass fit
 
 """
-from typing import Tuple
+from typing import Tuple, Callable
 import numpy as np
 from iminuit import Minuit
 
@@ -179,12 +179,9 @@ def binned_simultaneous_fit(
 def alt_bkg_fit(
     counts: np.ndarray,
     bins: np.ndarray,
-    year: str,
-    magnetisation: str,
-    sign: str,
     initial_guess: Tuple,
+    bkg_pdf: Callable,
     *,
-    bdt_cut: bool,
     errors: np.ndarray = None,
 ) -> Minuit:
     """
@@ -192,12 +189,9 @@ def alt_bkg_fit(
 
     :param counts: array of D* - D0 mass differences
     :param bins: delta M binning used for the fit
-    :param year: data taking year
-    :param magnetisation: magnetisation direction
-    :param sign: either "cf" or "dcs"
+    :param bkg_pdf: bkg PDF, normalised over the bins
     :param initial_guess:  initial guess at the parameters
 
-    :param bdt_cut: whether to model the background after the BDT cut
     :param errors: optional errors. If not provided Poisson errors assumed
 
     :returns: fitter after performing the fit
@@ -206,9 +200,6 @@ def alt_bkg_fit(
     assert len(counts) == len(bins) - 1
     if (errors is not None) and (len(errors) != len(counts)):
         raise ValueError(f"{len(errors)=}\t{len(counts)=}")
-
-    # Get the bkg pdf from a pickle dump
-    bkg_pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
 
     chi2 = pdfs.AltBkgBinnedChi2(bkg_pdf, counts, bins, errors)
 
@@ -226,7 +217,6 @@ def alt_bkg_fit(
         a_2,
     ) = initial_guess
 
-    n_tot = np.sum(counts)
     fitter = Minuit(
         chi2,
         n_sig=n_sig,
@@ -241,6 +231,8 @@ def alt_bkg_fit(
         a_1=a_1,
         a_2=a_2,
     )
+
+    n_tot = np.sum(counts)
     fitter.limits = (
         (0, n_tot),  # N sig
         (0, n_tot),  # N bkg
