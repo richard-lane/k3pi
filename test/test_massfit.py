@@ -9,7 +9,7 @@ from scipy.integrate import quad
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
-from libFit import pdfs, definitions, util
+from libFit import pdfs, definitions, util, bkg
 from lib_data import stats
 
 
@@ -145,3 +145,14 @@ def test_alt_bkg_normalised():
         )[0],
         1.0,
     )
+
+
+def test_ext_bin():
+    """
+    Test the bin extending code thing for finding the KDE for the alt bkg
+
+    """
+    bins = [1, 2, 3, 4, 5]
+    exp_bins = [-np.inf, 0, 1, 2, 3, 4, 5, 6, np.inf]
+
+    assert np.allclose(exp_bins, bkg._extended_bins(bins, 1, 1))

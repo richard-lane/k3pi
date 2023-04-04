@@ -38,39 +38,95 @@ def _plot(
     )
 
 
+def _plot_pdf(
+    axis: plt.Axes,
+    bins: np.ndarray,
+    year: str,
+    sign: str,
+    magnetisation: str,
+    *,
+    bdt_cut: bool,
+    colour: str,
+) -> None:
+    """
+    Plot the PDF derived from the counts on an axis
+
+    """
+    pdf = bkg.pdf(bins, year, magnetisation, sign, bdt_cut=bdt_cut)
+
+    pts = np.linspace(bins[0], bins[-1], 200)
+    fval = pdf(pts)
+
+    axis.plot(pts, fval, color=colour, linewidth=0.5)
+
+
+def _count_in_fit_region(
+    year: str, sign: str, magnetisation: str, *, bdt_cut: str
+) -> float:
+    """
+    Find the count in teh fit region by findnig the counts in one big bin
+
+    """
+    bins = [-np.inf, *pdfs.reduced_domain(), np.inf]
+    counts, _ = bkg.get_counts(year, magnetisation, sign, bins, bdt_cut=bdt_cut)
+    return counts[1]
+
+
 def main(*, year: str, magnetisation: str, bdt_cut: bool):
     """
     Get the dumps, plot them
 
     """
     bins = np.linspace(pdfs.domain()[0], 160, 250)
+    reduced_bins = np.linspace(*pdfs.reduced_domain(), 250)
 
-    fig, axis = plt.subplots(1, 1, figsize=(5, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
 
     _plot(
-        axis,
+        axes[0],
         bins,
         *bkg.get_counts(year, magnetisation, "dcs", bins, bdt_cut=bdt_cut),
         color="r",
         label="DCS",
     )
     _plot(
-        axis,
+        axes[0],
         bins,
         *bkg.get_counts(year, magnetisation, "cf", bins, bdt_cut=bdt_cut),
         color="b",
         label="CF",
     )
 
-    axis.legend()
+    _plot_pdf(
+        axes[1],
+        reduced_bins,
+        year,
+        "dcs",
+        magnetisation,
+        bdt_cut=bdt_cut,
+        colour="r",
+    )
+    _plot_pdf(
+        axes[1],
+        reduced_bins,
+        year,
+        "cf",
+        magnetisation,
+        bdt_cut=bdt_cut,
+        colour="b",
+    )
 
-    axis.set_xlabel(r"$\Delta M$")
-    axis.set_ylabel("count / MeV")
+    axes[0].legend()
 
-    upper = pdfs.domain()[1]
-    axis.axvline(upper, color="k", alpha=0.8)
-    axis.arrow(upper, 0.06, -2, 0.0, color="k", head_length=0.5)
-    axis.text(upper - 5, 0.0625, "Fit region", color="k", alpha=0.8)
+    for axis in axes:
+        axis.set_xlabel(r"$\Delta M$")
+        axis.set_ylabel("count / MeV")
+
+        lower, upper = pdfs.reduced_domain()
+        axis.axvline(lower, color="k", alpha=0.8)
+        axis.axvline(upper, color="k", alpha=0.8)
+    axes[0].arrow(upper, 0.06, -2, 0.0, color="k", head_length=0.5)
+    axes[0].text(upper - 5, 0.0625, "Fit region", color="k", alpha=0.8)
 
     fig.tight_layout()
 

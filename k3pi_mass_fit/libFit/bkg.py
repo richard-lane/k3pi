@@ -8,9 +8,9 @@ import glob
 import pathlib
 import pickle
 from typing import Tuple, Callable, Iterable
-import numpy as np
 
-from . import definitions
+import numpy as np
+from scipy.stats import norm
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
@@ -74,6 +74,36 @@ def get_counts(
     )
 
 
+def _extended_bins(bins: np.ndarray, n_low: int, n_high: int) -> np.ndarray:
+    """
+    Bins with a few higher for under/overflow, and infs on each end
+
+    """
+    low_w = bins[1] - bins[0]
+    high_w = bins[-1] - bins[-2]
+
+    return np.array(
+        (
+            -np.inf,
+            *[bins[0] - i * low_w for i in range(n_low, 0, -1)],
+            *bins,
+            *[bins[-1] + i * high_w for i in range(1, n_high + 1)],
+            np.inf,
+        )
+    )
+
+
+def _integral(fcn: Callable, domain: Tuple[float, float]) -> float:
+    """
+    Approx integral over a region
+
+    """
+    pts = np.linspace(*domain, 10000)
+    vals = fcn(pts)
+
+    return np.sum(0.5 * (vals[1:] + vals[:-1]) * (pts[1] - pts[0]))
+
+
 def pdf(
     bins: np.ndarray, year: str, magnetisation: str, sign: str, *, bdt_cut: bool
 ) -> Callable:
@@ -93,32 +123,52 @@ def pdf(
               normalised over this region
 
     """
-    # Bins with an under and overflow
-    extended_bins = (-np.inf, *bins, np.inf)
+    # Bins with an underflow and a few bins for overflow
+    # The first/last bins are true under/overflow;
+    # the last few bins are used for smoothing the KDE
+    extended_bins = _extended_bins(bins, n_low=8, n_high=15)
+    print(f"extended bins from {extended_bins[1]} to {extended_bins[-2]}")
 
     # Get the histogram
-    counts, _ = get_counts(year, magnetisation, sign, extended_bins, bdt_cut=bdt_cut)
+    ext_counts, _ = get_counts(
+        year, magnetisation, sign, extended_bins, bdt_cut=bdt_cut
+    )
 
-    assert np.sum(counts), "Empty histogram - have you created the dump?"
+    assert np.sum(ext_counts), "Empty histogram - have you created the dump?"
 
-    print(f"{counts[0]} underflow (<{bins[0]}); {counts[-1]} overflow (>{bins[-1]})")
+    print(f"{ext_counts[0]} underflow; {ext_counts[-1]} overflow")
 
     # Get rid of under and overflow
-    counts = counts[1:-1]
+    ext_counts = ext_counts[1:-1]
+    extended_bins = extended_bins[1:-1]
 
-    # Normalise counts
-    widths = bins[1:] - bins[:-1]
-    counts /= widths * np.sum(counts)
+    # Get bin centres and widths
+    ext_centres = (extended_bins[1:] + extended_bins[:-1]) / 2
+    ext_widths = extended_bins[1:] - extended_bins[:-1]
 
-    def fcn(point: float):
-        """histogram -> pdf"""
-        # Bin the point
-        index = np.digitize(point, bins) - 1
+    # Get a gaussian of the right width in each one
+    gaussians = [
+        norm(loc=centre, scale=4 * width)
+        for (centre, width) in zip(ext_centres, ext_widths)
+    ]
 
-        assert np.all(index > -1)
-        assert np.all(index < len(bins) - 1)
+    # Build a function that get the sum of gaussians
+    def fcn(points: np.ndarray) -> np.ndarray:
+        """sum of gaussians, not normalised"""
+        retval = np.zeros_like(points)
 
-        # Return the counts at that point
-        return counts[index]
+        for gaussian, count in zip(gaussians, ext_counts):
+            retval += count * gaussian.pdf(points)
 
-    return fcn
+        return retval
+
+    # Get the integral over the original bin range
+    integral = _integral(fcn, (bins[0], bins[-1]))
+
+    # Scale the fcn by its integral
+    def scaled_fcn(points: np.ndarray) -> np.ndarray:
+        """scaled sum of gaussians"""
+        return fcn(points) / integral
+
+    # Return this fcn
+    return scaled_fcn
