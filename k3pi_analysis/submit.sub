@@ -11,7 +11,7 @@ RequestMemory = 16GB
 
 +JobFlavour = "longlunch"
 
-transfer_input_files = k3pi_signal_cuts/scripts/optimise/optimise.py, lib_data.tar.gz, lib_cuts.tar.gz, python.tar.gz
+transfer_input_files = k3pi-data/scripts/plot_parameterisation.py, lib_data.tar.gz, lib_cuts.tar.gz, lib_efficiency.tar.gz, mass_fit.tar.gz, time_fit.tar.gz, python.tar.gz
 transfer_output_files = data_param_rs.png, data_param_ws.png
 
 should_transfer_files = YES

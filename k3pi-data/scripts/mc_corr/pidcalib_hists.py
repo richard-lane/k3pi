@@ -2,13 +2,15 @@
 Plot histograms of PID calibration efficiences,
 generated with pidcalib2.
 
-If you haven't created these already, it's probably easiest
-to create them on lxplus with the commands in one of the
-READMEs.
+If you haven't created these already, create them
+with the script
+k3pi-data/scripts/create_pid_hists.sh
 
 """
+import os
 import pickle
 import pathlib
+import argparse
 import matplotlib.pyplot as plt
 from matplotlib.collections import QuadMesh
 
@@ -25,28 +27,27 @@ def _plot(axis: plt.Axes, path: str) -> QuadMesh:
         )
 
 
-def main():
+def main(
+    *,
+    year: str,
+    magnetisation: str,
+):
     """
     Read + plot histograms
 
     """
-    paths = tuple(pathlib.Path("pidcalib_output/").glob("*"))
+    k_path, pi_path = (
+        f"pidcalib_output/effhists-Turbo{year[-2:]}-{magnetisation[3:]}-{particle}-probe_PIDK{condition}-P.ETA.pkl"
+        for particle, condition in zip(("K", "Pi"), (">8", "<0"))
+    )
+
+    assert os.path.exists(k_path)
+    assert os.path.exists(pi_path)
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    k_mesh, pi_mesh = None, None
-    for path in paths:
-        if "-Pi-" in str(path):
-            print(f"Pi: plotting {path}")
-            pi_mesh = _plot(axes[0], path)
-        elif "-K-" in str(path):
-            print(f"K: plotting {path}")
-            k_mesh = _plot(axes[1], path)
-        else:
-            print(f"not plotting {path} (neither k nor pi?)")
-
-    assert k_mesh
-    assert pi_mesh
+    pi_mesh = _plot(axes[0], pi_path)
+    k_mesh = _plot(axes[1], k_path)
 
     axes[0].set_title(r"$\pi$")
     axes[1].set_title(r"K")
@@ -60,10 +61,21 @@ def main():
     cax = fig.add_axes([0.90, 0.1, 0.05, 0.8])
     fig.colorbar(k_mesh, cax=cax)
 
-    fig.savefig("pidcalib_hists.png")
-
-    plt.show()
+    path = f"pidcalib_hists_{year}_{magnetisation}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Plot pidcalib2 histograms")
+    parser.add_argument(
+        "year", type=str, choices={"2016", "2017", "2018"}, help="Data taking year"
+    )
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown", "magup"},
+        help="Magnetisation Direction",
+    )
+
+    main(**vars(parser.parse_args()))
