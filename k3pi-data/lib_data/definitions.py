@@ -12,7 +12,7 @@ DUMP_DIR = pathlib.Path(__file__).resolve().parents[1] / "dumps"
 
 
 # Column names for momenta
-MOMENTUM_SUFFICES = "Px", "Py", "Pz", "E"
+MOMENTUM_SUFFICES = "PX", "PY", "PZ", "PE"
 
 # ROOT file branch prefices
 DATA_BRANCH_PREFICES = (

@@ -20,7 +20,7 @@ from tqdm import tqdm
 from lib_data import cuts, definitions, get, util, read
 
 
-def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataFrame:
+def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
     """
     Populate a pandas dataframe with momenta, time and other arrays from the provided trees
 
@@ -66,21 +66,24 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree, mc_tree) -> pd.DataF
 
     print(f"read/cut/shuffle : {read_time:.3f}/{cut_time:.3f}/{shuffle_time:.3f}")
 
+    # Rename branch -> column names
+    util.rename_cols(dataframe)
+
     # Add test/train column
     util.add_train_column(gen, dataframe)
 
     # Also find how many generated events there are + return
-    return dataframe, mc_tree.num_entries
+    return dataframe
 
 
 def main(
     *, year: str, sign: str, magnetisation: str, n_files: int, verbose: bool
 ) -> None:
     """Create a DataFrame holding AmpGen momenta"""
-    # Check if this exists first, to avoid confusion
-    # In case we resume generating later + accidentally overwrite the file
+    # Hopefully it'll be obvious if this is
+    # writing the right info, if we pause generation and
+    # resume later...
     n_gen_file = get.pgun_n_gen_file(year, sign, magnetisation)
-    assert not n_gen_file.is_file()
 
     # If the dir doesnt exist, create it
     if not definitions.PGUN_DIR.is_dir():
@@ -108,14 +111,16 @@ def main(
         with uproot.open(str(data_path)) as data_f, uproot.open(str(hlt_path)) as hlt_f:
             data_tree = data_f["Dstp2D0pi/DecayTree"]
             hlt_tree = hlt_f["DecayTree"]
-            mc_tree = data_f["MCDstp2D0pi/MCDecayTree"]
 
             # Create the dataframe
-            dataframe, n_gen = _pgun_df(gen, data_tree, hlt_tree, mc_tree)
+            dataframe = _pgun_df(gen, data_tree, hlt_tree)
+
+            # Find also the number generated
+            n_gen = data_f["MCDstp2D0pi/MCDecayTree"].num_entries
+            generated.append(n_gen)
+
             if verbose:
                 print(f"{len(dataframe)=}\t{n_gen=}", end="\t")
-
-            generated.append(n_gen)
 
         # Dump it
         with open(dump_path, "wb") as dump_f:
@@ -124,7 +129,7 @@ def main(
             pickle.dump(dataframe, dump_f)
 
     print("writing info about n gen to file")
-    with open(str(n_gen_file), "w", encoding="utf8") as gen_f:
+    with open(str(n_gen_file), "a", encoding="utf8") as gen_f:
         gen_f.write("\n".join(str(n) for n in generated))
 
 

@@ -101,13 +101,15 @@ def main():
     )
 
     rs_pgun = _parameterise(
-        util.flip_momenta(get.particle_gun("cf", show_progress=True))
+        util.flip_momenta(
+            get.particle_gun(year, "cf", magnetisation, show_progress=True)
+        )
     )
     ws_pgun = _parameterise(
-        util.flip_momenta(get.particle_gun("dcs", show_progress=True))
+        util.flip_momenta(
+            get.particle_gun(year, "dcs", magnetisation, show_progress=True)
+        )
     )
-    rs_pgun = _parameterise(get.particle_gun("cf", show_progress=True))
-    ws_pgun = _parameterise(get.particle_gun("dcs", show_progress=True))
 
     # false_df = get.false_sign(show_progress=True)
     # false_sign = _parameterise(
@@ -117,8 +119,9 @@ def main():
     rs_mc = _parameterise(util.flip_momenta(get.mc(year, "cf", magnetisation)))
     ws_mc = _parameterise(util.flip_momenta(get.mc(year, "dcs", magnetisation)))
 
-    rs_ampgen = _parameterise(get.ampgen("cf"))
-    ws_ampgen = _parameterise(get.ampgen("dcs"))
+    n_pts = 1_000_000
+    rs_ampgen = _parameterise(get.ampgen("cf")[:n_pts])
+    ws_ampgen = _parameterise(get.ampgen("dcs")[:n_pts])
 
     _plot(
         [

@@ -11,7 +11,7 @@ import time
 import pickle
 import pathlib
 import argparse
-from multiprocessing import Pool
+from multiprocessing import get_context
 import pandas as pd
 from tqdm import tqdm
 import uproot
@@ -36,6 +36,9 @@ def _real_df(tree) -> pd.DataFrame:
     keep = cuts.data_keep(dataframe)
     dataframe = dataframe[keep]
     cut_time = time.time() - start
+
+    # Rename branch -> column names
+    util.rename_cols(dataframe)
 
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
@@ -81,7 +84,7 @@ def main(args: argparse.Namespace) -> None:
     # Ugly - also have a list of tree names so i can use a starmap to iterate over both in parallel
     tree_names = [definitions.data_tree(sign) for _ in dump_paths]
 
-    with Pool(args.n_procs) as pool:
+    with get_context("spawn").Pool(args.n_procs) as pool:
         tqdm(
             pool.starmap(_create_dump, zip(data_paths, dump_paths, tree_names)),
             total=len(dump_paths),

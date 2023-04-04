@@ -33,15 +33,16 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
 
     # Expect to have K+3pi AmpGen
     # This is why we have K~ (K+) and two pi# (pi-)
+    momentum_suffices = "Px", "Py", "Pz", "E"
     branches = [
-        *(f"_1_K~_{s}" for s in definitions.MOMENTUM_SUFFICES),
-        *(f"_2_pi#_{s}" for s in definitions.MOMENTUM_SUFFICES),
-        *(f"_3_pi#_{s}" for s in definitions.MOMENTUM_SUFFICES),
-        *(f"_4_pi~_{s}" for s in definitions.MOMENTUM_SUFFICES),
+        *(f"_1_K~_{s}" for s in momentum_suffices),
+        *(f"_2_pi#_{s}" for s in momentum_suffices),
+        *(f"_3_pi#_{s}" for s in momentum_suffices),
+        *(f"_4_pi~_{s}" for s in momentum_suffices),
     ]
 
     for branch, column in zip(branches, definitions.MOMENTUM_COLUMNS):
-        df[column] = tree[branch].array() * 1000  # Convert to MeV
+        df[column] = tree[branch].array(library="np") * 1000  # Convert to MeV
 
     util.add_train_column(gen, df)
 
@@ -50,6 +51,11 @@ def _ampgen_df(gen: np.random.Generator, tree, sign: str) -> pd.DataFrame:
 
 def main(path: str, sign: str) -> None:
     """Create a DataFrame holding AmpGen momenta"""
+    # If the dump exists, don't do anything
+    dump_path = definitions.ampgen_dump(sign)
+    if dump_path.is_file():
+        return
+
     # If the dir doesnt exist, create it
     if not definitions.AMPGEN_DIR.is_dir():
         os.mkdir(definitions.AMPGEN_DIR)
@@ -62,7 +68,7 @@ def main(path: str, sign: str) -> None:
         dataframe = _ampgen_df(gen, ag_f["DalitzEventList"], sign)
 
     # Dump it
-    with open(definitions.ampgen_dump(sign), "wb") as f:
+    with open(dump_path, "wb") as f:
         pickle.dump(dataframe, f)
 
 

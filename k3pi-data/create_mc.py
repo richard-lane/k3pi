@@ -39,6 +39,9 @@ def _mc_df(gen: np.random.Generator, tree) -> pd.DataFrame:
 
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
+    # Rename branch -> column names
+    util.rename_cols(dataframe)
+
     # Train test
     util.add_train_column(gen, dataframe)
 
