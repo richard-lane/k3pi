@@ -8,23 +8,16 @@ k3pi-data/scripts/create_pid_hists.sh
 
 """
 import os
+import sys
 import pickle
 import pathlib
 import argparse
 import matplotlib.pyplot as plt
 from matplotlib.collections import QuadMesh
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
-def _plot(axis: plt.Axes, path: str) -> QuadMesh:
-    """
-    Plot histogram stored in a pickle dump on an axis
-
-    """
-    with open(path, "rb") as hist_f:
-        hist = pickle.load(hist_f)
-        return axis.pcolormesh(
-            *hist.axes.edges.T, hist.values().T, vmin=0, vmax=1, cmap="magma"
-        )
+from lib_data import corrections
 
 
 def main(
@@ -36,21 +29,19 @@ def main(
     Read + plot histograms
 
     """
-    k_path, pi_path = (
-        f"pidcalib_output/effhists-Turbo{year[-2:]}-{magnetisation[3:]}-{particle}-probe_PIDK{condition}-P.ETA.pkl"
-        for particle, condition in zip(("K", "Pi"), (">8", "<0"))
-    )
-
-    assert os.path.exists(k_path)
-    assert os.path.exists(pi_path)
+    k_hist, pi_hist = corrections.k_pi_hists(year, magnetisation)
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    hist_options = {"vmin": 0, "vmax": 1, "cmap": "magma"}
+    k_mesh = axes[0].pcolormesh(
+        *k_hist.axes.edges.T, k_hist.values().T, vmin=0, vmax=1, cmap="magma"
+    )
+    axes[1].pcolormesh(
+        *pi_hist.axes.edges.T, pi_hist.values().T, vmin=0, vmax=1, cmap="magma"
+    )
 
-    pi_mesh = _plot(axes[0], pi_path)
-    k_mesh = _plot(axes[1], k_path)
-
-    axes[0].set_title(r"$\pi$")
-    axes[1].set_title(r"K")
+    axes[0].set_title(r"K")
+    axes[1].set_title(r"$\pi$")
 
     for axis in axes:
         axis.set_xlabel(r"$p$")
