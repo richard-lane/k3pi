@@ -2,10 +2,15 @@
 Functions for finding MC correction weights
 
 """
+import pickle
+from typing import Tuple, Iterable
+
 import numpy as np
 import pandas as pd
 import boost_histogram as bh
 from hep_ml.reweight import BinsReweighter
+
+from . import util
 
 
 def add_multiplicity_columns(tree, dataframe: pd.DataFrame, keep: np.ndarray) -> None:
@@ -73,6 +78,26 @@ def _bin_values(
     return retval
 
 
+def k_pi_hists(year: str, magnetisation: str) -> Tuple[bh.Histogram, bh.Histogram]:
+    """
+    PID calibration hists, for kaon and pion
+    """
+    assert year in {"2016", "2017", "2018"}
+    assert magnetisation in {"magdown", "magup"}
+
+    paths = (
+        f"pidcalib_output/effhists-Turbo{year[-2:]}-{magnetisation[3:]}-{particle}-DLLK{condition}-P.ETA.pkl"
+        for particle, condition in zip(("K", "Pi"), (">8.0", "<0.0"))
+    )
+
+    hists = []
+    for path in paths:
+        with open(path, "rb") as hist_f:
+            hists.append(pickle.load(hist_f))
+
+    return tuple(hists)
+
+
 def pid_weights(
     etas: np.ndarray,
     momenta: np.ndarray,
@@ -95,3 +120,54 @@ def pid_weights(
     )
 
     return np.multiply.reduce((k_vals, *pi_vals))
+
+
+def pid_wts_df(
+    dataframe: pd.DataFrame,
+    pion_hist: bh.Histogram,
+    kaon_hist: bh.Histogram,
+) -> np.ndarray:
+    """
+    Find PID weights for a dataframe
+
+    :param dataframe: a dataframe
+
+    :returns: array of weights to apply to MC
+
+    """
+    # Find eta
+    particles = util.k_3pi(dataframe)
+
+    k_eta, pi1_eta, pi2_eta, pi3_eta = (
+        util.eta(*particle[0:3]) for particle in particles
+    )
+
+    # Find total momentum
+    k_p, pi1_p, pi2_p, pi3_p = (
+        np.sqrt(particle[0] ** 2 + particle[1] ** 2 + particle[2] ** 2)
+        for particle in particles
+    )
+
+    # Stack them
+    eta = np.row_stack((k_eta, pi1_eta, pi2_eta, pi3_eta))
+    momenta = np.row_stack((k_p, pi1_p, pi2_p, pi3_p))
+
+    # Find weights
+    return pid_weights(eta, momenta, pion_hist, kaon_hist)
+
+
+def pid_wts_dfs(
+    dataframes: Iterable[pd.DataFrame],
+    pion_hist: bh.Histogram,
+    kaon_hist: bh.Histogram,
+) -> Iterable[np.ndarray]:
+    """
+    Find PID weights for dataframes; returns generators
+
+    :param dataframe: a dataframe
+
+    :returns: generator of array of weights to apply to MC
+
+    """
+    for dataframe in dataframes:
+        yield pid_wts_df(dataframe, pion_hist, kaon_hist)

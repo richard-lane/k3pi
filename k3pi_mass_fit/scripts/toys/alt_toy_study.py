@@ -316,8 +316,8 @@ def _do_pull_study():
         "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
     )
 
-    n_procs = 5
-    n_experiments = 5
+    n_procs = 6
+    n_experiments = 7
     procs = [
         Process(
             target=_pull_study,
