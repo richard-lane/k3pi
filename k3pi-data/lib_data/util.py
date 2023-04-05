@@ -196,12 +196,23 @@ def total_luminosity(files: List[str]) -> float:
     return total_lumi
 
 
+def corresponding_lumi(files: List[str]) -> float:
+    """
+    Get the corresponding luminosity for a collection of dumps
+
+    """
+    prod_paths = [analysis_prod_paths(dump_path) for dump_path in files]
+
+    return total_luminosity(prod_paths)
+
+
 def add_momenta(df: pd.DataFrame, tree, keep: np.ndarray) -> None:
     """
     Add K3pi, slow pi momenta into the dataframe from a
     MC/particle gun/real data tree in place
 
     """
+    raise NotImplementedError
     # This should be the right order to give us K+pi-pi-pi+ in real data and MC
     # It will not! give the right order for
     # particle gun, but that gets dealt with in
