@@ -2,11 +2,13 @@
  fcnUtility functions that may be useful
 
 """
+import pathlib
 from typing import Tuple, List, Any
+
+import uproot
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import uproot
 
 from . import definitions
 
@@ -145,6 +147,28 @@ def add_train_column(
     assert (0.0 <= train_fraction) and (train_fraction <= 1.0)
 
     dataframe["train"] = gen.random(len(dataframe)) < train_fraction
+
+
+def analysis_prod_paths(dump_path: pathlib.Path) -> str:
+    """
+    Get the path to an analysis production from the
+    absolute path to a dump
+
+    """
+    folder = dump_path.parent.name
+    name = dump_path.name
+
+    # Find the right file listing the analysis productions
+    year, _, mag = folder.split("_")
+    prod_file = definitions.data_anaprod_txt_path(year, mag)
+
+    with open(prod_file, "r", encoding="utf8") as prod_f:
+        for line in prod_f:
+            path = line.strip()
+            if path.split()[-1] == name:
+                return line.strip()
+
+    raise FileNotFoundError
 
 
 def luminosity(filepath: str) -> float:

@@ -162,6 +162,20 @@ def data_dir(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     return DATA_DIR / f"{year}_{sign}_{magnetisation}"
 
 
+def data_anaprod_txt_path(year: str, magnetisation: str) -> pathlib.Path:
+    """
+    Location of the text file holding the locations of
+    real data analysis productions
+
+    """
+    return (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "production_locations"
+        / "real_data"
+        / f"{year}_{magnetisation}_dd.txt"
+    )
+
+
 def data_files(year: str, magnetisation: str) -> List[str]:
     """
     Paths to real data analysis productions on lxplus (or the grid maybe).
@@ -175,12 +189,7 @@ def data_files(year: str, magnetisation: str) -> List[str]:
     assert magnetisation in {"magup", "magdown"}
 
     # File holding locations of productions
-    pfn_file = (
-        pathlib.Path(__file__).resolve().parents[1]
-        / "production_locations"
-        / "real_data"
-        / f"{year}_{magnetisation}_dd.txt"
-    )
+    pfn_file = data_anaprod_txt_path(year, magnetisation)
 
     with open(pfn_file, "r") as f:
         return [line.strip() for line in f.readlines()]
