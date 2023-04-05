@@ -5,10 +5,9 @@
 # performs mass fits and a fit to the yield
 # Also does a few toy studies/tests/etc. to verify that things are working
 
-# Treat unset variables as error
 # Print commands and their arguments as they are executed
 # Exit immediately if any script exits non-zero
-set -exu
+set -ex
 
 # Create the right dataframes
 # Need to point the AmpGen scripts at the ROOT files that

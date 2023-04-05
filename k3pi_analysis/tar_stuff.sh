@@ -1,33 +1,39 @@
 #!/bin/bash
 # Tar stuff up
 
-set -exu
+set -ex
 
 # Tar libraries
-data_tar=lib_data.tar.gz
-cuts_tar=lib_cuts.tar.gz
-efficiency_tar=lib_efficiency.tar.gz
+analysis_tar=analysis.tar.gz
+data_tar=data.tar.gz
+cuts_tar=cuts.tar.gz
+efficiency_tar=efficiency.tar.gz
 mass_fit_tar=mass_fit.tar.gz
 time_fit_tar=time_fit.tar.gz
 
+if [ ! -f $analysis_tar ]; then
+    tar -zcf $analysis_tar k3pi_analysis
+fi
+
 if [ ! -f $data_tar ]; then
-    tar -zcf $data_tar k3pi-data/lib_data
+    # Don't want to tar the dumps!
+    tar -zcf $data_tar k3pi-data/lib_data k3pi-data/scripts k3pi-data/create* k3pi-data/branch_names.txt k3pi-data/production_locations
 fi
 
 if [ ! -f $cuts_tar ]; then
-    tar -zcf $cuts_tar k3pi_signal_cuts/lib_cuts
+    tar -zcf $cuts_tar k3pi_signal_cuts
 fi
 
 if [ ! -f $efficiency_tar ]; then
-    tar -zcf $efficiency_tar k3pi_efficiency/lib_efficiency
+    tar -zcf $efficiency_tar k3pi_efficiency
 fi
 
 if [ ! -f $mass_fit_tar ]; then
-    tar -zcf $mass_fit_tar k3pi_mass_fit/libFit
+    tar -zcf $mass_fit_tar k3pi_mass_fit
 fi
 
 if [ ! -f $time_fit_tar ]; then
-    tar -zcf $time_fit_tar k3pi_fitter/lib_time_fit
+    tar -zcf $time_fit_tar k3pi_fitter
 fi
 
 # Tar python

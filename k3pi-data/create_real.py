@@ -89,6 +89,7 @@ def main(args: argparse.Namespace) -> None:
             pool.starmap(_create_dump, zip(data_paths, dump_paths, tree_names)),
             total=len(dump_paths),
         )
+        pool.close()
 
 
 if __name__ == "__main__":
