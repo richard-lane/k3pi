@@ -134,7 +134,7 @@ if __name__ == "__main__":
         help="magnetisation direction",
     )
 
-    # TODO use a subparser to make args conditional on this
+    # what
     parser.add_argument(
         "--print_lumi",
         action="store_true",
@@ -146,7 +146,5 @@ if __name__ == "__main__":
         default=None,
         help="number of files to process; defaults to all of them",
     )
-
-    parser.add_argument("--n_procs", type=int, default=2, help="number of processes")
 
     main(parser.parse_args())

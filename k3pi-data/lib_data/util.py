@@ -156,7 +156,7 @@ def analysis_prod_paths(dump_path: pathlib.Path) -> str:
 
     """
     folder = dump_path.parent.name
-    name = dump_path.name
+    name = dump_path.name.split(".")[0]
 
     # Find the right file listing the analysis productions
     year, _, mag = folder.split("_")
@@ -164,11 +164,11 @@ def analysis_prod_paths(dump_path: pathlib.Path) -> str:
 
     with open(prod_file, "r", encoding="utf8") as prod_f:
         for line in prod_f:
-            path = line.strip()
-            if path.split()[-1] == name:
+            line_name = line.strip().split("/")[-1].split(".")[0]
+            if line_name == name:
                 return line.strip()
 
-    raise FileNotFoundError
+    raise FileNotFoundError(dump_path)
 
 
 def luminosity(filepath: str) -> float:

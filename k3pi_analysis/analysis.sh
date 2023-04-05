@@ -9,6 +9,11 @@
 # Exit immediately if any script exits non-zero
 set -ex
 
+# Create dumps dir
+echo "creating dumps dir"
+mkdir k3pi-data/dumps/
+ls k3pi-data/
+
 # Create the right dataframes
 # Need to point the AmpGen scripts at the ROOT files that
 # were generated with AmpGen

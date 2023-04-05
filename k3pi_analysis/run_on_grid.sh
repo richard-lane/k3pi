@@ -19,14 +19,7 @@ tar -xzf python.tar.gz --directory=python
 # Source the python executable I want to use
 source python/bin/activate
 
-echo `which python`
-
-# Move the scripts to the right directories, since it uses relative imports
-mkdir k3pi_analysis/
-mv analysis.sh k3pi_analysis/
-
-mkdir -p k3pi-data/scripts/
-mv plot_parameterisation.py k3pi-data/scripts/
+echo python: `which python`
 
 # Debug
 find . -type f -name '*.py'
