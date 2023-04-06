@@ -23,6 +23,7 @@ def main(
     bdt_cut: bool,
     efficiency: bool,
     alt_bkg: bool,
+    scaled_yield: bool,
 ):
     """
     From a file of yields, time bins etc., plot the
@@ -36,8 +37,9 @@ def main(
         yield_file_path = mass_util.yield_file(
             year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
         )
+        if scaled_yield:
+            yield_file_path = mass_util.scaled_yield_file_path(yield_file_path)
 
-        # If the file already exists, appending to it might have unexpected results
         assert yield_file_path.exists()
 
         # Get time bins, yields and errors
@@ -78,13 +80,15 @@ def main(
     axes[1].set_ylabel("WS")
     axes[2].set_ylabel(r"$\frac{WS}{RS}$")
 
-    axes[0].set_ylim([0.0, 3e6])
-    axes[1].set_ylim([0.0, 10000])
-    axes[2].set_ylim([0.0022, 0.0040])
+    # axes[0].set_ylim([0.0, 3e6])
+    # axes[1].set_ylim([0.0, 10000])
+    # axes[2].set_ylim([0.0022, 0.0040])
 
     fig.tight_layout()
 
     path = f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png"
+    if scaled_yield:
+        path = f"scaled_{path}"
     print(f"plotting {path}")
     fig.savefig(path)
 
@@ -112,6 +116,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "phsp_bins", type=int, choices=range(4), help="Phase space bin index", nargs="*"
+    )
+    parser.add_argument(
+        "--scaled_yield",
+        action="store_true",
+        help="Whether to use the yield file that has been scaled by luminosities",
     )
 
     main(**vars(parser.parse_args()))
