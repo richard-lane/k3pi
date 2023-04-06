@@ -15,7 +15,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts.get import classifier as get_clf
 from lib_cuts.definitions import THRESHOLD
-from lib_data import get, training_vars
+from lib_data import get, training_vars, cuts
 
 
 def _plot(
@@ -44,7 +44,10 @@ def main():
 
     n_dfs = 100
     dataframes = list(
-        tqdm(islice(get.data(year, sign, magnetisation), n_dfs), total=n_dfs)
+        tqdm(
+            islice(cuts.ipchi2_cut_dfs(get.data(year, sign, magnetisation)), n_dfs),
+            total=n_dfs,
+        )
     )
     dataframe = pd.concat(dataframes)
 
@@ -59,7 +62,7 @@ def main():
     print(f"{threshhold=}\tefficiency: {np.sum(predictions) / len(predictions)}")
 
     # Plot histograms of our variables before/after doing these cuts
-    columns = list(training_vars.training_var_names()) + ["D0 mass", "D* mass"]
+    columns = list(training_vars.training_var_names()) + ["Dst_ReFit_D0_M", "D* mass"]
     fig, ax = plt.subplots(3, 3, figsize=(8, 8))
     for col, axis in zip(columns, ax.ravel()):
         _plot(axis, dataframe[col], predictions)
@@ -69,7 +72,7 @@ def main():
     # Let's also plot the mass difference
     _plot(
         ax.ravel()[-1],
-        dataframe["D* mass"] - dataframe["D0 mass"],
+        dataframe["D* mass"] - dataframe["Dst_ReFit_D0_M"],
         predictions,
     )
     ax.ravel()[-1].set_title(r"$\Delta$M*")

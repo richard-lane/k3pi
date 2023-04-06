@@ -16,7 +16,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts import util, definitions
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars, d0_mc_corrections
+from lib_data import get, training_vars, d0_mc_corrections, cuts
 
 
 def _dataframe(
@@ -29,10 +29,11 @@ def _dataframe(
     """
     # Read dataframes of stuff
     sig_df = get.mc(year, sign, magnetisation)
-    bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
+    bkg_df = pd.concat(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
 
-    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    mc_corr_wts /= np.mean(mc_corr_wts)
+    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    # mc_corr_wts /= np.mean(mc_corr_wts)
+    mc_corr_wts = np.ones(len(sig_df))
 
     # We only want the testing data here
     sig_mask = sig_df["train"] if train else ~sig_df["train"]

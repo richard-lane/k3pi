@@ -9,11 +9,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts import util, definitions
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars, d0_mc_corrections
+from lib_data import get, training_vars, d0_mc_corrections, cuts
+from libFit.util import delta_m
 
 
 def _plot(
@@ -41,21 +43,22 @@ def _plot(
     )
 
     # Plot before cuts
+    hist_kw = {"bins": bins}
     axis.hist(
-        signal, bins=bins, label="sig", histtype="step", color="b", weights=mc_corr_wts
+        signal, label="sig", histtype="step", color="b", weights=mc_corr_wts, **hist_kw
     )
-    axis.hist(bkg, bins=bins, label="bkg", histtype="step", color="r")
+    axis.hist(bkg, label="bkg", histtype="step", color="r", **hist_kw)
 
     # Plot after cuts
     axis.hist(
         signal[sig_predictions == 1],
-        bins=bins,
         label="sig",
         alpha=0.5,
         color="b",
         weights=mc_corr_wts[sig_predictions == 1],
+        **hist_kw,
     )
-    axis.hist(bkg[bkg_predictions == 1], bins=bins, label="bkg", alpha=0.5, color="r")
+    axis.hist(bkg[bkg_predictions == 1], label="bkg", alpha=0.5, color="r", **hist_kw)
 
 
 def main():
@@ -66,10 +69,11 @@ def main():
     # Read dataframes of stuff
     year, sign, magnetisation = "2018", "dcs", "magdown"
     sig_df = get.mc(year, sign, magnetisation)
-    bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
+    bkg_df = pd.concat(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
 
-    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    mc_corr_wts /= np.mean(mc_corr_wts)
+    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    # mc_corr_wts /= np.mean(mc_corr_wts)
+    mc_corr_wts = np.ones(len(sig_df))
 
     # We only want the testing data here
     mc_corr_wts = mc_corr_wts[~sig_df["train"]]
@@ -99,7 +103,7 @@ def main():
     bkg_predictions = clf.predict_proba(bkg_df[training_labels])[:, 1] > threshhold
 
     # Plot histograms of our variables before/after doing these cuts
-    columns = list(training_vars.training_var_names()) + ["D0 mass", "D* mass"]
+    columns = list(training_vars.training_var_names()) + ["Dst_ReFit_D0_M", "D* mass"]
     fig, ax = plt.subplots(3, 3, figsize=(8, 8))
     for col, axis in zip(columns, ax.ravel()):
         _plot(
@@ -117,8 +121,8 @@ def main():
     # Let's also plot the mass difference
     _plot(
         ax.ravel()[-1],
-        sig_df["D* mass"] - sig_df["D0 mass"],
-        bkg_df["D* mass"] - bkg_df["D0 mass"],
+        delta_m(sig_df),
+        delta_m(bkg_df),
         sig_predictions,
         bkg_predictions,
         mc_corr_wts,
@@ -130,8 +134,6 @@ def main():
     fig.tight_layout()
 
     plt.savefig("cuts.png")
-
-    plt.show()
 
 
 if __name__ == "__main__":

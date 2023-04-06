@@ -20,8 +20,10 @@ from lib_cuts import definitions
 from lib_cuts import util
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1] / "k3pi-data"))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[1] / "k3pi_mass_fit"))
 
-from lib_data import get, training_vars, d0_mc_corrections
+from lib_data import get, training_vars, d0_mc_corrections, cuts
+from libFit.util import delta_m
 
 
 def _train_test_dfs(year, sign, magnetisation):
@@ -31,12 +33,20 @@ def _train_test_dfs(year, sign, magnetisation):
     Returns also weights for the MC correction
     """
     sig_df = get.mc(year, sign, magnetisation)
-    bkg_df = pd.concat(list(get.uppermass(year, sign, magnetisation)))
+    bkg_df = pd.concat(
+        list(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
+    )
+
+    # Add delta M column cus its easier
+    sig_df["delta M"] = delta_m(sig_df)
+    bkg_df["delta M"] = delta_m(bkg_df)
 
     # Find MC correction wts for the sig df
     # Scale st their average is 1.0
-    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    mc_corr_wts /= np.mean(mc_corr_wts)
+    # TODO put this back
+    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    # mc_corr_wts /= np.mean(mc_corr_wts)
+    mc_corr_wts = np.ones(len(sig_df))
 
     combined_df = pd.concat((sig_df, bkg_df))
 
@@ -71,18 +81,15 @@ def _plot_masses(
     bkg_wt = weights[train_label == 0]
     sig_wt = weights[train_label == 1]
 
-    def _delta_m(dataframe):
-        return dataframe["D* mass"] - dataframe["D0 mass"]
-
     ax[0].hist(
-        sig_df["D0 mass"],
+        sig_df["Dst_ReFit_D0_M"],
         bins=np.linspace(1775, 1950, 200),
         color="b",
         alpha=0.4,
         weights=sig_wt,
     )
     ax[0].hist(
-        bkg_df["D0 mass"],
+        bkg_df["Dst_ReFit_D0_M"],
         bins=np.linspace(1775, 1950, 200),
         color="r",
         alpha=0.4,
@@ -90,7 +97,7 @@ def _plot_masses(
     )
 
     ax[1].hist(
-        _delta_m(sig_df),
+        sig_df["delta M"],
         bins=np.linspace(140, 160, 200),
         color="b",
         alpha=0.4,
@@ -98,7 +105,7 @@ def _plot_masses(
         weights=sig_wt,
     )
     ax[1].hist(
-        _delta_m(bkg_df),
+        bkg_df["delta M"],
         bins=np.linspace(140, 160, 200),
         color="r",
         alpha=0.4,
@@ -130,14 +137,12 @@ def _plot_train_vars(
     Plot histograms of the training variables
 
     """
-    dataframe["delta M"] = dataframe["D* mass"] - dataframe["D0 mass"]
-
     sig_df, bkg_df = dataframe[labels == 1], dataframe[labels == 0]
     sig_wts, bkg_wts = wts[labels == 1], wts[labels == 0]
     sig_mc_wts, bkg_mc_wts = mc_corr_wts[labels == 1], mc_corr_wts[labels == 0]
 
     columns = list(training_vars.training_var_names()) + [
-        "D0 mass",
+        "Dst_ReFit_D0_M",
         "D* mass",
         "delta M",
     ]
