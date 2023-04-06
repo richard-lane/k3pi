@@ -35,9 +35,12 @@ def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     util.ctau2lifetimes(dataframe)
 
     start = time.time()
-    keep = cuts.data_keep(dataframe)
+    keep = cuts.uppermass_keep(dataframe)
     dataframe = dataframe[keep]
     cut_time = time.time() - start
+
+    # Rename branch -> column names
+    util.rename_cols(dataframe)
 
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
