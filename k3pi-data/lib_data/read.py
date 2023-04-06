@@ -35,14 +35,14 @@ def branches(data_type: str) -> List[str]:
     lines = _all_branches()
 
     if data_type == "data":
-        return lines[:35] + lines[37:43]
+        return lines[:40] + lines[42:48]
 
     elif data_type == "pgun":
         # No tracking or HLT information in the pgun data files
-        return lines[:37] + lines[-1:]
+        return lines[:42] + lines[-1:]
 
     # MC
-    return lines[:43]
+    return lines[:48]
 
 
 def pgun_hlt_branches() -> List[str]:

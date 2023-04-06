@@ -5,6 +5,8 @@ to get it into the right format for the classifier
 Some branches we can just read directly; others require some calculation
 (e.g. the sum of daughter pT) before they can be used
 
+Most of the functions here are deprecated
+
 """
 from typing import Tuple, Generator
 
@@ -222,6 +224,24 @@ def daughters_sum_pt(tree) -> np.ndarray:
     return np.sum(_refit_daughters_pt(tree), axis=0)
 
 
+def slow_pi_pt_colname() -> str:
+    """
+    Column name for the slow pi pT
+
+    """
+    return r"$\pi_s$ $p_T$"
+
+
+def add_slowpi_pt_col(dataframe: pd.DataFrame) -> None:
+    """
+    Add slow pion pT column to a dataframe in place
+
+    """
+    dataframe[slow_pi_pt_colname()] = _pt(
+        dataframe["Dst_ReFit_piplus_PX"], dataframe["Dst_ReFit_piplus_PY"]
+    )
+
+
 def _training_var_names_and_functions() -> Tuple:
     """
     Both of them together, to make it easier to comment things out when I'm
@@ -235,13 +255,13 @@ def _training_var_names_and_functions() -> Tuple:
     return tuple(
         zip(
             *(
-                (refit_chi2, r"ReFit $\chi^2$"),
-                (endvertex_chi2, r"D0 End Vtx $\chi^2$"),
-                (orivx_chi2, r"D0 Origin Vtx $\chi^2$"),
-                (slow_pi_prob_nn_pi, r"$\pi_s$ ProbNN$\pi$"),
+                (refit_chi2, "Dst_ReFit_chi2"),
+                (endvertex_chi2, "D0_ENDVERTEX_CHI2"),
+                (orivx_chi2, "D0_ORIVX_CHI2"),
+                (slow_pi_prob_nn_pi, "Dst_pi_ProbNNpi"),
                 # (d0_pt, r"D0 $p_T$"),
-                (slow_pi_pt, r"$\pi_s$ $p_T$"),
-                (slow_pi_ipchi2, r"$\pi_s$ IP$\chi^2$"),
+                (slow_pi_pt, slow_pi_pt_colname()),
+                (slow_pi_ipchi2, "Dst_pi_IPCHI2_OWNPV"),
                 # (pions_max_pt, r"$3\pi$ max $p_T$"),
                 # (pions_min_pt, r"$3\pi$ min $p_T$"),
                 # (pions_sum_pt, r"$3\pi$ sum $p_T$"),
@@ -264,8 +284,6 @@ def training_var_functions() -> Tuple:
 def training_var_names() -> Tuple:
     """
     Returns a tuple of the names of training variables
-
-    Contains matplotlib-style LaTeX formatting: suitable for using as plot labels, etc.
 
     """
     return _training_var_names_and_functions()[1]

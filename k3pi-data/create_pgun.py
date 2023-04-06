@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from lib_data import cuts, definitions, get, util, read
+from lib_data import cuts, definitions, get, util, read, training_vars
 
 
 def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
@@ -31,6 +31,8 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
     start = time.time()
     dataframe = data_tree.arrays(read.branches("pgun"), library="pd")
     dataframe = read.remove_refit(dataframe)
+
+    training_vars.add_slowpi_pt_col(dataframe)
 
     # Also convert the right HLT branches from the other file
     # into a dataframe

@@ -16,7 +16,7 @@ import pandas as pd
 from tqdm import tqdm
 import uproot
 
-from lib_data import definitions, cuts, util, read
+from lib_data import definitions, cuts, util, read, training_vars
 
 
 def _real_df(tree) -> pd.DataFrame:
@@ -28,6 +28,7 @@ def _real_df(tree) -> pd.DataFrame:
     start = time.time()
     dataframe = tree.arrays(read.branches("data"), library="pd")
     dataframe = read.remove_refit(dataframe)
+    training_vars.add_slowpi_pt_col(dataframe)
     read_time = time.time() - start
 
     util.ctau2lifetimes(dataframe)

@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from lib_data import cuts, definitions, read, util
+from lib_data import cuts, definitions, read, util, training_vars
 
 
 def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
@@ -30,6 +30,7 @@ def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     start = time.time()
     dataframe = tree.arrays(read.branches("data"), library="pd")
     dataframe = read.remove_refit(dataframe)
+    training_vars.add_slowpi_pt_col(dataframe)
     read_time = time.time() - start
 
     util.ctau2lifetimes(dataframe)

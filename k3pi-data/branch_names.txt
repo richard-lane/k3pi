@@ -32,6 +32,11 @@ Dst_pi_ProbNNghost
 D0_P0_PIDK
 D0_P1_PIDK
 D0_P3_PIDK
+Dst_ReFit_chi2
+D0_ENDVERTEX_CHI2
+D0_ORIVX_CHI2
+Dst_pi_ProbNNpi
+Dst_pi_IPCHI2_OWNPV
 nCandidate
 D0_BKGCAT
 Dst_BKGCAT
