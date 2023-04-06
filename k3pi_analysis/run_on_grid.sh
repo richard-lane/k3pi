@@ -4,14 +4,6 @@
 
 set -ex
 
-# Untar the libraries that we brought with us
-tar -xzf analysis.tar.gz
-tar -xzf data.tar.gz
-tar -xzf cuts.tar.gz
-tar -xzf efficiency.tar.gz
-tar -xzf mass_fit.tar.gz
-tar -xzf time_fit.tar.gz
-
 # Untar the python env that we brought with us
 mkdir python
 tar -xzf python.tar.gz --directory=python
@@ -19,12 +11,22 @@ tar -xzf python.tar.gz --directory=python
 # Source the python executable I want to use
 source python/bin/activate
 
-echo python: `which python`
+# Clone the analysis repo
+git clone https://github.com/richard-lane/k3pi.git
 
-# Debug
-find . -type f -name '*.py'
-ls -al
+# cd into the right dir
+cd k3pi
 
 # Run the analysis
 ./k3pi_analysis/analysis.sh
+
+# Move the output stuff into the home dir
+ls  # debug
+mv data_param_?s.png ..
+
+# cd into home dir for some reason
+cd ..
+
+# debug
+find . -maxdepth 1 -type f
 

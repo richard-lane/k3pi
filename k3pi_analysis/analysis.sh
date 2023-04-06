@@ -9,17 +9,13 @@
 # Exit immediately if any script exits non-zero
 set -ex
 
-# Create dumps dir
-echo "creating dumps dir"
-mkdir k3pi-data/dumps/
-ls k3pi-data/
-
 # Create the right dataframes
 # Need to point the AmpGen scripts at the ROOT files that
 # were generated with AmpGen
-python k3pi-data/create_ampgen.py ./ws_D02piKpipi.root dcs &
+# These were brought over and live in the worker node's home dir
+python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs &
 pids[0]=$!
-python k3pi-data/create_ampgen.py ./rs_Dbar02piKpipi.root cf &
+python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf &
 pids[1]=$!
 
 # Only create a few pgun dfs for speed
