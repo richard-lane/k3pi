@@ -17,7 +17,7 @@ from iminuit.cost import UnbinnedNLL
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
-from lib_data import get, ipchi2_fit, stats
+from lib_data import get, ipchi2_fit, stats, cuts
 from lib_time_fit import definitions
 
 
@@ -98,12 +98,12 @@ def main(*, sign: str):
         fmt="k+",
     )
 
-    pts = np.linspace(low_ip, high_ip, 1_000)
     predicted = (
         stats.areas(bins, len(ipchi2s) * ipchi2_fit.norm_peak(bins, *fitter.values))
         / bin_widths
     )
     axes["A"].plot(centres, predicted)
+    axes["A"].axvline(np.log(cuts.MAX_IPCHI2))
 
     diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
     axes["B"].axhline(0, color="k")

@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
-from lib_data import get, ipchi2_fit
+from lib_data import get, ipchi2_fit, cuts
 from lib_time_fit import definitions
 
 
@@ -46,7 +46,6 @@ def main(*, sign: str):
     # Only want the second+ time bins, since we fixed the shape
     # of the prompt peak from the first time bin
     time_bins = definitions.TIME_BINS[2:-1]
-    ip_cut = 9.0
 
     sec_frac_guesses = [
         0.05,
@@ -116,12 +115,10 @@ def main(*, sign: str):
             sig_defaults,
         )
         axes["A"].legend()
-        axes["A"].axvline(x=np.log(ip_cut), color="r")
+        axes["A"].axvline(x=np.log(cuts.MAX_IPCHI2), color="r")
 
         # Append the secondary fraction (below the cut) to the list
-        sec_frac = ipchi2_fit.sec_frac_below_cut(
-            sig_defaults, fitter.values, np.log(ip_cut)
-        )
+        sec_frac = ipchi2_fit.sec_frac_below_cut(sig_defaults, fitter.values)
         sec_fracs.append(sec_frac)
 
         fig.suptitle(

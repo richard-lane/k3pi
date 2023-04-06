@@ -18,7 +18,7 @@ from iminuit.cost import ExtendedUnbinnedNLL
 from iminuit.util import make_func_code
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
-from . import stats
+from . import stats, cuts
 from libFit import pdfs
 
 
@@ -468,13 +468,13 @@ def sweight_fcn(params: Tuple) -> Callable:
     return lambda x: (alpha[0] * prompt(x) + alpha[1] * sec(x)) / overall(x)
 
 
-def sec_frac_below_cut(prompt_params: dict, fit_vals: Tuple, cut_val: float) -> float:
+def sec_frac_below_cut(prompt_params: dict, fit_vals: Tuple) -> float:
     """
     Find the fraction of secondaries below the cut value
     from a fit
 
     """
-    pts = np.linspace(domain()[0], cut_val, 1_000_000)
+    pts = np.linspace(domain()[0], np.log(cuts.MAX_IPCHI2), 1_000_000)
 
     # Find prompt integral up to the cut
     prompt = stats.integral(
@@ -612,6 +612,7 @@ def plot_fixed_prompt(
         predicted_bkg,
         label="bkg",
     )
+    axes[0].axvline(np.log(cuts.MAX_IPCHI2))
 
     # Plot pull
     diff = ((counts / bin_widths) - predicted) / (errs / bin_widths)
