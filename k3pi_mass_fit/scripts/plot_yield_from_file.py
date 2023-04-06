@@ -32,11 +32,9 @@ def main(
     fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
     hist_kw = {"histtype": "step"}
 
-    yield_file_fcn = mass_util.yield_file if not alt_bkg else mass_util.alt_yield_file
-
     for phsp_bin in phsp_bins:
-        yield_file_path = yield_file_fcn(
-            year, magnetisation, phsp_bin, bdt_cut, efficiency
+        yield_file_path = mass_util.yield_file(
+            year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
         )
 
         # If the file already exists, appending to it might have unexpected results
@@ -85,9 +83,10 @@ def main(
     axes[2].set_ylim([0.0022, 0.0040])
 
     fig.tight_layout()
-    fig.savefig(
-        f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png"
-    )
+
+    path = f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
 
 if __name__ == "__main__":

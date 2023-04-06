@@ -6,6 +6,8 @@ Each function returns a boolean mask of which events to keep
 """
 import sys
 import pathlib
+from typing import Iterable
+
 import numpy as np
 import pandas as pd
 
@@ -273,3 +275,12 @@ def ipchi2_cut(dataframe: pd.DataFrame) -> pd.DataFrame:
 
     """
     return dataframe[dataframe["D0 ipchi2"] < MAX_IPCHI2]
+
+
+def ipchi2_cut_dfs(dataframes: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+    """
+    Perform the IPCHI2 cut on the dataframes; returns a generator
+
+    """
+    for dataframe in dataframes:
+        yield ipchi2_cut(dataframe)

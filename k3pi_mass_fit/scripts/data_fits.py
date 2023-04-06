@@ -14,7 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_fitter"))
 
-from lib_data import get
+from lib_data import get, cuts
 from lib_cuts.get import classifier as get_clf, cut_dfs
 from lib_efficiency.get import reweighter_dump as get_reweighter
 from lib_efficiency.efficiency_util import wts_generator
@@ -168,6 +168,14 @@ def _fit(
     fig.savefig(plot_path)
     plt.close(fig)
 
+    return (
+        fitter.fval,
+        fitter.values[0],
+        fitter.errors[0],
+        fitter.values[2],
+        fitter.errors[2],
+    )
+
 
 def _dataframes(
     year: str,
@@ -186,7 +194,7 @@ def _dataframes(
     return cut_dfs(
         get.binned_generator(
             get.time_binned_generator(
-                get.data(year, sign, magnetisation), low_t, high_t
+                cuts.ipchi2_cut_dfs(get.data(year, sign, magnetisation)), low_t, high_t
             ),
             phsp_bin,
         ),
@@ -202,6 +210,7 @@ def main(
     phsp_bin: int,
     bdt_cut: bool,
     efficiency: bool,
+    alt_bkg: bool,
 ):
     """
     Do mass fits in each time bin
@@ -216,7 +225,7 @@ def main(
     fit_range = pdfs.reduced_domain()
     n_underflow = 3
     mass_bins = definitions.nonuniform_mass_bins(
-        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 50, 100, 50)
+        (low, fit_range[0], high), (n_underflow, 150)
     )
 
     # Get the classifier for BDT cut if we need
@@ -237,8 +246,15 @@ def main(
         if efficiency
         else None
     )
-
     plot_dir = mass_util.plot_dir(bdt_cut, efficiency, phsp_bin)
+
+    # For writing the result
+    yield_file_path = mass_util.yield_file(
+        year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
+    )
+
+    # If the file already exists, appending to it might have unexpected results
+    yield_file_path.touch(exist_ok=False)
 
     for i, (low_t, high_t) in enumerate(zip(time_bins[:-1], time_bins[1:])):
         # Get generators of dataframes
@@ -283,7 +299,8 @@ def main(
         cf_count, cf_err = mass_util.delta_m_counts(cf_dfs, mass_bins, cf_wts)
         dcs_count, dcs_err = mass_util.delta_m_counts(dcs_dfs, mass_bins, dcs_wts)
 
-        _fit(
+        # Return the yield from the simultaneous fit
+        chi2, n_rs, err_rs, n_ws, err_ws = _fit(
             cf_count,
             dcs_count,
             cf_err,
@@ -293,6 +310,8 @@ def main(
             n_underflow,
             plot_dir,
         )
+
+        # Plot the individual fits just to check stuff
         _separate_fit(
             cf_count,
             cf_err,
@@ -310,6 +329,15 @@ def main(
             n_underflow,
             "dcs",
             f"{plot_dir}ws/{i}.png",
+        )
+
+        # Append the yields to the yield file
+        mass_util.write_yield(
+            (low_t, high_t),
+            (n_rs, n_ws),
+            (err_rs, err_ws),
+            yield_file_path,
+            print_str=True,
         )
 
 
@@ -333,6 +361,11 @@ if __name__ == "__main__":
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")
     parser.add_argument(
         "--efficiency", action="store_true", help="Correct for the detector efficiency"
+    )
+    parser.add_argument(
+        "--alt_bkg",
+        action="store_true",
+        help="Whether to fit with the alternate bkg model",
     )
 
     main(**vars(parser.parse_args()))

@@ -26,7 +26,7 @@ def delta_m(dataframe: pd.DataFrame) -> pd.Series:
     Get mass difference from a dataframe
 
     """
-    return dataframe["D* mass"] - dataframe["D0 mass"]
+    return dataframe["D* mass"] - dataframe["Dst_ReFit_D0_M"]
 
 
 def delta_m_generator(dataframes: Iterable[pd.DataFrame]) -> Iterable[pd.Series]:
@@ -328,7 +328,12 @@ def signal_param_guess(time_bin: int = 5) -> Tuple:
 
 
 def yield_file(
-    year: str, magnetisation: str, phsp_bin: int, bdt_cut: bool, efficiency: bool
+    year: str,
+    magnetisation: str,
+    phsp_bin: int,
+    bdt_cut: bool,
+    efficiency: bool,
+    alt_bkg: bool,
 ) -> pathlib.Path:
     """
     For writing the yields to
@@ -336,20 +341,7 @@ def yield_file(
     """
     return (
         pathlib.Path(__file__).resolve().parents[1]
-        / f"yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}.txt"
-    )
-
-
-def alt_yield_file(
-    year: str, magnetisation: str, phsp_bin: int, bdt_cut: bool, efficiency: bool
-) -> pathlib.Path:
-    """
-    For writing the yields to
-
-    """
-    return (
-        pathlib.Path(__file__).resolve().parents[1]
-        / f"alt_yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}.txt"
+        / f"yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.txt"
     )
 
 
@@ -417,3 +409,60 @@ def read_yield(path: pathlib.Path) -> Tuple:
     return tuple(
         np.array(arr) for arr in (time_bins, rs_yields, rs_errs, ws_yields, ws_errs)
     )
+
+
+def scaled_yield_file_path(yield_file_path: pathlib.Path) -> pathlib.Path:
+    """
+    Path to a yield file where the CF counts/errors are scaled by the right amount
+
+    We might only be using a subset of the CF data, since the sensitivity comes
+    almost entirely from the DCS dataset: this means we need to scale up the
+    CF yield and error reported by the mass fit. This fcn gets its path.
+
+    """
+    return yield_file_path.resolve().parent / f"scaled_{yield_file_path.name}"
+
+
+def write_scaled_yield(
+    in_path: pathlib.Path,
+    dcs_lumi: float,
+    cf_lumi: float,
+) -> pathlib.Path:
+    """
+    Create a yield file where the CF counts/errors are scaled by the right amount
+
+    This fcn creates the file and fills it with the right values
+
+    :param in_file: path to the unscaled yield file
+    :param dcs_lumi: the luminosity used to create the DCS dataframes
+    :param cf_lumi: the luminosity used to create the CF dataframes
+
+    :returns: path to the new yield file that this fcn creates
+
+    """
+    assert in_path.exists()
+
+    out_path = scaled_yield_file_path(in_path)
+    assert not out_path.exists()
+
+    # Find the scaling factor, check that it is >1
+    # i.e. that we generated more DCS than CF. If not something unexpected has happened
+    scale_factor = dcs_lumi / cf_lumi
+    assert scale_factor >= 1.0, "More CF luminosity than DCS?"
+
+    # Read the unscaled yields from file
+    time_bins, rs_yields, rs_errs, ws_yields, ws_errs = read_yield(in_path)
+
+    # Scale the unscaled CF yields and errors
+    rs_yields *= scale_factor
+    rs_errs *= scale_factor
+
+    # Write them back to file
+    print(f"writing to {out_path}")
+    with open(str(out_path), "w", encoding="utf8") as yield_f:
+        for stuff in zip(
+            time_bins[:-1], time_bins[1:], rs_yields, rs_errs, ws_yields, ws_errs
+        ):
+            out_str = "\t".join((str(num) for num in stuff))
+            out_str += "\n"
+            yield_f.write(out_str)
