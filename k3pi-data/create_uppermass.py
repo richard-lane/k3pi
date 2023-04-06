@@ -68,12 +68,6 @@ def _create_dump(
         # Create the dataframe
         dataframe = _uppermass_df(gen, data_f[tree_name])
 
-        # Add also a column for the luminosity
-        # Do this by adding a column of zeros and then filling the first
-        # entry with the required luminosity
-        dataframe["luminosity"] = np.zeros(len(dataframe))
-        dataframe.loc[0, "luminosity"] = util.luminosity(data_path)
-
     # Dump it
     print(f"dumping {dump_path}")
     with open(dump_path, "wb") as dump_f:
@@ -92,10 +86,6 @@ def main(args: argparse.Namespace) -> None:
     year, sign, magnetisation = args.year, args.sign, args.magnetisation
 
     data_paths = definitions.data_files(year, magnetisation)[:n_files]
-
-    if args.print_lumi:
-        print(f"total luminosity: {util.total_luminosity(data_paths)}")
-        return
 
     # If the dir doesnt exist, create it
     if not definitions.UPPERMASS_DIR.is_dir():
@@ -134,12 +124,6 @@ if __name__ == "__main__":
         help="magnetisation direction",
     )
 
-    # what
-    parser.add_argument(
-        "--print_lumi",
-        action="store_true",
-        help="Iterate over all files, print total luminosity and exit.",
-    )
     parser.add_argument(
         "-n",
         type=int,
