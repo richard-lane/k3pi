@@ -20,13 +20,21 @@ cd k3pi
 # Run the analysis
 ./k3pi_analysis/analysis.sh
 
-# Move the output stuff into the home dir
-ls  # debug
-mv *.png ..
-mv *.svg ..
+# Move all the output stuff into a special dir
+mkdir out_stuff/
+mv *.png out_stuff/
+mv *.svg out_stuff/
+mv raw_fits out_stuff/
+mv bdt_fits out_stuff/
 
-# cd into home dir for some reason
+# Move the output dir into the home dir
+mv out_stuff/ ..
+
+# cd into home dir
 cd ..
+
+# Tar the output stuff up
+tar -czf out_files_${CONDOR_JOB_ID}.tar.gz out_stuff/
 
 # debug
 find . -maxdepth 1 -type f
