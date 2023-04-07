@@ -22,7 +22,8 @@ cd k3pi
 
 # Move the output stuff into the home dir
 ls  # debug
-mv data_param_?s.png ..
+mv *.png ..
+mv *.svg ..
 
 # cd into home dir for some reason
 cd ..

@@ -9,10 +9,10 @@ RequestGpus = 0
 # RequestDisk = 24GB
 # RequestMemory = 16GB
 
-+JobFlavour = "longlunch"
++MaxRuntime = 3600
 
 transfer_input_files = python.tar.gz, rs_Dbar02piKpipi.root, ws_D02piKpipi.root
-transfer_output_files = data_param_rs.png, data_param_ws.png
+transfer_output_files = data_param_rs.png, data_param_ws.png, cuts.png, roc.png, training_masses_d0_weighted.png, training_masses_no_wt.png, training_masses_weighted.png, training_vars.svg, dcs_data_cuts.png
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
