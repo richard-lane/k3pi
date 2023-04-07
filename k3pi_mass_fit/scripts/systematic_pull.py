@@ -65,7 +65,7 @@ def _sig_counts(
 
     """
     # Read the right dataframe
-    mc_df = get.particle_gun(sign)
+    mc_df = get.particle_gun(year, sign, magnetisation)
 
     # Perform BDT cut
     clf = get_clf(year, "dcs", magnetisation)
@@ -76,7 +76,7 @@ def _sig_counts(
     mc_df = mc_df[sig_predictions]
 
     count, _ = stats.counts(mass_util.delta_m(mc_df), bins)
-    print(np.sum(count))
+    print(f"total sig: {np.sum(count)}")
 
     return count
 
@@ -95,14 +95,6 @@ def _bkg(
     counts, _ = stats.counts(points, bins)
 
     return counts
-
-
-def _n_bkg_expected(n_gen: int, fit_region: Tuple[float, float], sign: str) -> float:
-    """
-    The number of bkg events we expect to accept, given a number generated
-
-    """
-    return n_gen
 
 
 def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.ndarray:
@@ -141,12 +133,9 @@ def _pull_study(
     n_ws_sig = 2_200
 
     # number to generate for the bkg
-    rs_n_bkg_gen = 45_000
-    ws_n_bkg_gen = 45_000
+    n_bkg = 45_000
 
     # Find the expected number of bkg events from the acceptance area / generating area
-    rs_n_bkg_expected = _n_bkg_expected(rs_n_bkg_gen, fit_range, "cf")
-    ws_n_bkg_expected = _n_bkg_expected(ws_n_bkg_gen, fit_range, "dcs")
 
     n_experiments = 3
     # want to track n_sig and n_bkg for both RS and WS
@@ -155,8 +144,8 @@ def _pull_study(
         # Keep trying until a fit converges
         while True:
             # Generate bkg
-            rs_bkg = _bkg(rng, rs_n_bkg_gen, bins=bins, sign="cf")
-            ws_bkg = _bkg(rng, ws_n_bkg_gen, bins=bins, sign="dcs")
+            rs_bkg = _bkg(rng, n_bkg, bins=bins, sign="cf")
+            ws_bkg = _bkg(rng, n_bkg, bins=bins, sign="dcs")
 
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
@@ -192,9 +181,9 @@ def _pull_study(
             fit_errs = binned_fitter.errors
             print(fit_vals[0:4])
             rs_sig_pull = (fit_vals[0] - n_rs_sig) / fit_errs[0]
-            rs_bkg_pull = (fit_vals[1] - rs_n_bkg_expected) / fit_errs[1]
+            rs_bkg_pull = (fit_vals[1] - n_bkg) / fit_errs[1]
             ws_sig_pull = (fit_vals[2] - n_ws_sig) / fit_errs[2]
-            ws_bkg_pull = (fit_vals[3] - ws_n_bkg_expected) / fit_errs[3]
+            ws_bkg_pull = (fit_vals[3] - n_bkg) / fit_errs[3]
 
             pulls[0][i] = rs_sig_pull
             pulls[1][i] = rs_bkg_pull
