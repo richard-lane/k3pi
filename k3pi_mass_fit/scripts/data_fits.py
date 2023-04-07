@@ -5,6 +5,8 @@ Simultaneous and individual fits to RS and WS
 import sys
 import pathlib
 import argparse
+from typing import Callable
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -18,7 +20,7 @@ from lib_data import get, cuts
 from lib_cuts.get import classifier as get_clf, cut_dfs
 from lib_efficiency.get import reweighter_dump as get_reweighter
 from lib_efficiency.efficiency_util import wts_generator
-from libFit import pdfs, fit, util as mass_util, plotting, definitions
+from libFit import pdfs, fit, util as mass_util, plotting, definitions, bkg
 from lib_time_fit.definitions import TIME_BINS
 
 
@@ -30,6 +32,9 @@ def _separate_fit(
     n_underflow: int,
     sign: str,
     plot_path: str,
+    alt_bkg: bool,
+    *,
+    bkg_pdf: Callable,
 ):
     """
     Plot separate fits
@@ -41,31 +46,52 @@ def _separate_fit(
         total * sig_frac,
         total * (1 - sig_frac),
         *mass_util.signal_param_guess(bin_number),
-        *mass_util.sqrt_bkg_param_guess(sign),
+        *((0, 0, 0) if alt_bkg else mass_util.sqrt_bkg_param_guess(sign)),
     )
     try:
-        fitter = fit.binned_fit(
-            count[n_underflow:],
-            bins[n_underflow:],
-            initial_guess,
-            (bins[n_underflow], bins[-1]),
-            errors=err[n_underflow:],
+        fitter = (
+            fit.alt_bkg_fit(
+                count[n_underflow:],
+                bins[n_underflow:],
+                initial_guess,
+                bkg_pdf,
+                errors=err[n_underflow:],
+            )
+            if alt_bkg
+            else fit.binned_fit(
+                count[n_underflow:],
+                bins[n_underflow:],
+                initial_guess,
+                (bins[n_underflow], bins[-1]),
+                errors=err[n_underflow:],
+            )
         )
 
     except pdfs.ZeroCountsError as exc:
         print("time bin:", bin_number, repr(exc))
-        return
+        raise exc
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", sharex=True, figsize=(6, 8))
 
-    plotting.mass_fit(
-        (axes["A"], axes["B"]),
-        count,
-        err,
-        bins,
-        (bins[n_underflow], bins[-1]),
-        fitter.values,
-    )
+    if alt_bkg:
+        plotting.alt_bkg_fit(
+            (axes["A"], axes["B"]),
+            count,
+            err,
+            bins,
+            bkg_pdf,
+            (bins[n_underflow], bins[-1]),
+            fitter.values,
+        )
+    else:
+        plotting.mass_fit(
+            (axes["A"], axes["B"]),
+            count,
+            err,
+            bins,
+            (bins[n_underflow], bins[-1]),
+            fitter.values,
+        )
 
     axes["A"].legend()
 
@@ -97,6 +123,10 @@ def _fit(
     bins: np.ndarray,
     n_underflow: int,
     fit_dir: str,
+    alt_bkg: bool,
+    *,
+    rs_bkg_pdf: Callable,
+    ws_bkg_pdf: Callable,
 ) -> None:
     """
     Plot the fit
@@ -110,53 +140,89 @@ def _fit(
         ws_total * 0.05,
         ws_total * 0.95,
         *mass_util.signal_param_guess(bin_number),
-        *mass_util.sqrt_bkg_param_guess("cf"),
-        *mass_util.sqrt_bkg_param_guess("dcs"),
+        *((0, 0, 0) if alt_bkg else mass_util.sqrt_bkg_param_guess("cf")),
+        *((0, 0, 0) if alt_bkg else mass_util.sqrt_bkg_param_guess("dcs")),
     )
     try:
-        fitter = fit.binned_simultaneous_fit(
-            rs_count[n_underflow:],
-            ws_count[n_underflow:],
-            bins[n_underflow:],
-            initial_guess,
-            (bins[n_underflow], bins[-1]),
-            rs_errors=rs_err[n_underflow:],
-            ws_errors=ws_err[n_underflow:],
+        fitter = (
+            fit.alt_simultaneous_fit(
+                rs_count[n_underflow:],
+                ws_count[n_underflow:],
+                bins[n_underflow:],
+                initial_guess,
+                rs_bkg_pdf,
+                ws_bkg_pdf,
+                rs_errors=rs_err[n_underflow:],
+                ws_errors=ws_err[n_underflow:],
+            )
+            if alt_bkg
+            else fit.binned_simultaneous_fit(
+                rs_count[n_underflow:],
+                ws_count[n_underflow:],
+                bins[n_underflow:],
+                initial_guess,
+                (bins[n_underflow], bins[-1]),
+                rs_errors=rs_err[n_underflow:],
+                ws_errors=ws_err[n_underflow:],
+            )
         )
     except pdfs.ZeroCountsError as err:
         print("time bin:", bin_number, repr(err))
-        return
+        raise err
 
     params = fitter.values
     print(f"{fitter.valid=}", end="\t")
     print(f"{params[-2]} +- {fitter.errors[-2]}", end="\t")
     print(f"{params[-1]} +- {fitter.errors[-1]}")
 
-    fig, axes = plotting.simul_fits(
-        rs_count,
-        rs_err,
-        ws_count,
-        ws_err,
-        bins,
-        (bins[n_underflow], bins[-1]),
-        params,
+    fig, axes = (
+        plotting.alt_bkg_simul(
+            rs_count,
+            rs_err,
+            ws_count,
+            ws_err,
+            bins,
+            (bins[n_underflow], bins[-1]),
+            rs_bkg_pdf,
+            ws_bkg_pdf,
+            params,
+        )
+        if alt_bkg
+        else plotting.simul_fits(
+            rs_count,
+            rs_err,
+            ws_count,
+            ws_err,
+            bins,
+            (bins[n_underflow], bins[-1]),
+            params,
+        )
     )
+    n_rs_sig = fitter.values[0]
+    n_rs_bkg = fitter.values[1]
+    n_ws_sig = fitter.values[2]
+    n_ws_bkg = fitter.values[3]
+
+    n_rs_sig_err = fitter.errors[0]
+    n_rs_bkg_err = fitter.errors[1]
+    n_ws_sig_err = fitter.errors[2]
+    n_ws_bkg_err = fitter.errors[3]
 
     axes["A"].set_title(
-        f"Nsig={fitter.values[0]:,.2f}"
+        f"Nsig={n_rs_sig:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[0]:,.2f}"
-        f"\tNbkg={fitter.values[1]:,.2f}"
+        f"{n_rs_sig_err:,.2f}"
+        f"\tNbkg={n_rs_bkg:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[1]:,.2f}"
+        f"{n_rs_bkg_err:,.2f}"
     )
     axes["B"].set_title(
-        f"Nsig={fitter.values[2]:,.2f}"
+        f"Nsig={n_ws_sig:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[2]:,.2f}"
-        f"\tNbkg={fitter.values[3]:,.2f}"
+        f"{n_ws_sig_err:,.2f}"
+        f"\tNbkg={n_ws_bkg:,.2f}"
         r"$\pm$"
-        f"{fitter.errors[3]:,.2f}"
+        f"{n_ws_bkg_err:,.2f}"
     )
     fig.suptitle(f"{fitter.valid=}")
     fig.tight_layout()
@@ -169,10 +235,10 @@ def _fit(
     plt.close(fig)
 
     return (
-        fitter.values[0],
-        fitter.errors[0],
-        fitter.values[2],
-        fitter.errors[2],
+        n_rs_sig,
+        n_rs_sig_err,
+        n_ws_sig,
+        n_ws_sig_err,
     )
 
 
@@ -245,12 +311,17 @@ def main(
         if efficiency
         else None
     )
-    plot_dir = mass_util.plot_dir(bdt_cut, efficiency, phsp_bin)
+    plot_dir = mass_util.plot_dir(bdt_cut, efficiency, phsp_bin, alt_bkg)
 
     # For writing the result
     yield_file_path = mass_util.yield_file(
         year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
     )
+
+    # Get the bkg pdfs if we need
+    if alt_bkg:
+        rs_bkg_pdf = bkg.pdf(mass_bins, year, magnetisation, "cf", bdt_cut=bdt_cut)
+        ws_bkg_pdf = bkg.pdf(mass_bins, year, magnetisation, "dcs", bdt_cut=bdt_cut)
 
     # If the file already exists, appending to it might have unexpected results
     yield_file_path.touch(exist_ok=False)
@@ -299,36 +370,55 @@ def main(
         dcs_count, dcs_err = mass_util.delta_m_counts(dcs_dfs, mass_bins, dcs_wts)
 
         # Return the yield from the simultaneous fit
-        n_rs, err_rs, n_ws, err_ws = _fit(
-            cf_count,
-            dcs_count,
-            cf_err,
-            dcs_err,
-            i,
-            mass_bins,
-            n_underflow,
-            plot_dir,
-        )
+        try:
+            n_rs, err_rs, n_ws, err_ws = _fit(
+                cf_count,
+                dcs_count,
+                cf_err,
+                dcs_err,
+                i,
+                mass_bins,
+                n_underflow,
+                plot_dir,
+                alt_bkg,
+                rs_bkg_pdf=rs_bkg_pdf if alt_bkg else None,
+                ws_bkg_pdf=ws_bkg_pdf if alt_bkg else None,
+            )
+        except pdfs.ZeroCountsError:
+            print(f"Simultaneous fit: {i} ZeroCountsError")
 
         # Plot the individual fits just to check stuff
-        _separate_fit(
-            cf_count,
-            cf_err,
-            i,
-            mass_bins,
-            n_underflow,
-            "cf",
-            f"{plot_dir}rs/{i}.png",
-        )
-        _separate_fit(
-            dcs_count,
-            dcs_err,
-            i,
-            mass_bins,
-            n_underflow,
-            "dcs",
-            f"{plot_dir}ws/{i}.png",
-        )
+        try:
+            _separate_fit(
+                cf_count,
+                cf_err,
+                i,
+                mass_bins,
+                n_underflow,
+                "cf",
+                f"{plot_dir}rs/{i}.png",
+                alt_bkg,
+                bkg_pdf=rs_bkg_pdf if alt_bkg else None,
+            )
+        except pdfs.ZeroCountsError:
+            print(f"RS: {i} ZeroCountsError")
+            continue
+
+        try:
+            _separate_fit(
+                dcs_count,
+                dcs_err,
+                i,
+                mass_bins,
+                n_underflow,
+                "dcs",
+                f"{plot_dir}ws/{i}.png",
+                alt_bkg,
+                bkg_pdf=ws_bkg_pdf if alt_bkg else None,
+            )
+        except pdfs.ZeroCountsError:
+            print(f"WS: {i} ZeroCountsError")
+            continue
 
         # Append the yields to the yield file
         mass_util.write_yield(

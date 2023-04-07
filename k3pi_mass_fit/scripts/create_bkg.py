@@ -55,12 +55,14 @@ def _create_dumps(
     # involve having to concatenate the arrays
     with tqdm(total=n_dfs * n_repeats) as pbar:
         for i, dataframe in enumerate(df_generator):
+            # Take only the first candidate in each case
+            dataframe = dataframe[dataframe["nCandidate"] == 0]
             n_evts = len(dataframe)
             n_rolls = min(n_evts - 1, n_repeats)
 
             if n_rolls < n_repeats:
                 logging.warning(
-                    f"{n_repeats=} but {n_evts=} in this dataframe, rolling {n_evts-1} times instead",
+                    f"{n_repeats=} but {n_evts=} in this dataframe, rolling {n_rolls} times instead",
                     exc_info=UserWarning(),
                 )
 
@@ -72,12 +74,15 @@ def _create_dumps(
             # Get the kinematic 4-vectors
             k, pi1, pi2, pi3 = k_3pi(dataframe)
             slowpi = np.row_stack(
-                [dataframe[f"slowpi_{s}"] for s in definitions.MOMENTUM_SUFFICES]
+                [
+                    dataframe[f"{definitions.DATA_BRANCH_PREFICES[-1]}_{s}"]
+                    for s in definitions.MOMENTUM_SUFFICES
+                ]
             )
             d_mass = util.inv_mass(k, pi1, pi2, pi3)
 
             # Shuffle the slow pi momenta by 1, find the delta M, append to list
-            for _ in range(n_evts - 1):
+            for _ in range(n_rolls):
                 slowpi = np.roll(slowpi, 1, axis=1)
                 dst_mass = util.inv_mass(k, pi1, pi2, pi3, slowpi)
 

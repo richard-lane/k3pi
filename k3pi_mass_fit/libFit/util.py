@@ -241,7 +241,9 @@ def mass_counts(
     return dcs_counts, cf_counts, dcs_errs, cf_errs
 
 
-def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
+def plot_dir(
+    bdt_cut: bool, correct_efficiency: bool, phsp_bin: int, alt_bkg: bool
+) -> str:
     """
     Directory for storing plots
 
@@ -264,6 +266,9 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
         retval = "bdt_fits/"
     else:
         retval = "raw_fits/"
+
+    if alt_bkg:
+        retval = f"alt_bkg_{retval}"
 
     retval = os.path.join(retval, f"bin_{phsp_bin}/")
 
@@ -329,7 +334,7 @@ def signal_param_guess(time_bin: int = 5) -> Tuple:
     Some parameters for the signal
 
     """
-    return 146.0, 0.2, 0.2, 0.18, 0.18, 0.0019 * time_bin + 0.0198
+    return 145.5, 0.2, 0.2, 0.18, 0.18, 0.0019 * time_bin + 0.0198
 
 
 def yield_file(
