@@ -169,7 +169,6 @@ def _fit(
     plt.close(fig)
 
     return (
-        fitter.fval,
         fitter.values[0],
         fitter.errors[0],
         fitter.values[2],
@@ -300,7 +299,7 @@ def main(
         dcs_count, dcs_err = mass_util.delta_m_counts(dcs_dfs, mass_bins, dcs_wts)
 
         # Return the yield from the simultaneous fit
-        chi2, n_rs, err_rs, n_ws, err_ws = _fit(
+        n_rs, err_rs, n_ws, err_ws = _fit(
             cf_count,
             dcs_count,
             cf_err,
@@ -356,7 +355,12 @@ if __name__ == "__main__":
         help="magnetisation direction",
     )
     parser.add_argument(
-        "phsp_bin", type=int, choices=range(4), help="Phase space bin index"
+        "phsp_bin",
+        type=int,
+        choices=range(4),
+        help="Phase space bin index. If not provided, performs phase space integrated fits",
+        nargs="?",
+        default=None,
     )
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")
     parser.add_argument(

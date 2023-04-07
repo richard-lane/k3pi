@@ -253,6 +253,11 @@ def plot_dir(bdt_cut: bool, correct_efficiency: bool, phsp_bin: int) -> str:
     if correct_efficiency:
         assert bdt_cut
 
+    # Special directory for phsp integrated stuff
+    # Indicated by the phsp_bin flag being None instead of an int
+    if phsp_bin is None:
+        phsp_bin = "integrated"
+
     if bdt_cut and correct_efficiency:
         retval = "eff_fits/"
     elif bdt_cut:
@@ -339,6 +344,9 @@ def yield_file(
     For writing the yields to
 
     """
+    if phsp_bin is None:
+        phsp_bin = "phsp_integrated"
+
     return (
         pathlib.Path(__file__).resolve().parents[1]
         / f"yields_{year}_{magnetisation}_{phsp_bin}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.txt"

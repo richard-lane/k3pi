@@ -234,9 +234,17 @@ def binned_generator(
     Given a generator of dataframes, returns another generator of dataframes selecting
     only events in the desired phase space bin
 
-    phsp bin column must exist in the dataframe
+    "phsp bin" column must exist in the dataframe
+
+    :param generator: generator of dataframes
+    :param phsp_bin: phsp bin index, 0/1/2/3 or None
+                     if None, this fcn is no op
 
     """
+    if phsp_bin is None:
+        for dataframe in generator:
+            yield dataframe
+
     for dataframe in generator:
         yield dataframe[dataframe["phsp bin"] == phsp_bin]
 
