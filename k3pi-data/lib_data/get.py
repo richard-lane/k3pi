@@ -238,12 +238,12 @@ def binned_generator(
 
     :param generator: generator of dataframes
     :param phsp_bin: phsp bin index, 0/1/2/3 or None
-                     if None, this fcn is no op
+                     if None, this fcn returns all of them
 
     """
     if phsp_bin is None:
         for dataframe in generator:
-            yield dataframe
+            yield dataframe[np.isin(dataframe["phsp bin"], (0, 1, 2, 3))]
 
     for dataframe in generator:
         yield dataframe[dataframe["phsp bin"] == phsp_bin]
