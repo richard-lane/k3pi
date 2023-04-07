@@ -24,6 +24,7 @@ def main(
     efficiency: bool,
     alt_bkg: bool,
     scaled_yield: bool,
+    integrated: bool,
 ):
     """
     From a file of yields, time bins etc., plot the
@@ -32,6 +33,11 @@ def main(
     """
     fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
     hist_kw = {"histtype": "step"}
+
+    if integrated:
+        # Append a None to the list as this is the secret special value
+        # that means we want the phsp integrated stuff
+        phsp_bins += [None]
 
     for phsp_bin in phsp_bins:
         yield_file_path = mass_util.yield_file(
@@ -69,7 +75,7 @@ def main(
             ratio,
             xerr=widths / 2,
             yerr=ratio_err,
-            label=f"Phsp bin {phsp_bin}",
+            label=f"Phsp bin {phsp_bin}" if phsp_bin is not None else "Phsp Integrated",
             fmt="+",
         )
 
@@ -116,6 +122,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "phsp_bins", type=int, choices=range(4), help="Phase space bin index", nargs="*"
+    )
+    parser.add_argument(
+        "--integrated",
+        action="store_true",
+        help="Also plot the phsp bin integrated stuff",
     )
     parser.add_argument(
         "--scaled_yield",
