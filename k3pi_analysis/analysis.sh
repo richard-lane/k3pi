@@ -40,6 +40,9 @@ unset pids
 python k3pi-data/create_real.py -n 18 2018 cf magdown --n_procs 6
 python k3pi-data/create_real.py -n 18 2018 dcs magdown --n_procs 6
 
+# Build amplitude model libraries
+./k3pi_efficiency/lib_efficiency/amplitude_models/build.sh
+
 # Create some uppermass dfs
 python k3pi-data/create_uppermass.py 2018 dcs magdown -n 24 &
 pids[0]=$!
