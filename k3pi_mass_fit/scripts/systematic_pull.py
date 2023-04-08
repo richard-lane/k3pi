@@ -130,14 +130,14 @@ def _pull_study(
 
     # we want the signal counts to add up to these
     n_rs_sig = 800_000
-    n_ws_sig = 2_200
+    n_ws_sig = 3_200
 
     # number to generate for the bkg
     n_bkg = 45_000
 
     # Find the expected number of bkg events from the acceptance area / generating area
 
-    n_experiments = 3
+    n_experiments = 5
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
@@ -179,7 +179,6 @@ def _pull_study(
             # Find the pulls
             fit_vals = binned_fitter.values
             fit_errs = binned_fitter.errors
-            print(fit_vals[0:4])
             rs_sig_pull = (fit_vals[0] - n_rs_sig) / fit_errs[0]
             rs_bkg_pull = (fit_vals[1] - n_bkg) / fit_errs[1]
             ws_sig_pull = (fit_vals[2] - n_ws_sig) / fit_errs[2]
@@ -310,7 +309,7 @@ def main():
     fit_range = pdfs.reduced_domain()
     n_underflow = 3
     bins = definitions.nonuniform_mass_bins(
-        (low, fit_range[0], 144.5, 146.5, high), (n_underflow, 50, 100, 50)
+        (low, fit_range[0], high), (n_underflow, 150)
     )
 
     rs_count = _sig_counts(year, "cf", magnetisation, bins)
