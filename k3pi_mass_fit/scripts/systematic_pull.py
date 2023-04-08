@@ -89,7 +89,7 @@ def _bkg(
 
     """
     points = toy_utils.gen_bkg_sqrt(
-        rng, n_gen, pdfs.reduced_domain(), mass_util.sqrt_bkg_param_guess(sign)
+        rng, n_gen, mass_util.sqrt_bkg_param_guess(sign), pdfs.reduced_domain()
     )
 
     counts, _ = stats.counts(points, bins)
