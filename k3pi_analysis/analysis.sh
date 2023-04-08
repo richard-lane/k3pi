@@ -35,6 +35,11 @@ for pid in ${pids[*]}; do
 done
 unset pids
 
+# Only create a few real dfs for speed
+# Don't run these in parallel since they spawn their own processes
+python k3pi-data/create_real.py -n 18 2018 cf magdown --n_procs 6
+python k3pi-data/create_real.py -n 18 2018 dcs magdown --n_procs 6
+
 # Create some uppermass dfs
 python k3pi-data/create_uppermass.py 2018 dcs magdown -n 24 &
 pids[0]=$!
@@ -46,16 +51,10 @@ python k3pi-data/scripts/add_phsp_bins.py 2018 dcs magdown &
 pids[2]=$!
 python k3pi-data/scripts/add_phsp_bins.py 2018 cf magdown &
 pids[3]=$!
-
 for pid in ${pids[*]}; do
     wait $pid
 done
 unset pids
-
-# Only create a few real dfs for speed
-# Don't run these in parallel since they spawn their own processes
-python k3pi-data/create_real.py -n 18 2018 cf magdown --n_procs 6
-python k3pi-data/create_real.py -n 18 2018 dcs magdown --n_procs 6
 
 # Plot projections of data
 python k3pi-data/scripts/plot_parameterisation.py
