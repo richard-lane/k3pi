@@ -19,9 +19,9 @@ python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf &
 pids[1]=$!
 
 # Only create a few pgun dfs for speed
-python k3pi-data/create_pgun.py 2018 dcs magdown -n 24 -v &
+python k3pi-data/create_pgun.py 2018 dcs magdown -v &
 pids[2]=$!
-python k3pi-data/create_pgun.py 2018 cf magdown -n 24 -v &
+python k3pi-data/create_pgun.py 2018 cf magdown -v &
 pids[3]=$!
 
 python k3pi-data/create_mc.py 2018 dcs magdown &
@@ -37,16 +37,16 @@ unset pids
 
 # Only create a few real dfs for speed
 # Don't run these in parallel since they spawn their own processes
-python k3pi-data/create_real.py -n 18 2018 cf magdown --n_procs 6
-python k3pi-data/create_real.py -n 18 2018 dcs magdown --n_procs 6
+python k3pi-data/create_real.py -n 48 2018 cf magdown --n_procs 6
+python k3pi-data/create_real.py -n 48 2018 dcs magdown --n_procs 6
 
 # Build amplitude model libraries
 ./k3pi_efficiency/lib_efficiency/amplitude_models/build.sh
 
 # Create some uppermass dfs
-python k3pi-data/create_uppermass.py 2018 dcs magdown -n 24 &
+python k3pi-data/create_uppermass.py 2018 dcs magdown -n 48 &
 pids[0]=$!
-python k3pi-data/create_uppermass.py 2018 cf magdown -n 24 &
+python k3pi-data/create_uppermass.py 2018 cf magdown -n 48 &
 pids[1]=$!
 
 # Add phsp information to the real data dfs

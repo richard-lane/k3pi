@@ -6,10 +6,10 @@ log        = log.$(cluster).$(process).log
 
 RequestCpus = 6
 RequestGpus = 0
-# RequestDisk = 24GB
+# RequestDisk = 32GB
 # RequestMemory = 16GB
 
-+MaxRuntime = 7200
++MaxRuntime = 14400
 
 transfer_input_files = python.tar.gz, rs_Dbar02piKpipi.root, ws_D02piKpipi.root
 
