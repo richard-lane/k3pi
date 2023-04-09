@@ -403,7 +403,7 @@ def read_yield(path: pathlib.Path) -> Tuple:
 
     with open(str(path), "r", encoding="utf8") as yield_f:
         for line in yield_f.readlines():
-            low_t, high_t, rs_yield, rs_err, ws_yield, ws_err = (
+            low_t, high_t, rs_yield, ws_yield, rs_err, ws_err = (
                 float(val) for val in line.strip().split("\t")
             )
 
