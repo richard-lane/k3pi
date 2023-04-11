@@ -18,6 +18,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit
 from libFit import pdfs
 
 ANGLE_CUT_DEG = 0.03
+GHOST_CUT = 0.05
 MAX_IPCHI2 = 9.0
 MAX_LIFETIMES = 8.0
 MIN_D0_MASS, MAX_D0_MASS = 1840.83, 1888.83
@@ -87,7 +88,7 @@ def _ghost_keep(dataframe: pd.DataFrame) -> np.ndarray:
     Keep events with small ghost probability
 
     """
-    return dataframe["Dst_pi_ProbNNghost"] < 0.1
+    return dataframe["Dst_pi_ProbNNghost"] < GHOST_CUT
 
 
 def _angle_keep(dataframe: pd.DataFrame) -> np.ndarray:
@@ -209,6 +210,7 @@ def uppermass_keep(dataframe: pd.DataFrame) -> np.ndarray:
         & _l0_keep(dataframe)
         & _hlt_keep(dataframe)
         & _pid_keep(dataframe)
+        & _ghost_keep(dataframe)
     )
 
 
@@ -225,6 +227,7 @@ def data_keep(dataframe: pd.DataFrame) -> np.ndarray:
         & _l0_keep(dataframe)
         & _hlt_keep(dataframe)
         & _pid_keep(dataframe)
+        & _ghost_keep(dataframe)
     )
 
 
@@ -243,6 +246,7 @@ def mc_keep(dataframe: pd.DataFrame) -> np.ndarray:
         & _pid_keep(dataframe)
         & _bkgcat(dataframe)
         & _ipchi2_keep(dataframe)
+        & _ghost_keep(dataframe)
     )
 
 
@@ -263,6 +267,7 @@ def pgun_keep(dataframe: pd.DataFrame, hlt_df: pd.DataFrame) -> np.ndarray:
         & _bkgcat(dataframe)
         & _ipchi2_keep(dataframe)
         & _trueorigvtx_keep(dataframe)
+        & _ghost_keep(dataframe)
     )
 
 
