@@ -33,8 +33,9 @@ def main(
     """
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    yield_file_fcn = mass_util.yield_file if not alt_bkg else mass_util.alt_yield_file
-    yield_file_path = yield_file_fcn(year, magnetisation, phsp_bin, bdt_cut, efficiency)
+    yield_file_path = mass_util.yield_file(
+        year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
+    )
 
     assert yield_file_path.exists()
 
