@@ -6,6 +6,7 @@ allows us to fix the shape of the prompt peak in IPCHI2
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from itertools import islice
@@ -95,6 +96,14 @@ def main(*, sign: str):
         },
     )
 
+    # Dump the fit params to file
+    pkl_file = str(ipchi2_fit.sec_frac_lowtime_file(sign))
+    with open(pkl_file, "wb") as dump_f:
+        pickle.dump(np.array(fitter.values), dump_f)
+
+    # Read them again from file
+    fit_params = ipchi2_fit.low_t_params(sign)
+
     # plot the fit
     fig, axes = plt.subplot_mosaic("AAA\n" * 3 + "BBB", figsize=(15, 15))
 
@@ -112,7 +121,7 @@ def main(*, sign: str):
     )
 
     predicted = (
-        stats.areas(bins, len(ipchi2s) * ipchi2_fit.norm_peak(bins, *fitter.values))
+        stats.areas(bins, len(ipchi2s) * ipchi2_fit.norm_peak(bins, *fit_params))
         / bin_widths
     )
     axes["A"].plot(centres, predicted)
@@ -135,7 +144,7 @@ def main(*, sign: str):
 
     print(fitter)
     fig.suptitle(
-        str(dict(zip(fitter.parameters, [f"{float(x):.3f}" for x in fitter.values])))
+        str(dict(zip(fitter.parameters, [f"{float(x):.3f}" for x in fit_params])))
         + f"\n{fitter.valid=}"
     )
 
