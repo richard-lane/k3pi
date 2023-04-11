@@ -57,7 +57,7 @@ def k_sign_cut(dataframe: pd.DataFrame, k_sign: str) -> pd.DataFrame:
 
     copy = dataframe.copy()
 
-    k_ids = copy["K ID"].to_numpy()
+    k_ids = copy["Dst_ReFit_D0_Kplus_ID"].to_numpy()
     keep = k_ids < 0 if k_sign == "k_minus" else k_ids > 0
 
     print(f"k sign cut: keeping {np.sum(keep)} of {len(keep)}")
@@ -120,19 +120,23 @@ def ampgen_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
     return dataframe
 
 
-def pgun_df(decay_type: str, k_charge: str, train: bool) -> pd.DataFrame:
+def pgun_df(
+    year: str, magnetisation: str, decay_type: str, k_charge: str, train: bool
+) -> pd.DataFrame:
     """
     Particle gun dataframe
 
     """
     assert decay_type in {"dcs", "cf", "false"}
     assert k_charge in {"k_plus", "k_minus", "both"}
+    assert year in {"2018", "2016"}
+    assert magnetisation in {"magdown", "magup"}
 
     if decay_type == "false":
         dataframe = get.false_sign()
 
     else:
-        dataframe = get.particle_gun(decay_type, show_progress=True)
+        dataframe = get.particle_gun(year, decay_type, magnetisation)
 
         # We only want to train on training data
         train_mask = dataframe["train"] if train else ~dataframe["train"]

@@ -19,27 +19,36 @@ from lib_efficiency import (
     plotting,
     efficiency_model,
     efficiency_definitions,
-    cut,
 )
 
+from lib_cuts.get import classifier as get_clf, signal_cut_df
+from lib_cuts.definitions import THRESHOLD
 
-def main(args):
+
+def main(
+    *,
+    year: str,
+    decay_type: str,
+    weighter_type: str,
+    magnetisation: str,
+    data_k_charge: str,
+    weighter_k_charge: str,
+    fit: bool,
+    cut: bool,
+):
     """
     Create a plot
 
     """
-    pgun_df = efficiency_util.pgun_df(args.decay_type, args.data_k_charge, train=False)
-    ampgen_df = efficiency_util.ampgen_df(
-        args.decay_type, args.data_k_charge, train=False
+    pgun_df = efficiency_util.pgun_df(
+        year, magnetisation, decay_type, data_k_charge, train=False
     )
+    ampgen_df = efficiency_util.ampgen_df(decay_type, data_k_charge, train=False)
 
     # We might want to do BDT cut
-    if args.cut:
-        mask = cut.mask(
-            pgun_df, args.year, args.magnetisation, "dcs"
-        )  # Always use the DCS bdt cut
-        print(f"BDT cut: cutting {np.sum(mask)} of {len(mask)}")
-        pgun_df = pgun_df[mask]
+    if cut:
+        # Always use DCS classifier for BDT cut, even on RS data
+        pgun_df = signal_cut_df(pgun_df, get_clf(year, "dcs", magnetisation), THRESHOLD)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
     ag_k, ag_pi1, ag_pi2, ag_pi3 = util.k_3pi(ampgen_df)
@@ -53,12 +62,12 @@ def main(args):
         mc_pi2,
         mc_pi3,
         mc_t,
-        args.weighter_k_charge,
-        args.year,
-        args.weighter_type,
-        args.magnetisation,
-        args.fit,
-        args.cut,
+        weighter_k_charge,
+        year,
+        weighter_type,
+        magnetisation,
+        fit,
+        cut,
         verbose=True,
     )
 
@@ -74,13 +83,13 @@ def main(args):
 
     plotting.projections(mc, ag, mc_wt=weights)
 
-    fit_suffix = "_fit" if args.fit else ""
+    fit_suffix = "_fit" if fit else ""
     plt.savefig(
-        f"proj_{args.year}_{args.magnetisation}_data_{args.decay_type}_{args.data_k_charge}"
-        f"_weighter_{args.weighter_type}_{args.weighter_k_charge}{fit_suffix}.png"
+        f"proj_{year}_{magnetisation}_data_{decay_type}_{data_k_charge}"
+        f"_weighter_{weighter_type}_{weighter_k_charge}_{fit=}_{cut=}.png"
     )
 
 
 if __name__ == "__main__":
     parser = common.parser("Plot projections of phase space variables")
-    main(parser.parse_args())
+    main(**vars(parser.parse_args()))
