@@ -4,7 +4,7 @@ output     = output.$(cluster).$(process).out
 error      = error.$(cluster).$(process).err
 log        = log.$(cluster).$(process).log
 
-RequestCpus = 6
+RequestCpus = 8
 RequestGpus = 0
 # RequestDisk = 32GB
 # RequestMemory = 16GB

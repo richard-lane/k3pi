@@ -24,21 +24,35 @@ pids[2]=$!
 python k3pi-data/create_pgun.py 2018 cf magdown -v &
 pids[3]=$!
 
+# MC dataframes are quick so just stick them in here
 python k3pi-data/create_mc.py 2018 dcs magdown &
 pids[4]=$!
 python k3pi-data/create_mc.py 2018 cf magdown &
 pids[5]=$!
 
-# Wait for these to all be done
+# Wait for ampgen and particle dfs to be made
 for pid in ${pids[*]}; do
     wait $pid
 done
 unset pids
 
+# Start training efficiency reweighters now because they are extremely slow
+python k3pi_efficiency/create_reweighter.py --cut cf 2018 magdown both &
+pids[0]=$!
+python k3pi_efficiency/create_reweighter.py --cut dcs 2018 magdown both &
+pids[1]=$!
+
 # Only create a few real dfs for speed
-# Don't run these in parallel since they spawn their own processes
-python k3pi-data/create_real.py -n 48 2018 cf magdown --n_procs 6
-python k3pi-data/create_real.py -n 48 2018 dcs magdown --n_procs 6
+python k3pi-data/create_real.py -n 48 2018 cf magdown --n_procs 3 &
+pids[2]=$!
+python k3pi-data/create_real.py -n 48 2018 dcs magdown --n_procs 3 &
+pids[3]=$!
+
+# This should be most of the analysis, in terms of time
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
 
 # Build amplitude model libraries
 ./k3pi_efficiency/lib_efficiency/amplitude_models/build.sh
@@ -104,7 +118,40 @@ for pid in ${pids[*]}; do
 done
 unset pids
 
+# Perform mass fits with BDT + efficiency
+python k3pi_mass_fit/scripts/data_fits.py 2018 magdown 0 --bdt_cut --efficiency &
+pids[0]=$!
+python k3pi_mass_fit/scripts/data_fits.py 2018 magdown 1 --bdt_cut --efficiency &
+pids[1]=$!
+python k3pi_mass_fit/scripts/data_fits.py 2018 magdown 2 --bdt_cut --efficiency &
+pids[2]=$!
+python k3pi_mass_fit/scripts/data_fits.py 2018 magdown 3 --bdt_cut --efficiency &
+pids[3]=$!
+python k3pi_mass_fit/scripts/data_fits.py 2018 magdown --bdt_cut --efficiency &
+pids[4]=$!
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
+
 # Plot yields
 python k3pi_mass_fit/scripts/plot_yield_from_file.py 2018 magdown 0 1 2 3 --integrated
 python k3pi_mass_fit/scripts/plot_yield_from_file.py 2018 magdown 0 1 2 3 --integrated --bdt_cut
+python k3pi_mass_fit/scripts/plot_yield_from_file.py 2018 magdown 0 1 2 3 --integrated --bdt_cut --efficiency
+
+# Plot fits
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut
+
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut
+
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 0 --bdt_cut --efficiency
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 1 --bdt_cut --efficiency
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 2 --bdt_cut --efficiency
+python k3pi_fitter/scripts/fit_from_file.py 2018 magdown 3 --bdt_cut --efficiency
 
