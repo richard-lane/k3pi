@@ -179,7 +179,7 @@ def _time_eff(
 
     bins = np.linspace(bins[0], bins[-1], 100)
     ax["B"].hist(sig_t, bins=bins, histtype="step")
-    ax["B"].hist(sig_t, bins=bins, histtype="step")
+    ax["B"].hist(bkg_t, bins=bins, histtype="step")
 
     ax["B"].set_xlabel("t / ps")
     ax["A"].set_ylabel("efficiency")

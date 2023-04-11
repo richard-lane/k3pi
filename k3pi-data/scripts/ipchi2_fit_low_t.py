@@ -6,6 +6,7 @@ allows us to fix the shape of the prompt peak in IPCHI2
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from itertools import islice
@@ -29,6 +30,15 @@ def _fit(log_ipchi2s: np.ndarray, param_guess: dict) -> Minuit:
     cost_fcn = UnbinnedNLL(log_ipchi2s, ipchi2_fit.norm_peak)
 
     fitter = Minuit(cost_fcn, **param_guess)
+
+    fitter.limits = (
+        (0.8, 2.5),  # Centre
+        (0.8, 2.5),  # width L
+        (0.8, 2.5),  # width R
+        (0.0, 2.0),  # alpha L
+        (0.0, 2.0),  # alpha R
+        (None, None),  # Beta (fixed below)
+    )
 
     fitter.fixed["beta"] = True
     fitter.migrad(ncall=5000)
@@ -69,18 +79,30 @@ def main(*, sign: str):
     ipchi2s = ipchi2s[ipchi2s > low_ip]
     ipchi2s = ipchi2s[ipchi2s < high_ip]
 
+    # Only use first N pts
+    n_pts = 1_000_000
+    ipchi2s = ipchi2s[:n_pts]
+
     # fit
     fitter = _fit(
         ipchi2s,
         {
-            "centre": 1.5,
-            "width_l": 2.5,
-            "width_r": 2.5,
-            "alpha_l": 0.1,
-            "alpha_r": 0.1,
+            "centre": 1.45,
+            "width_l": 1.0,
+            "width_r": 1.0,
+            "alpha_l": 0.0,
+            "alpha_r": 0.0,
             "beta": 0.0,
         },
     )
+
+    # Dump the fit params to file
+    pkl_file = str(ipchi2_fit.sec_frac_lowtime_file(sign))
+    with open(pkl_file, "wb") as dump_f:
+        pickle.dump(np.array(fitter.values), dump_f)
+
+    # Read them again from file
+    fit_params = ipchi2_fit.low_t_params(sign)
 
     # plot the fit
     fig, axes = plt.subplot_mosaic("AAA\n" * 3 + "BBB", figsize=(15, 15))
@@ -99,7 +121,7 @@ def main(*, sign: str):
     )
 
     predicted = (
-        stats.areas(bins, len(ipchi2s) * ipchi2_fit.norm_peak(bins, *fitter.values))
+        stats.areas(bins, len(ipchi2s) * ipchi2_fit.norm_peak(bins, *fit_params))
         / bin_widths
     )
     axes["A"].plot(centres, predicted)
@@ -122,7 +144,7 @@ def main(*, sign: str):
 
     print(fitter)
     fig.suptitle(
-        str(dict(zip(fitter.parameters, [f"{float(x):.3f}" for x in fitter.values])))
+        str(dict(zip(fitter.parameters, [f"{float(x):.3f}" for x in fit_params])))
         + f"\n{fitter.valid=}"
     )
 

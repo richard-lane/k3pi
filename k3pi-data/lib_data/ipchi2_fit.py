@@ -5,6 +5,7 @@ For assessing the secondary systematic
 
 """
 import sys
+import pickle
 import pathlib
 from typing import Tuple, Callable
 
@@ -229,29 +230,26 @@ def fit(
     fitter = Minuit(chi2, n_sig=n_sig, n_bkg=n_bkg, **sig_defaults, **bkg_defaults)
 
     # Limits
-    sig_limits = {
-        "centre_sig": (-1.5, 1.5),
-        "width_l_sig": (0.5, 3.0),
-        "width_r_sig": (0.5, 3.0),
-        "alpha_l_sig": (0.0, 2.0),
-        "alpha_r_sig": (0.0, 2.0),
-        "beta_sig": (None, None),
-    }
     bkg_limits = {
         "centre_bkg": (2.5, 8.0),
-        "width_bkg": (0.5, 4.0),
+        "width_bkg": (0.5, 3.0),
         "alpha_bkg": (0.0, 2.0),
         "beta_bkg": (None, None),
     }
 
-    for lims in sig_limits, bkg_limits:
-        for name, vals in lims.items():
-            fitter.limits[name] = vals
+    for name, vals in bkg_limits.items():
+        fitter.limits[name] = vals
 
     fitter.limits["n_sig"] = (0.0, total)
     fitter.limits["n_bkg"] = (0.0, total)
 
-    # fitter.fixed["beta_sig"] = True
+    fitter.fixed["centre_sig"] = True
+    fitter.fixed["width_l_sig"] = True
+    fitter.fixed["width_r_sig"] = True
+    fitter.fixed["alpha_l_sig"] = True
+    fitter.fixed["alpha_r_sig"] = True
+    fitter.fixed["beta_sig"] = True
+
     # fitter.fixed["beta_bkg"] = True
 
     fitter.migrad()
@@ -526,6 +524,8 @@ def fixed_prompt_unbinned_fit(
     signal_frac_guess: float,
     sig_defaults: dict,
     bkg_defaults: dict,
+    centre_lim: Tuple[float, float],
+    width_lim: Tuple[float, float],
 ) -> Minuit:
     """
     Perform an unbinned fit, return the fitter
@@ -534,6 +534,8 @@ def fixed_prompt_unbinned_fit(
     :param signal_frac_guess: initial guess at the signal fraction
     :param sig_defaults: dict of initial guesses - these are fixed
     :param bkg_defaults: dict of initial guesses - these are floated
+    :param centre_lim: fit limits on the secondary peak centre
+    :param width_lim: fit limits on the secondary peak width
 
     :returns: fitter after performing the fit
 
@@ -551,13 +553,15 @@ def fixed_prompt_unbinned_fit(
     cost_fcn = ExtendedUnbinnedNLL(log_ipchi2, fit_fcn)
 
     fitter = Minuit(cost_fcn, n_sig=n_sig, n_bkg=n_bkg, **bkg_defaults)
-    fitter.limits["centre"] = (2.0, 8.0)
-    fitter.limits["width"] = (0.5, None)
+    fitter.limits["centre"] = centre_lim
+    fitter.limits["width"] = width_lim
+
     fitter.limits["alpha"] = (0.0, 2.0)
     fitter.limits["n_sig"] = (0.0, total)
     fitter.limits["n_bkg"] = (0.0, total)
 
-    # fitter.fixed["beta"] = True
+    fitter.fixed["beta"] = True
+    fitter.fixed["alpha"] = True
 
     fitter.migrad()
 
@@ -629,6 +633,26 @@ def plot_fixed_prompt(
     axes[0].set_ylabel("N/bin width")
     axes[1].set_xlabel(r"D0 IP$\chi^2$")
     axes[1].set_ylabel(r"$\sigma$")
+
+
+def sec_frac_lowtime_file(sign: str) -> pathlib.Path:
+    """
+    Location for a pickle dump holding the params
+    from the low time fit
+
+    """
+    return (
+        pathlib.Path(__file__).resolve().parents[1] / f"ip_fit_lowt_params_{sign}.pkl"
+    )
+
+
+def low_t_params(sign: str):
+    """
+    Get the low t fit params from pickle dump
+
+    """
+    with open(str(sec_frac_lowtime_file(sign)), "rb") as dump_f:
+        return pickle.load(dump_f)
 
 
 def sec_frac_file(sign: str) -> pathlib.Path:

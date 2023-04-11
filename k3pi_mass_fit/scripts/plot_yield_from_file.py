@@ -46,7 +46,7 @@ def main(
         if scaled_yield:
             yield_file_path = mass_util.scaled_yield_file_path(yield_file_path)
 
-        assert yield_file_path.exists()
+        assert yield_file_path.exists(), yield_file_path
 
         # Get time bins, yields and errors
         time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
