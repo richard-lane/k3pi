@@ -11,7 +11,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
+from lib_data import ipchi2_fit
 from libFit import util as mass_util
 
 
@@ -23,6 +25,7 @@ def main(
     bdt_cut: bool,
     efficiency: bool,
     alt_bkg: bool,
+    sec_correction: bool,
     scaled_yield: bool,
     integrated: bool,
 ):
@@ -39,9 +42,19 @@ def main(
         # that means we want the phsp integrated stuff
         phsp_bins += [None]
 
+    # Get the secondary fractions if we need to
+    if sec_correction:
+        rs_sec_frac = ipchi2_fit.sec_fracs("cf")
+        ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
+
     for phsp_bin in phsp_bins:
         yield_file_path = mass_util.yield_file(
-            year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
+            year,
+            magnetisation,
+            phsp_bin,
+            bdt_cut,
+            efficiency,
+            alt_bkg,
         )
         if scaled_yield:
             yield_file_path = mass_util.scaled_yield_file_path(yield_file_path)
@@ -52,6 +65,14 @@ def main(
         time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
             yield_file_path
         )
+
+        # Do secondary fraction correction if we need to
+        if sec_correction:
+            rs_yields = ipchi2_fit.correct(rs_yields, rs_sec_frac)
+            rs_errs = ipchi2_fit.correct(rs_errs, rs_sec_frac)
+
+            ws_yields = ipchi2_fit.correct(ws_yields, ws_sec_frac)
+            ws_errs = ipchi2_fit.correct(ws_errs, ws_sec_frac)
 
         # Get densities
         widths = time_bins[1:] - time_bins[:-1]
@@ -92,7 +113,7 @@ def main(
 
     fig.tight_layout()
 
-    path = f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}.png"
+    path = f"yields_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}.png"
     if scaled_yield:
         path = f"scaled_{path}"
     print(f"plotting {path}")
@@ -132,6 +153,11 @@ if __name__ == "__main__":
         "--scaled_yield",
         action="store_true",
         help="Whether to use the yield file that has been scaled by luminosities",
+    )
+    parser.add_argument(
+        "--sec_correction",
+        action="store_true",
+        help="Whether to use the yield file after secondary fraction correction",
     )
 
     main(**vars(parser.parse_args()))

@@ -661,3 +661,22 @@ def sec_frac_file(sign: str) -> pathlib.Path:
 
     """
     return pathlib.Path(__file__).resolve().parents[1] / f"sec_frac_{sign}.pkl"
+
+
+def sec_fracs(sign: str) -> np.ndarray:
+    """
+    Get the secondary fraction from a pickle dump
+
+    """
+    with open(str(sec_frac_file(sign)), "rb") as dump_f:
+        return pickle.load(dump_f)
+
+
+def correct(target: np.ndarray, secondary_fractions: np.ndarray) -> np.ndarray:
+    """
+    Correct an array (i.e. yield or error) by the provided secondary fractions
+
+    """
+    assert len(target) == len(secondary_fractions)
+
+    return target * (1 - secondary_fractions)

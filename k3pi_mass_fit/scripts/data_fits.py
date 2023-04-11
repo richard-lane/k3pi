@@ -318,13 +318,13 @@ def main(
         year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
     )
 
+    # If the file already exists, appending to it might have unexpected results
+    yield_file_path.touch(exist_ok=False)
+
     # Get the bkg pdfs if we need
     if alt_bkg:
         rs_bkg_pdf = bkg.pdf(mass_bins, year, magnetisation, "cf", bdt_cut=bdt_cut)
         ws_bkg_pdf = bkg.pdf(mass_bins, year, magnetisation, "dcs", bdt_cut=bdt_cut)
-
-    # If the file already exists, appending to it might have unexpected results
-    yield_file_path.touch(exist_ok=False)
 
     for i, (low_t, high_t) in enumerate(zip(time_bins[:-1], time_bins[1:])):
         # Get generators of dataframes
