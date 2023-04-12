@@ -97,7 +97,7 @@ def _bes_lib_path() -> pathlib.Path:
     Path to the BES-III shared library
 
     """
-    return pathlib.Path(__file__).resolve().parents[0] / "bes.so"
+    return pathlib.Path(__file__).resolve().parents[0] / "libBes.so"
 
 
 def _bes_lib_exists() -> pathlib.Path:
