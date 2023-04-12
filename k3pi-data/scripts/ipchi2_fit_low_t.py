@@ -49,7 +49,7 @@ def _fit(log_ipchi2s: np.ndarray, param_guess: dict) -> Minuit:
     return fitter
 
 
-def _ipchi2s(sign: str) -> np.ndarray:
+def _ipchi2s(year: str, sign: str, magnetisation: str) -> np.ndarray:
     """
     ipchi2 in the given time range
 
@@ -61,18 +61,18 @@ def _ipchi2s(sign: str) -> np.ndarray:
     print(f"{low_t=}\t{high_t=}")
     dfs = (
         dataframe[(low_t < dataframe["time"]) & (dataframe["time"] < high_t)]
-        for dataframe in islice(get.data("2018", sign, "magdown"), n_dfs)
+        for dataframe in islice(get.data(year, sign, magnetisation), n_dfs)
     )
     return np.concatenate([np.log(dataframe["D0 ipchi2"]) for dataframe in dfs])
 
 
-def main(*, sign: str):
+def main(*, year: str, sign: str, magnetisation: str):
     """
     Get the D0 ipchi2 counts from the data
     Fit to them + plot
 
     """
-    ipchi2s = _ipchi2s(sign)
+    ipchi2s = _ipchi2s(year, sign, magnetisation)
 
     # Get rid of points outside domain where the PDF is defined
     low_ip, high_ip = ipchi2_fit.domain()
@@ -157,6 +157,15 @@ if __name__ == "__main__":
         "the prompt peak",
     )
 
+    parser.add_argument(
+        "year", type=str, choices={"2016", "2017", "2018"}, help="data taking year"
+    )
     parser.add_argument("sign", type=str, choices={"dcs", "cf"}, help="data type")
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magup", "magdown"},
+        help="magnetisation direction",
+    )
 
     main(**vars(parser.parse_args()))

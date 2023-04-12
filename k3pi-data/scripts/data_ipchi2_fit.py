@@ -19,7 +19,9 @@ from lib_data import get, ipchi2_fit, cuts
 from lib_time_fit import definitions
 
 
-def _ipchi2s(sign: str, time_range: Tuple[float, float]) -> np.ndarray:
+def _ipchi2s(
+    year: str, sign: str, magnetisation: str, time_range: Tuple[float, float]
+) -> np.ndarray:
     """
     ipchi2 in the given time range
 
@@ -30,12 +32,12 @@ def _ipchi2s(sign: str, time_range: Tuple[float, float]) -> np.ndarray:
     low_t, high_t = time_range
     dfs = (
         dataframe[(low_t < dataframe["time"]) & (dataframe["time"] < high_t)]
-        for dataframe in islice(get.data("2018", sign, "magdown"), n_dfs)
+        for dataframe in islice(get.data(year, sign, magnetisation), n_dfs)
     )
     return np.concatenate([np.log(dataframe["D0 ipchi2"]) for dataframe in dfs])
 
 
-def main(*, sign: str):
+def main(*, year: str, sign: str, magnetisation: str):
     """
     Get the D0 ipchi2 counts from the data
     Fit to them + plot
@@ -108,7 +110,7 @@ def main(*, sign: str):
         )
     ):
         # Get counts in the bins
-        ipchi2s = _ipchi2s(sign, (low_t, high_t))[:500000]
+        ipchi2s = _ipchi2s(year, sign, magnetisation, (low_t, high_t))[:750_000]
 
         # Get rid of points outside domain where the PDF is defined
         low_ip, high_ip = ipchi2_fit.domain()
@@ -183,6 +185,15 @@ if __name__ == "__main__":
         description="Perform IPCHI2 fit to measure secondary fraction"
     )
 
+    parser.add_argument(
+        "year", type=str, choices={"2016", "2017", "2018"}, help="data taking year"
+    )
     parser.add_argument("sign", type=str, choices={"dcs", "cf"}, help="data type")
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magup", "magdown"},
+        help="magnetisation direction",
+    )
 
     main(**vars(parser.parse_args()))

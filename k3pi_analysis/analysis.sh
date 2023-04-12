@@ -100,9 +100,9 @@ python k3pi-data/scripts/add_phsp_bins.py $YEAR cf $MAG &
 pids[1]=$!
 
 # Do ip fits
-python k3pi-data/scripts/ipchi2_fit_low_t.py dcs &
+python k3pi-data/scripts/ipchi2_fit_low_t.py $YEAR dcs $MAG &
 pids[2]=$!
-python k3pi-data/scripts/ipchi2_fit_low_t.py cf &
+python k3pi-data/scripts/ipchi2_fit_low_t.py $YEAR cf $MAG &
 pids[3]=$!
 
 # Once we have the real data stuff we're ready to do the fits
@@ -112,17 +112,27 @@ done
 unset pids
 
 # Do IP fits to get secondary fractions
-python k3pi-data/scripts/data_ipchi2_fit.py dcs
-python k3pi-data/scripts/data_ipchi2_fit.py cf
+python k3pi-data/scripts/data_ipchi2_fit.py $YEAR dcs $MAG &
+pids[0]=$!
+python k3pi-data/scripts/data_ipchi2_fit.py $YEAR cf $MAG
+pids[1]=$!
 
 # Plot BDT stuff
-# These are quick so no need to paralellise
-python k3pi_signal_cuts/scripts/plot_roc.py
-python k3pi_signal_cuts/scripts/plot_cuts.py
-python k3pi_signal_cuts/scripts/plot_data_cuts.py
+python k3pi_signal_cuts/scripts/plot_roc.py &
+pids[2]=$!
+python k3pi_signal_cuts/scripts/plot_cuts.py &
+pids[3]=$!
+python k3pi_signal_cuts/scripts/plot_data_cuts.py &
+pids[4]=$!
 
 # Plot projections of data
-python k3pi-data/scripts/plot_parameterisation.py
+python k3pi-data/scripts/plot_parameterisation.py &
+pids[5]=$!
+
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
 
 # Perform mass fits without BDT cut
 python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 &
