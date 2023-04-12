@@ -83,6 +83,10 @@ unset dcs_eff_pid
 unset cf_data_pid
 unset dcs_data_pid
 
+# Plot efficiency validation plots
+python k3pi_efficiency/scripts/plot_projection.py $YEAR cf cf $MAG both both --cut
+python k3pi_efficiency/scripts/plot_projection.py $YEAR dcs dcs $MAG both both --cut
+
 # Build amplitude model libraries
 ./k3pi_efficiency/lib_efficiency/amplitude_models/build.sh
 pids[0]=$!

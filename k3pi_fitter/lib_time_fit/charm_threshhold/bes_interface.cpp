@@ -106,9 +106,9 @@ extern "C" double besChi2(const short phspBin, const double z_re, const double z
     std::map<const short, const short> rdIndices{{0, 22}, {1, 23}, {2, 24}, {3, 25}};
 
     // Need to convert Re and Im parts of Z to magnitude and phase
-    const std::complex z{z_re, z_im};
-    const double       mag   = std::abs(z);
-    const double       phase = 180.0 + 180.0 * std::arg(z) / M_PI;
+    const std::complex<double> z{z_re, z_im};
+    const double               mag   = std::abs(z);
+    const double               phase = 180.0 + 180.0 * std::arg(z) / M_PI;
 
     // Construct an array of the parameter we want to pass to the BES likelihood function
     std::array<double, numParams> besParams{};
@@ -140,9 +140,9 @@ besChi2Standalone(const short phspBin, const double z_re, const double z_im, con
     std::map<const short, const short> rdIndices{{0, 22}, {1, 23}, {2, 24}, {3, 25}};
 
     // Need to convert Re and Im parts of Z to magnitude and phase
-    const std::complex z{z_re, z_im};
-    const double       mag   = std::abs(z);
-    const double       phase = 180.0 + 180.0 * std::arg(z) / M_PI;
+    const std::complex<double> z{z_re, z_im};
+    const double               mag   = std::abs(z);
+    const double               phase = 180.0 + 180.0 * std::arg(z) / M_PI;
 
     // Construct an array of the parameter we want to pass to the BES likelihood function
     std::array<double, numParams> besParams{};

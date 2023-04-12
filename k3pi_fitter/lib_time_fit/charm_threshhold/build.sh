@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Exit immediately on error
-set -e
+set -exu
 
 SOURCE_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-FLAGS="-shared -Wall -Werror -fPIC -std=c++17"
+FLAGS="-shared -Wall -Werror -fPIC -std=c++17 -static-libstdc++"
+GPP_CXX=/cvmfs/sft.cern.ch/lcg/releases/gcc/9.2.0-afc57/x86_64-centos7/bin/g++
 
 # CLEO
-clang++ $SOURCE_DIR/cleo_interface.cpp -o $SOURCE_DIR/cleo.so $FLAGS
+$GPP_CXX $SOURCE_DIR/cleo_interface.cpp -o $SOURCE_DIR/cleo.so $FLAGS
 
 # BES
 # I do something funny here
@@ -19,14 +20,14 @@ python $SOURCE_DIR/compile_covmatrix.py
 # The BES library requires ROOT
 echo "building cov matrix shared lib..."
 BES_LIB=$SOURCE_DIR/libBes.so
-clang++ $SOURCE_DIR/bes_interface.cpp $SOURCE_DIR/besIII_covmat.cpp -o $BES_LIB \
+$GPP_CXX $SOURCE_DIR/bes_interface.cpp $SOURCE_DIR/besIII_covmat.cpp -o $BES_LIB \
     $FLAGS $(root-config --glibs --cflags --libs)
 
 # Also compile a test
 echo "building test..."
 TEST_DIR=$SOURCE_DIR/../../../test
 INCLUDE_LOC=$TEST_DIR/../
-clang++ $TEST_DIR/test_bes_likelihood.cpp -o $TEST_DIR/bes_covariance_test.exe -Wall -Werror -std=c++17 -L$SOURCE_DIR $BES_LIB\
+$GPP_CXX $TEST_DIR/test_bes_likelihood.cpp -o $TEST_DIR/bes_covariance_test.exe -Wall -Werror -std=c++17 -L$SOURCE_DIR $BES_LIB\
     -Wl,-rpath,$SOURCE_DIR
 
 # Run the test
