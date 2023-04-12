@@ -114,8 +114,8 @@ def main():
         _write_header(out_f)
 
         for k in keys:
-            size = (root_f[k]._fNrows, root_f[k]._fNcols)
-            _write_fcn(out_f, root_f[k]._fElements, size, k)
+            size = (root_f[k].member("fNrows"), root_f[k].member("fNcols"))
+            _write_fcn(out_f, root_f[k].member("fElements"), size, k)
 
         # Fcn that returns a vector of matrices
         _write_vector(out_f, keys)
