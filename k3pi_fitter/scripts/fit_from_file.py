@@ -11,8 +11,10 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
+sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fit"))
 
+from lib_data import ipchi2_fit
 from libFit import util as mass_util
 from lib_time_fit import plotting, util, fitter
 
@@ -25,12 +27,17 @@ def main(
     bdt_cut: bool,
     efficiency: bool,
     alt_bkg: bool,
+    sec_correction: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
     and plot a fit to their ratio
 
     """
+    if sec_correction:
+        rs_sec_frac = ipchi2_fit.sec_fracs("cf")
+        ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
+
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
     yield_file_path = mass_util.yield_file(
@@ -44,6 +51,14 @@ def main(
         yield_file_path
     )
     axes[0].set_xlim(0, time_bins[-1])
+
+    # Do secondary fraction correction if we need to
+    if sec_correction:
+        rs_yields = ipchi2_fit.correct(rs_yields, rs_sec_frac)
+        rs_errs = ipchi2_fit.correct(rs_errs, rs_sec_frac)
+
+        ws_yields = ipchi2_fit.correct(ws_yields, ws_sec_frac)
+        ws_errs = ipchi2_fit.correct(ws_errs, ws_sec_frac)
 
     ratio = ws_yields / rs_yields
     ratio_err = ratio * np.sqrt((rs_errs / rs_yields) ** 2 + (ws_errs / ws_yields) ** 2)
@@ -105,7 +120,7 @@ def main(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    path = f"fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}.png"
+    path = f"fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}.png"
     print(f"plotting {path}")
     fig.savefig(path)
 
@@ -133,6 +148,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--alt_bkg", action="store_true", help="Whether to use alt bkg model file"
+    )
+    parser.add_argument(
+        "--sec_correction",
+        action="store_true",
+        help="Correct the yields by the secondary fractions in each time bin",
     )
 
     main(**vars(parser.parse_args()))
