@@ -4,14 +4,15 @@ output     = output.$(cluster).$(process).out
 error      = error.$(cluster).$(process).err
 log        = log.$(cluster).$(process).log
 
-RequestCpus = 1
+RequestCpus = 8
 RequestGpus = 0
-RequestDisk = 12GB
-RequestMemory = 8GB
 
-+JobFlavour = "espresso"
++MaxRuntime = 600
 
-transfer_input_files = k3pi_signal_cuts/scripts/optimise/optimise.py, lib_data.tar.gz, lib_cuts.tar.gz, python.tar.gz
+transfer_input_files = python.tar.gz
+
+stream_output=True
+stream_error=True
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
