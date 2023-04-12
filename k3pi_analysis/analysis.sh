@@ -17,6 +17,12 @@ MAG=magdown
 # Print commands and their arguments as they are executed
 set -ex
 
+# Build the shared libraries that we'll need later
+./k3pi_efficiency/lib_efficiency/amplitude_models/build.sh &
+pids[0]=$!
+./k3pi_fitter/lib_time_fit/charm_threshhold/build.sh &
+pids[1]=$!
+
 # Create the right dataframes
 # First create uppermass + MC
 python k3pi-data/create_uppermass.py $YEAR dcs $MAG -n 36 &
@@ -87,15 +93,11 @@ unset dcs_data_pid
 python k3pi_efficiency/scripts/plot_projection.py $YEAR cf cf $MAG both both --cut
 python k3pi_efficiency/scripts/plot_projection.py $YEAR dcs dcs $MAG both both --cut
 
-# Build amplitude model libraries
-./k3pi_efficiency/lib_efficiency/amplitude_models/build.sh
-pids[0]=$!
-
 # Add phsp information to the real data dfs
 python k3pi-data/scripts/add_phsp_bins.py $YEAR dcs $MAG &
-pids[1]=$!
+pids[0]=$!
 python k3pi-data/scripts/add_phsp_bins.py $YEAR cf $MAG &
-pids[2]=$!
+pids[1]=$!
 
 # Once these are done we'll be ready to do the analysis
 for pid in ${pids[*]}; do
