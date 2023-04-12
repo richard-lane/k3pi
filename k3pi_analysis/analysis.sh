@@ -168,6 +168,22 @@ python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integr
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut --efficiency
 
 # Plot fits
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3
+
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut
+
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency
+
+# Plot fits with charm constraint
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2
