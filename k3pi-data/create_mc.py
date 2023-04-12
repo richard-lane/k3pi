@@ -83,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "year",
         type=str,
-        choices={"2018"},
+        choices={"2016", "2017", "2018"},
         help="data taking year",
     )
     parser.add_argument(

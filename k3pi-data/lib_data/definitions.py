@@ -84,7 +84,7 @@ def mc_files(year: str, magnetisation: str, sign: str) -> List[str]:
     :returns: list of paths as strings
 
     """
-    assert year in {"2018"}
+    assert year in {"2016", "2017", "2018"}
     assert magnetisation in {"magup", "magdown"}
     assert sign in {"cf", "dcs"}
 
@@ -156,7 +156,7 @@ def data_dir(year: str, sign: str, magnetisation: str) -> pathlib.Path:
 
     """
     assert sign in {"cf", "dcs"}
-    assert year in {"2018"}
+    assert year in {"2018", "2017", "2016"}
     assert magnetisation in {"magup", "magdown"}
 
     return DATA_DIR / f"{year}_{sign}_{magnetisation}"
@@ -185,7 +185,7 @@ def data_files(year: str, magnetisation: str) -> List[str]:
     :returns: list of paths as strings
 
     """
-    assert year in {"2018"}
+    assert year in {"2016", "2017", "2018"}
     assert magnetisation in {"magup", "magdown"}
 
     # File holding locations of productions
@@ -208,7 +208,7 @@ def data_dump(data_file: str, year: str, sign: str, magnetisation: str) -> pathl
 
     """
     assert sign in {"cf", "dcs"}
-    assert year in {"2018"}
+    assert year in {"2016", "2017", "2018"}
     assert magnetisation in {"magup", "magdown"}
 
     data_file = pathlib.Path(data_file)
@@ -227,7 +227,7 @@ def uppermass_dir(year: str, sign: str, magnetisation: str) -> pathlib.Path:
 
     """
     assert sign in {"cf", "dcs"}
-    assert year in {"2018"}
+    assert year in {"2016", "2017", "2018"}
     assert magnetisation in {"magup", "magdown"}
 
     return UPPERMASS_DIR / f"{year}_{sign}_{magnetisation}"
@@ -248,7 +248,7 @@ def uppermass_dump(
 
     """
     assert sign in {"cf", "dcs"}
-    assert year in {"2018"}
+    assert year in {"2016", "2017", "2018"}
     assert magnetisation in {"magup", "magdown"}
 
     data_file = pathlib.Path(data_file)
