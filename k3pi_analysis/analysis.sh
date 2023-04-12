@@ -99,11 +99,21 @@ pids[0]=$!
 python k3pi-data/scripts/add_phsp_bins.py $YEAR cf $MAG &
 pids[1]=$!
 
-# Once these are done we'll be ready to do the analysis
+# Do ip fits
+python k3pi-data/scripts/ipchi2_fit_low_t.py dcs &
+pids[2]=$!
+python k3pi-data/scripts/ipchi2_fit_low_t.py cf &
+pids[3]=$!
+
+# Once we have the real data stuff we're ready to do the fits
 for pid in ${pids[*]}; do
     wait $pid
 done
 unset pids
+
+# Do IP fits to get secondary fractions
+python k3pi-data/scripts/data_ipchi2_fit.py dcs
+python k3pi-data/scripts/data_ipchi2_fit.py cf
 
 # Plot BDT stuff
 # These are quick so no need to paralellise
@@ -168,6 +178,22 @@ python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integr
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut --efficiency
 
 # Plot fits
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --sec_correction
+
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --sec_correction
+
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction
+
+# Fits without secondary correction
 python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0
 python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1
 python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2
@@ -184,18 +210,18 @@ python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --effici
 python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency
 
 # Plot fits with charm constraint
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --sec_correction
 
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --sec_correction
 
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency
-python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction
 
