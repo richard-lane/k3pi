@@ -13,6 +13,9 @@ RequestGpus = 0
 
 transfer_input_files = python.tar.gz, rs_Dbar02piKpipi.root, ws_D02piKpipi.root
 
+stream_output=True
+stream_error=True
+
 environment = CONDOR_JOB_ID=$(cluster).$(process)
 transfer_output_files = out_files_$(cluster).$(process).tar.gz
 
