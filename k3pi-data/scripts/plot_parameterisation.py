@@ -4,6 +4,7 @@ Make plots of phase space variables to make sure everything looks like we expect
 """
 import sys
 import pathlib
+import resource
 from typing import List, Tuple
 from itertools import islice
 
@@ -83,6 +84,11 @@ def _parameterise(data_frame: pd.DataFrame):
     return np.column_stack((helicity_param(k, pi1, pi2, pi3), data_frame["time"]))
 
 
+def _max_usage() -> int:
+    """max memory usage of this process in GB"""
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1_000_000
+
+
 def main():
     """
     Create a plot
@@ -90,31 +96,35 @@ def main():
     """
     year, magnetisation = "2018", "magdown"
     # These return generators
-    n_dfs = 50
+    n_dfs = 5
     rs_data = _parameterise(
         util.flip_momenta(pd.concat(islice(get.data(year, "cf", magnetisation), n_dfs)))
     )
+    print(f"got rs data; {_max_usage()}GB")
     ws_data = _parameterise(
         util.flip_momenta(
             pd.concat(islice(get.data(year, "dcs", magnetisation), n_dfs))
         )
     )
+    print(f"got ws data; {_max_usage()}GB")
 
     rs_pgun = _parameterise(
         util.flip_momenta(
             get.particle_gun(year, "cf", magnetisation, show_progress=True)
         )
     )
+    print(f"got rs pgun; {_max_usage()}GB")
     ws_pgun = _parameterise(
         util.flip_momenta(
             get.particle_gun(year, "dcs", magnetisation, show_progress=True)
         )
     )
+    print(f"got ws pgun; {_max_usage()}GB")
 
     # false_df = get.false_sign(show_progress=True)
     # false_sign = _parameterise(
-    #     util.flip_momenta(false_df)
-    # )  # Might want to flip momentum the other way
+    #     util.flip_momenta(false_df, false_df["K ID"].to_numpy() > 0)
+    # )
 
     rs_mc = _parameterise(util.flip_momenta(get.mc(year, "cf", magnetisation)))
     ws_mc = _parameterise(util.flip_momenta(get.mc(year, "dcs", magnetisation)))
@@ -146,12 +156,14 @@ def main():
             ws_mc,
             ws_pgun,
             ws_ampgen,
+            # false_sign,
         ],
         [
             "DCS data",
             "DCS MC",
             "DCS pgun",
             "DCS AmpGen",
+            # "False sign pgun",
         ],
         "data_param_ws.png",
     )

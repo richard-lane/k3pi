@@ -9,13 +9,14 @@ The particle gun files live on lxplus; this script should therefore be run on lx
 
 """
 import os
+import time
 import pickle
 import argparse
 import uproot
 import pandas as pd
 from tqdm import tqdm
 
-from lib_data import definitions, cuts, util
+from lib_data import definitions, cuts, util, read, training_vars
 
 
 def _false_sign_df(data_tree, hlt_tree) -> pd.DataFrame:
@@ -25,15 +26,46 @@ def _false_sign_df(data_tree, hlt_tree) -> pd.DataFrame:
     Provide the data + HLT information trees separately, since they live in different files
 
     """
-    dataframe = pd.DataFrame()
+    # Convert the right branches into a dataframe
+    start = time.time()
+    dataframe = data_tree.arrays(read.branches("pgun"), library="pd")
+    dataframe = read.remove_refit(dataframe)
 
-    keep = cuts.pgun_keep(data_tree, hlt_tree)
+    training_vars.add_slowpi_pt_col(dataframe)
 
-    util.add_momenta(dataframe, data_tree, keep)
+    # Also convert the right HLT branches from the other file
+    # into a dataframe
+    hlt_df = hlt_tree.arrays(read.pgun_hlt_branches(), library="pd")
 
-    util.add_refit_times(dataframe, data_tree, keep)
+    read_time = time.time() - start
 
-    util.add_k_id(dataframe, data_tree, keep)
+    # Perform cuts
+    start = time.time()
+    keep = cuts.pgun_keep(dataframe, hlt_df)
+    dataframe = dataframe[keep]
+    cut_time = time.time() - start
+
+    # Swap momenta, which needs to be done
+    start = time.time()
+    pi1_cols = definitions.MOMENTUM_COLUMNS[8:12]
+    pi2_cols = definitions.MOMENTUM_COLUMNS[12:16]
+    dataframe.rename(
+        columns=dict(zip(pi1_cols, pi2_cols), **dict(zip(pi2_cols, pi1_cols))),
+        inplace=True,
+    )
+
+    # Reorder the momentum columns to be consistent with the others
+    cols = dataframe.columns.tolist()
+    cols = [*cols[0:4], *cols[8:12], *cols[4:8], *cols[12:]]
+    dataframe = dataframe[cols]
+    shuffle_time = time.time() - start
+
+    print(f"read/cut/shuffle: {read_time:.3f}/{cut_time:.3f}{shuffle_time:.3f}")
+
+    # Convert decay times from ctau to lifetimes
+    util.ctau2lifetimes(dataframe)
+
+    util.rename_cols(dataframe)
 
     return dataframe
 
@@ -68,8 +100,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # No args at this stage, keep this in though for consistency with the other scripts
-    parser = argparse.ArgumentParser(description="Dump a pandas DataFrame to `dumps/`")
-    parser.parse_args()
+    # No args since there's only one dir of false sign pgun stuff
+    # but keep this in anyway
+    parser = argparse.ArgumentParser(
+        description="Dump 'false sign' pandas DataFrames to `dumps/`; i.e. RS evts that have undergone mixing"
+    )
 
     main()

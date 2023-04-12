@@ -165,6 +165,4 @@ if __name__ == "__main__":
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="verbose")
 
-    args = parser.parse_args()
-
     main(**vars(parser.parse_args()))
