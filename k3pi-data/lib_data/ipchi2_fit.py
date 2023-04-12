@@ -281,16 +281,18 @@ def plot(
         **err_kw,
     )
 
-    predicted = stats.areas(bins, model(bins, *fit_params)) / bin_widths
+    predicted = (
+        pdfs.bin_areas(lambda pts: model(pts, *fit_params), bins, 50) / bin_widths
+    )
 
     predicted_sig = (
         fit_params[0]
-        * stats.areas(bins, norm_peak(bins, *fit_params[2:8]))
+        * pdfs.bin_areas(lambda pts: norm_peak(pts, *fit_params[2:8]), bins, 50)
         / bin_widths
     )
     predicted_bkg = (
         fit_params[1]
-        * stats.areas(bins, secondary_peak(bins, *fit_params[8:]))
+        * pdfs.bin_areas(lambda pts: secondary_peak(pts, *fit_params[8:]), bins, 50)
         / bin_widths
     )
 
