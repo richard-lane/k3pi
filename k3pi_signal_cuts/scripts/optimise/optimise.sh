@@ -27,7 +27,7 @@ done
 unset pids
 
 # Run the optimisation
-python k3pi_signal_cuts/scripts/optimise/optimise.py 8 2
+python k3pi_signal_cuts/scripts/optimise/optimise.py 8 50
 
 # Debug
 find . -type f

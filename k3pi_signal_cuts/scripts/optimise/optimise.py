@@ -78,7 +78,7 @@ def _run_study(
     for _ in tqdm(range(n_repeats)):
         # Choose hyperparams
         train_params = {
-            "n_estimators": rng.integers(2, 20),
+            "n_estimators": rng.integers(50, 500),
             "learning_rate": rng.random() ** 3,
             "max_depth": rng.integers(2, 13),
             "loss": "exponential",
