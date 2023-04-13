@@ -26,7 +26,9 @@ def main(args: argparse.Namespace):
     Create a plot
 
     """
-    pgun_df = efficiency_util.pgun_df(args.year, args.magnetisation, args.decay_type, args.data_k_charge, train=False)
+    pgun_df = efficiency_util.pgun_df(
+        args.year, args.magnetisation, args.decay_type, args.data_k_charge, train=False
+    )
     ampgen_df = efficiency_util.ampgen_df(
         args.decay_type, args.data_k_charge, train=False
     )
