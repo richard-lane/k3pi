@@ -1,5 +1,5 @@
 """
- fcnUtility functions that may be useful
+Utility functions that may be useful
 
 """
 import pathlib

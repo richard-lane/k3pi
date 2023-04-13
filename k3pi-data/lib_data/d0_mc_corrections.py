@@ -53,7 +53,7 @@ class EtaPWeighter:
 
     def weights(self, points: np.ndarray, wts: np.ndarray = None) -> np.ndarray:
         """
-        Weights for an array of points
+        Weights for an array of points; not normalised
 
         :param points: (2, N) shape array of (eta, P)
 

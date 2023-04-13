@@ -106,12 +106,12 @@ def main(*, year: str, magnetisation: str, sign: str):
 
     # Plot the data used for training
     bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
-    weighter.plot_distribution("target", bins, "d0_distributions_target.png")
-    weighter.plot_distribution("original", bins, "d0_distributions_original.png")
-    weighter.plot_ratio(bins, "d0_distributions_ratio.png")
+    weighter.plot_distribution("target", bins, f"d0_distributions_{sign}_target.png")
+    weighter.plot_distribution("original", bins, f"dcs_d0_distributions_{sign}_original.png")
+    weighter.plot_ratio(bins, f"d0_distributions_{sign}_ratio.png")
 
     # Plot the projections after training
-    _train_proj(weighter, data_pts, pgun_pts, "d0_distributions_train_weighted.png")
+    _train_proj(weighter, data_pts, pgun_pts, f"d0_distributions_{sign}_train_weighted.png")
 
     # Store the reweighter in a pickle dump
     d0_mc_corrections.weighter_dir().mkdir(exist_ok=True)
