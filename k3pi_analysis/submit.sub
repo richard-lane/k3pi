@@ -9,7 +9,7 @@ RequestGpus = 0
 # RequestDisk = 32GB
 # RequestMemory = 16GB
 
-+MaxRuntime = 14400
++MaxRuntime = 28800
 
 transfer_input_files = python.tar.gz, rs_Dbar02piKpipi.root, ws_D02piKpipi.root
 
