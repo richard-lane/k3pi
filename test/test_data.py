@@ -32,8 +32,8 @@ def test_flip_momenta():
 
     # change sign for k3pi 3 momenta in the first row
     k3pi_3momenta = expected_df.columns.str.contains(
-        "us"
-    ) & ~expected_df.columns.str.endswith("_E")
+        "D0"
+    ) & ~expected_df.columns.str.endswith("_PE")
     expected_df.loc[0, k3pi_3momenta] *= -1
 
     # check that they're the same
