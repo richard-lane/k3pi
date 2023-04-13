@@ -25,10 +25,12 @@ def _keep_no_pid(tree):
         [
             fcn(tree)
             for fcn in (
-                cuts._d0_mass_keep,
-                cuts._delta_m_keep,
-                cuts._ipchi2_keep,
-                cuts._trigger_keep,
+                cuts._d0_mass_keep(dataframe),
+                cuts._delta_m_keep(dataframe),
+                cuts._l0_keep(dataframe),
+                cuts._hlt_keep(dataframe),
+                cuts._ipchi2_keep(dataframe),
+                cuts._ghost_keep(dataframe),
             )
         ]
     )

@@ -88,6 +88,8 @@ def main():
         0.9 * len(sig) / (len(sig) + len(bkg)),
         sig_defaults,
         bkg_defaults,
+        (4.5, 5.5),
+        (1.0, 3.0),
     )
 
     fig, axes = plt.subplot_mosaic("AAA\nAAA\nAAA\nBBB", figsize=(8, 10))
