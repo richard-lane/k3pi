@@ -7,9 +7,10 @@ log        = log.$(cluster).$(process).log
 RequestCpus = 8
 RequestGpus = 0
 
-+MaxRuntime = 600
++MaxRuntime = 1200
 
 transfer_input_files = python.tar.gz
+transfer_output_files = $(cluster)_bdt_opt.png, $(cluster)_bdt_opt.pkl
 
 stream_output=True
 stream_error=True
