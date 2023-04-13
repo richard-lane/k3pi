@@ -21,7 +21,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2]))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[3] / "k3pi-data"))
 
 from lib_cuts import definitions, util, metrics
-from lib_data import get, training_vars, d0_mc_corrections
+from lib_data import get, training_vars
 
 
 def _train_test_dfs(year, sign, magnetisation):
@@ -36,8 +36,9 @@ def _train_test_dfs(year, sign, magnetisation):
 
     # Find MC correction wts for the sig df
     # Scale st their average is 1.0
-    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    mc_corr_wts /= np.mean(mc_corr_wts)
+    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
+    # mc_corr_wts /= np.mean(mc_corr_wts)
+    mc_corr_wts = np.ones(len(sig_df))
 
     combined_df = pd.concat((sig_df, bkg_df))
 
