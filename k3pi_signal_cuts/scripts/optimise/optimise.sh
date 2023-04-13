@@ -14,7 +14,7 @@ git clone https://github.com/richard-lane/k3pi.git
 cd k3pi
 
 # Run the optimisation
-python k3pi_signal_cuts/scripts/optimise/optimise.py --n_procs 8 --n_repeats 2
+python k3pi_signal_cuts/scripts/optimise/optimise.py 8 2
 
 # Debug
 find . -type f
