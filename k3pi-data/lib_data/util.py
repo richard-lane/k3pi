@@ -307,6 +307,14 @@ def eta(p_x: np.ndarray, p_y: np.ndarray, p_z: np.ndarray) -> np.ndarray:
     return np.arctanh(p_z / np.sqrt(p_x**2 + p_y**2 + p_z**2))
 
 
+def eta_df(dataframe: pd.DataFrame) -> np.ndarray:
+    """
+    Get eta from a dataframe
+
+    """
+    return eta(dataframe["D0_PX"], dataframe["D0_PY"], dataframe["D0_PZ"])
+
+
 def add_d0_eta(dataframe: pd.DataFrame) -> None:
     """
     Add D0 eta from its momenta
