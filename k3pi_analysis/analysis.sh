@@ -73,9 +73,9 @@ python k3pi_efficiency/create_reweighter.py --cut dcs $YEAR $MAG both &
 dcs_eff_pid=$!
 
 # Create real data dataframes now as well; this is also slow
-python k3pi-data/create_real.py -n 96 $YEAR cf $MAG --n_procs 3 &
+python k3pi-data/create_real.py $YEAR cf $MAG --n_procs 3 &
 cf_data_pid=$!
-python k3pi-data/create_real.py -n 96 $YEAR dcs $MAG --n_procs 3 &
+python k3pi-data/create_real.py $YEAR dcs $MAG --n_procs 3 &
 dcs_data_pid=$!
 
 # This should be most of the analysis, in terms of time
