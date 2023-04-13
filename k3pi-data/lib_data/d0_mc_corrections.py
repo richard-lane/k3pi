@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from hep_ml.reweight import BinsReweighter
 
-from . import get
+from . import get, util
 
 
 class EtaPWeighter:
@@ -237,17 +237,16 @@ def d0_points(dfs: Union[Iterable[pd.DataFrame], pd.DataFrame]) -> np.ndarray:
 
     """
     if isinstance(dfs, pd.DataFrame):
-        # MC or pgun - passed a single dataframe
-        d0_eta = dfs["D0 eta"]
+        # passed a single dataframe
+        d0_eta = util.eta_df(dfs)
         d0_p = dfs["D0 P"]
 
         retval = np.row_stack((d0_eta, d0_p))
 
     else:
-        # real data - passed a generator
+        # passed a generator
         arrs = [
-            tuple(dataframe[label].to_numpy() for label in ("D0 eta", "D0 P"))
-            for dataframe in dfs
+            (util.eta_df(dataframe), dataframe["D0 P"].to_numpy()) for dataframe in dfs
         ]
 
         retval = np.concatenate(arrs, axis=1)
@@ -326,7 +325,7 @@ def pgun_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     """
     weighter = get_pgun(year, "cf", magnetisation)
 
-    return weighter.weights(d0_points(get.particle_gun(sign)))
+    return weighter.weights(d0_points(get.particle_gun(year, sign, magnetisation)))
 
 
 def mc_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
