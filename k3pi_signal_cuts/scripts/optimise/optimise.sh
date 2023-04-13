@@ -18,7 +18,7 @@ YEAR=2018
 MAG=magdown
 python k3pi-data/create_uppermass.py $YEAR dcs $MAG -n 36 &
 pids[0]=$!
-python k3pi-data/create_mc.py $YEAR dcs $MAG
+python k3pi-data/create_mc.py $YEAR dcs $MAG &
 pids[1]=$!
 
 for pid in ${pids[*]}; do
