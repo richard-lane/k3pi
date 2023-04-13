@@ -38,10 +38,14 @@ def _times_and_weights(
 
     """
     if sign == "false":
-        pgun_df = efficiency_util.pgun_df(sign, data_sign, train=False)
+        pgun_df = efficiency_util.pgun_df(
+            year, magnetisation, sign, data_sign, train=False
+        )
         ampgen_df = efficiency_util.ampgen_df("cf", data_sign, train=False)
     else:
-        pgun_df = efficiency_util.pgun_df(sign, data_sign, train=False)
+        pgun_df = efficiency_util.pgun_df(
+            year, magnetisation, sign, data_sign, train=False
+        )
         ampgen_df = efficiency_util.ampgen_df(sign, data_sign, train=False)
 
     # Just pass the arrays into the efficiency function and it should find the right weights
