@@ -7,7 +7,7 @@ log        = log.$(cluster).$(process).log
 RequestCpus = 8
 RequestGpus = 0
 
-+MaxRuntime = 14400
++MaxRuntime = 20000
 
 transfer_input_files = python.tar.gz
 transfer_output_files = $(cluster)_bdt_opt.png, $(cluster)_bdt_opt.pkl
@@ -20,4 +20,5 @@ when_to_transfer_output = ON_EXIT_OR_EVICT
 
 environment = CONDOR_JOB_ID=$(cluster)
 
-queue 1
+# Queue a few since we're in RNG territory
+queue 3
