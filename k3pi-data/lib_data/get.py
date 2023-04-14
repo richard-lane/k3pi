@@ -83,7 +83,7 @@ def pgun_n_gen_file(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     return definitions.pgun_dir(year, sign, magnetisation) / "n_gen.txt"
 
 
-def pgun_n_generated(sign: str) -> int:
+def pgun_n_generated(year: str, sign: str, magnetisation: str) -> int:
     """
     Number of events generated when creating particle gun dataframes
 
@@ -95,29 +95,31 @@ def pgun_n_generated(sign: str) -> int:
 
     """
     n_tot = 0
-    with open(str(pgun_n_gen_file(sign)), "r") as gen_f:
+    with open(str(pgun_n_gen_file(year, sign, magnetisation)), "r") as gen_f:
         for line in gen_f:
             n_tot += int(line.strip())
 
     return n_tot
 
 
-def absolute_efficiency(sign: str) -> int:
+def absolute_efficiency(year: str, sign: str, magnetisation: str) -> int:
     """
     Get the absolute efficiency from particle gun dataframes
 
     """
-    return len(particle_gun(sign)) / pgun_n_generated(sign)
+    return len(particle_gun(year, sign, magnetisation)) / pgun_n_generated(
+        year, sign, magnetisation
+    )
 
 
-def abs_eff_err(sign: str) -> int:
+def abs_eff_err(year: str, sign: str, magnetisation: str) -> int:
     """
     Get the statistical error on absolute efficiency from
     particle gun dataframes
 
     """
-    num = len(particle_gun(sign))
-    denom = pgun_n_generated(sign)
+    num = len(particle_gun(year, sign, magnetisation))
+    denom = pgun_n_generated(year, sign, magnetisation)
 
     return num * np.sqrt(1 / num + 1 / denom) / denom
 

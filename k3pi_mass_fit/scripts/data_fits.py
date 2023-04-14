@@ -268,6 +268,87 @@ def _dataframes(
     )
 
 
+def _n_total(year: str, magnetisation: str, sign: str, bdt_clf) -> int:
+    """
+    Total length of a generator of dataframes
+
+    All phase space bins (not Ks veto), all times
+
+    """
+    n_tot = 0
+    for dataframe in _dataframes(
+        year,
+        magnetisation,
+        phsp_bin=None,  # All phsp bins - should we really include the Ks veto bin too?
+        sign=sign,
+        low_t=0,
+        high_t=np.inf,
+        bdt_clf=bdt_clf,
+        bdt_cut=True,
+    ):
+        n_tot += len(dataframe)
+
+    return n_tot
+
+
+def _sum_eff_wt(year: str, magnetisation: str, sign: str, bdt_clf, eff_weighter) -> int:
+    """
+    Total sum off efficiency weights
+
+    All phase space bins (not Ks veto), all times
+
+    """
+    sum_tot = 0
+    for wts in wts_generator(
+        _dataframes(
+            year,
+            magnetisation,
+            phsp_bin=None,  # All phsp bins - should we really include the Ks veto bin too?
+            sign=sign,
+            low_t=0,
+            high_t=np.inf,
+            bdt_clf=bdt_clf,
+            bdt_cut=True,
+        ),
+        eff_weighter,
+    ):
+        sum_tot += np.sum(wts)
+
+    return sum_tot
+
+
+def _dcs_eff_wt_scale(
+    year: str, magnetisation: str, dcs_weighter, cf_weighter, bdt_clf
+) -> float:
+    """
+    Scaling factor to apply to DCS weights such that we have the right efficiency
+
+    """
+    # Get total length of dfs (after BDT cut)
+    n_ws = _n_total(year, magnetisation, "dcs", bdt_clf)
+    print(f"{n_ws=}", end="\t")
+    n_rs = _n_total(year, magnetisation, "cf", bdt_clf)
+    print(f"{n_rs=}", end="\t")
+
+    # Get total sum of efficiency weights
+    sum_ws = _sum_eff_wt(year, magnetisation, "dcs", bdt_clf, dcs_weighter)
+    print(f"{sum_ws=}", end="\t")
+    sum_rs = _sum_eff_wt(year, magnetisation, "cf", bdt_clf, cf_weighter)
+    print(f"{sum_rs=}", end="\t")
+
+    # Get the average efficiencies from particle gun
+    ws_abs_eff = get.absolute_efficiency(year, "dcs", magnetisation)
+    print(f"{ws_abs_eff=}", end="\t")
+    rs_abs_eff = get.absolute_efficiency(year, "cf", magnetisation)
+    print(f"{rs_abs_eff=}", end="\t")
+
+    # Find the right scaling factor to apply to ws weights
+    scale_factor = (n_ws / n_rs) * (rs_abs_eff / ws_abs_eff) * (sum_rs / sum_ws)
+    print(f"{scale_factor=}")
+
+    return scale_factor
+
+
 def main(
     *,
     year: str,
@@ -283,6 +364,14 @@ def main(
     """
     if efficiency:
         assert bdt_cut, "cannot have efficiency with BDT cut (for now)"
+
+    # For writing the result
+    yield_file_path = mass_util.yield_file(
+        year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
+    )
+
+    # If the file already exists, appending to it might have unexpected results
+    yield_file_path.touch(exist_ok=False)
 
     time_bins = TIME_BINS[2:-1]
 
@@ -311,15 +400,14 @@ def main(
         if efficiency
         else None
     )
+
+    # Get the efficiency weight scaling factor
+    if efficiency:
+        dcs_eff_wt_scale = _dcs_eff_wt_scale(
+            year, magnetisation, dcs_weighter, cf_weighter, bdt_clf
+        )
+
     plot_dir = mass_util.plot_dir(bdt_cut, efficiency, phsp_bin, alt_bkg)
-
-    # For writing the result
-    yield_file_path = mass_util.yield_file(
-        year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
-    )
-
-    # If the file already exists, appending to it might have unexpected results
-    yield_file_path.touch(exist_ok=False)
 
     # Get the bkg pdfs if we need
     if alt_bkg:
@@ -348,18 +436,21 @@ def main(
             else None
         )
         dcs_wts = (
-            wts_generator(
-                _dataframes(
-                    year,
-                    magnetisation,
-                    phsp_bin,
-                    "dcs",
-                    low_t,
-                    high_t,
-                    bdt_clf,
-                    bdt_cut,
-                ),
-                dcs_weighter,
+            (
+                dcs_eff_wt_scale * wts
+                for wts in wts_generator(
+                    _dataframes(
+                        year,
+                        magnetisation,
+                        phsp_bin,
+                        "dcs",
+                        low_t,
+                        high_t,
+                        bdt_clf,
+                        bdt_cut,
+                    ),
+                    dcs_weighter,
+                )
             )
             if efficiency
             else None
