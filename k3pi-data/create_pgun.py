@@ -61,7 +61,9 @@ def _pgun_df(gen: np.random.Generator, data_tree, hlt_tree) -> pd.DataFrame:
     )
 
     # Swap also the pid columns, since pi2 and pi3 have the opposite definition
-    dataframe.rename(columns={"D0_P2_PIDK": "D0_P3_PIDK", "D0_P3_PIDK": "D0_P2_PIDK"}, inplace=True)
+    dataframe.rename(
+        columns={"D0_P2_PIDK": "D0_P3_PIDK", "D0_P3_PIDK": "D0_P2_PIDK"}, inplace=True
+    )
 
     # Reorder the momentum columns to be consistent with the others
     cols = dataframe.columns.tolist()
