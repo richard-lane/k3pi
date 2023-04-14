@@ -219,8 +219,7 @@ python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integr
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut --efficiency
 
-# Plot no mixing "fit"
-# Plot mixing fit
+python k3pi_fitter/scripts/mixing_fit_from_file.py --bdt_cut --efficiency $YEAR $MAG
 
 # Plot Z scans
 python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG -1 --bdt_cut --efficiency --sec_correction
