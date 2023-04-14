@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-from lib_time_fit import models
+from lib_time_fit import models, definitions
 
 
 def main():
@@ -19,21 +19,21 @@ def main():
     and plot both 2d and 1d landscapes in each
 
     """
-    # Parameters for evaluating the chi2 value
-    means = (0.0, 2.0)
-    widths = (1.0, 0.5)
-    correlation = -0.3
-
     # Create arrays
     n_x, n_y = 50, 51
-    x_vals = np.linspace(-5, 5, n_x)
-    y_vals = np.linspace(-5, 5, n_y)
+    x_vals = np.linspace(-0.002, 0.01, n_x)
+    y_vals = np.linspace(0.002, 0.01, n_y)
     x_x, y_y = np.meshgrid(x_vals, y_vals)
 
     # We dont need to set anything but the params for working out the constraint
     # and the bins (otherwise we error)
     chi2 = models.ConstrainedBase(
-        None, None, np.array([0, 1]), means, widths, correlation
+        None,
+        None,
+        np.array([0, 1]),
+        (definitions.CHARM_X, definitions.CHARM_Y),
+        (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR),
+        definitions.CHARM_XY_CORRELATION,
     ).constraint(x_x, y_y)
     chi2 = np.sqrt(chi2 - np.min(chi2))
 

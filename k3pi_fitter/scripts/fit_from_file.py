@@ -16,7 +16,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fi
 
 from lib_data import ipchi2_fit
 from libFit import util as mass_util
-from lib_time_fit import plotting, util, fitter
+from lib_time_fit import plotting, util, fitter, definitions
 
 
 def main(
@@ -71,9 +71,9 @@ def main(
     fit_params = np.ones((n_im, n_re), dtype=object) * np.inf
 
     # TODO get these from somewhere
-    initial_rdxy = 0.0055, 0.0039183, 0.0065139
-    xy_err = (0.0011489, 0.00064945)
-    xy_corr = -0.301
+    initial_rdxy = 0.0055, definitions.CHARM_X, definitions.CHARM_Y
+    xy_err = (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR)
+    xy_corr = definitions.CHARM_XY_CORRELATION
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):

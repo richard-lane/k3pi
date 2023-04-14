@@ -14,7 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 
 from pulls import common
-from lib_time_fit import util as fit_util, models, fitter, plotting
+from lib_time_fit import util as fit_util, models, fitter, plotting, definitions
 from lib_data import stats, util
 
 
@@ -25,7 +25,7 @@ def _gen(
     Generate some RS and WS times
 
     """
-    n_rs = 240_000_000
+    n_rs = 120_000_00
     gen = np.random.default_rng()
 
     rs_t = common.gen_rs(gen, n_rs, domain)
@@ -41,7 +41,7 @@ def _ratio_err() -> Tuple[np.ndarray, np.ndarray]:
     """
     # Define our fit parameters
     z = (-0.27, -0.12)
-    params = fit_util.ScanParams(0.055, 0.06, 0.03, *z)
+    params = fit_util.ScanParams(0.055, definitions.CHARM_X, definitions.CHARM_Y, *z)
 
     # Generate some RS and WS times
     domain = 0.0, 10.0
@@ -63,17 +63,14 @@ def main():
     # ratio we'll fit to
     ratio, err, params, bins = _ratio_err()
 
-    # Need x/y widths and correlations for the Gaussian constraint
-    width = 0.005
-    correlation = -0.0301
-
-    n_re, n_im = 50, 51
+    n_re, n_im = 30, 31
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)
 
     phsp_bin = 3
 
     chi2s = np.ones((n_im, n_re)) * np.inf
+    fit_vals = np.ones((n_im, n_re), dtype=object) * np.inf
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
@@ -85,30 +82,41 @@ def main():
                     err,
                     bins,
                     these_params,
-                    (width, width),
-                    correlation,
+                    (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR),
+                    definitions.CHARM_XY_CORRELATION,
                     phsp_bin,
                 )
 
                 chi2s[j, i] = scan.fval
+                fit_vals[j, i] = fit_util.ScanParams(
+                    r_d=scan.values[0],
+                    x=scan.values[1],
+                    y=scan.values[2],
+                    re_z=re_z,
+                    im_z=im_z,
+                )
                 pbar.update(1)
 
     chi2s -= np.nanmin(chi2s)
     chi2s = np.sqrt(chi2s)
 
-    fig, axis = plt.subplots(figsize=(10, 10))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 10))
+
+    widths = (bins[1:] - bins[:-1]) / 2
+    centres = (bins[1:] + bins[:-1]) / 2
+    axes[0].errorbar(centres, ratio, xerr=widths, yerr=err, fmt="k+")
 
     n_contours = 4
-    contours = plotting.scan(
-        axis, allowed_rez, allowed_imz, chi2s, levels=np.arange(n_contours)
+    contours = plotting.fits_and_scan(
+        axes, (allowed_rez, allowed_imz), chi2s, fit_vals, n_contours
     )
 
     # Plot true Z
-    axis.plot(params.re_z, params.im_z, "y*")
+    axes[1].plot(params.re_z, params.im_z, "y*")
 
-    axis.set_xlabel(r"Re(Z)")
-    axis.set_ylabel(r"Im(Z)")
-    axis.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))
+    axes[1].set_xlabel(r"Re(Z)")
+    axes[1].set_ylabel(r"Im(Z)")
+    axes[1].add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))
 
     fig.tight_layout()
 

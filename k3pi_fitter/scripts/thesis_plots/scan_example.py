@@ -14,7 +14,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 
 from pulls import common
-from lib_time_fit import util as fit_util, models, fitter, plotting
+from lib_time_fit import util as fit_util, models, fitter, plotting, definitions
 from lib_data import stats, util
 
 
@@ -41,7 +41,9 @@ def _ratio_err() -> Tuple[np.ndarray, np.ndarray]:
     """
     # Define our fit parameters
     z = (0.75, -0.25)
-    params = fit_util.ScanParams(0.055, 0.06, 0.03, *z)
+    params = fit_util.ScanParams(
+        0.055, 10 * definitions.CHARM_X, 10 * definitions.CHARM_Y, *z
+    )
 
     # Generate some RS and WS times
     domain = 0.0, 10.0
@@ -73,10 +75,6 @@ def main():
     # ratio we'll fit to
     ratio, err, params, bins = _ratio_err()
 
-    # Need x/y widths and correlations for the Gaussian constraint
-    width = 0.005
-    correlation = -0.0301
-
     n_re, n_im = 50, 51
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)
@@ -90,7 +88,12 @@ def main():
                     params.r_d, params.x, params.y, re_z, im_z
                 )
                 scan = fitter.scan_fit(
-                    ratio, err, bins, these_params, (width, width), correlation
+                    ratio,
+                    err,
+                    bins,
+                    these_params,
+                    (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR),
+                    definitions.CHARM_XY_CORRELATION,
                 )
                 fit_vals = scan.values
                 fit_params[j, i] = fit_util.ScanParams(
