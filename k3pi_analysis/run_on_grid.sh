@@ -26,6 +26,7 @@ mv *.png out_stuff/
 mv *.svg out_stuff/
 mv raw_fits out_stuff/
 mv bdt_fits out_stuff/
+mv eff_fits out_stuff/
 
 # Move the output dir into the home dir
 mv out_stuff/ ..

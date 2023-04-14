@@ -80,7 +80,7 @@ def _time_keep(dataframe: pd.DataFrame) -> np.ndarray:
     Refit time < the chosen number of lifetimes
 
     """
-    return dataframe["time"] < MAX_LIFETIMES
+    return (0 < dataframe["time"]) & (dataframe["time"] < MAX_LIFETIMES)
 
 
 def _ghost_keep(dataframe: pd.DataFrame) -> np.ndarray:
@@ -211,6 +211,7 @@ def uppermass_keep(dataframe: pd.DataFrame) -> np.ndarray:
         & _hlt_keep(dataframe)
         & _pid_keep(dataframe)
         & _ghost_keep(dataframe)
+        & _angle_keep(dataframe)
     )
 
 
@@ -228,6 +229,7 @@ def data_keep(dataframe: pd.DataFrame) -> np.ndarray:
         & _hlt_keep(dataframe)
         & _pid_keep(dataframe)
         & _ghost_keep(dataframe)
+        & _angle_keep(dataframe)
     )
 
 

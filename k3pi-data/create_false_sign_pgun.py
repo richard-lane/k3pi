@@ -60,6 +60,9 @@ def _false_sign_df(data_tree, hlt_tree) -> pd.DataFrame:
     dataframe = dataframe[cols]
     shuffle_time = time.time() - start
 
+    # Swap also the pid columns, since pi2 and pi3 have the opposite definition
+    dataframe.rename(columns={"D0_P2_PIDK": "D0_P3_PIDK", "D0_P3_PIDK": "D0_P2_PIDK"}, inplace=True)
+
     print(f"read/cut/shuffle: {read_time:.3f}/{cut_time:.3f}{shuffle_time:.3f}")
 
     # Convert decay times from ctau to lifetimes
