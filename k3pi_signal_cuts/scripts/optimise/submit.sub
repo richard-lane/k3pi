@@ -21,4 +21,4 @@ when_to_transfer_output = ON_EXIT_OR_EVICT
 environment = CONDOR_JOB_ID=$(cluster)
 
 # Queue a few since we're in RNG territory
-queue 3
+queue 1
