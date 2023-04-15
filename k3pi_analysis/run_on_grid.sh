@@ -24,6 +24,8 @@ cd k3pi
 mkdir out_stuff/
 mv *.png out_stuff/
 mv *.svg out_stuff/
+mv *.txt out_stuff
+mv k3pi_mass_fit/*.txt out_stuff/
 mv raw_fits out_stuff/
 mv bdt_fits out_stuff/
 mv eff_fits out_stuff/
