@@ -111,9 +111,9 @@ done
 unset pids
 
 # False sign validation plots
-python k3pi_efficiency/scripts/plot_projections.py $YEAR 'false' cf $MAG both both --cut &
+python k3pi_efficiency/scripts/plot_projection.py $YEAR 'false' cf $MAG both both --cut &
 pids[0]=$!
-python k3pi_efficiency/scripts/plot_projections.py $YEAR 'false' dcs $MAG both both --cut &
+python k3pi_efficiency/scripts/plot_projection.py $YEAR 'false' dcs $MAG both both --cut &
 pids[1]=$!
 python k3pi_efficiency/scripts/plot_z_scatter.py $YEAR 'false' cf $MAG both both --cut &
 pids[2]=$!
