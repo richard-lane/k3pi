@@ -166,39 +166,7 @@ for pid in ${pids[*]}; do
 done
 unset pids
 
-# Perform mass fits without BDT cut
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 &
-pids[0]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 &
-pids[1]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 &
-pids[2]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 &
-pids[3]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG &
-pids[4]=$!
-for pid in ${pids[*]}; do
-    wait $pid
-done
-unset pids
-
-# Perform mass fits with BDT cut
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut &
-pids[0]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 --bdt_cut &
-pids[1]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 --bdt_cut &
-pids[2]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 --bdt_cut &
-pids[3]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG --bdt_cut &
-pids[4]=$!
-for pid in ${pids[*]}; do
-    wait $pid
-done
-unset pids
-
-# Perform mass fits with BDT + efficiency
+# mass fits
 python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut --efficiency &
 pids[0]=$!
 python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 --bdt_cut --efficiency &
@@ -214,43 +182,83 @@ for pid in ${pids[*]}; do
 done
 unset pids
 
-# Plot yields
+# Plot yields for all phsp bins + also for bin integrated
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut --efficiency
 
-python k3pi_fitter/scripts/mixing_fit_from_file.py --bdt_cut --efficiency $YEAR $MAG
+# Plot the fits using the no mixing/mixing hypotheses
+python k3pi_fitter/scripts/mixing_fit_from_file.py --bdt_cut --efficiency $YEAR $MAG --sec_correction --misid_correction
 
-# Plot Z scans
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG -1 --bdt_cut --efficiency --sec_correction
+# Plot Z scans (LHCb only)
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG -1 --bdt_cut --efficiency --sec_correction --misid_correction
 
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction
-
-# Fits without secondary correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency
-
-# Fits without efficiency correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --sec_correction
-
-# Fits without BDT or efficiency
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --sec_correction
-python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --sec_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction --misid_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction --misid_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction --misid_correction
+python k3pi_fitter/scripts/lhcb_fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction --misid_correction
 
 # Plot fits with charm constraint
 # These have to be phase space binned, since the BES constraint is binned
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction --misid_correction
+
+#### Systematic stuff
+# Charm fits without secondary correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --misid_correction
+
+# Charm fits without double misid correction
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction
+
+# Perform mass fits with no efficiency (but with BDT cut)
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut &
+pids[0]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 --bdt_cut &
+pids[1]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 --bdt_cut &
+pids[2]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 --bdt_cut &
+pids[3]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG --bdt_cut &
+pids[4]=$!
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
+
+# Fits without efficiency correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --sec_correction --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --sec_correction --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --sec_correction --misid_correction
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --sec_correction --misid_correction
+
+# Perform mass fits with alternate background model
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut --alt_bkg &
+pids[0]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 --bdt_cut --alt_bkg &
+pids[1]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 --bdt_cut --alt_bkg &
+pids[2]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 --bdt_cut --alt_bkg &
+pids[3]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG --bdt_cut --alt_bkg &
+pids[4]=$!
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
+
+# Do charm scans with alt bkg model
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 0 --bdt_cut --efficiency --sec_correction --misid_correction --alt_bkg
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --efficiency --sec_correction --misid_correction --alt_bkg
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --efficiency --sec_correction --misid_correction --alt_bkg
+python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --efficiency --sec_correction --misid_correction --alt_bkg
 

@@ -30,6 +30,7 @@ def main(
     efficiency: bool,
     alt_bkg: bool,
     sec_correction: bool,
+    misid_correction: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -39,6 +40,8 @@ def main(
     if sec_correction:
         rs_sec_frac = ipchi2_fit.sec_fracs("cf")
         ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
+    if misid_correction:
+        ws_yields, ws_errs = correct_misid(ws_yields, ws_errs)
 
     # Want the phsp-bin integrated yields
     yield_file_path = mass_util.yield_file(
@@ -131,6 +134,11 @@ if __name__ == "__main__":
         "--sec_correction",
         action="store_true",
         help="Correct the yields by the secondary fractions in each time bin",
+    )
+    parser.add_argument(
+        "--misid_correction",
+        action="store_true",
+        help="Correct the yields by the double misID fraction",
     )
 
     main(**vars(parser.parse_args()))

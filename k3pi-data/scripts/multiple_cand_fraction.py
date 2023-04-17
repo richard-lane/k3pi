@@ -14,7 +14,6 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 from lib_data import get, cuts
 
 
-
 def main(*, year: str, sign: str, magnetisation: str):
     """
     from our dataframes count how many candidates there are, how many events and how many
@@ -34,7 +33,10 @@ def main(*, year: str, sign: str, magnetisation: str):
         n_evts_with_multiple_cands += np.sum(cands_arr == 1)
 
     print(f"{n_cands=:,}\t{n_evts=:,}\t{n_evts_with_multiple_cands=:,}")
-    print(f"Frac of evts with multiple cands: {100 * n_evts_with_multiple_cands / n_evts:.3f} %")
+    print(
+        f"Frac of evts with multiple cands: {100 * n_evts_with_multiple_cands / n_evts:.3f} %"
+    )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
