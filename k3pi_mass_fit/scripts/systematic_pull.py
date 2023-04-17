@@ -130,7 +130,7 @@ def _pull_study(
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
     # we want the signal counts to add up to these
-    n_rs_sig = 10_000
+    n_rs_sig = 80_000
     n_ws_sig = 3_000
 
     # number to generate for the bkg
@@ -324,7 +324,7 @@ def main():
     out_dict = manager.dict()
     out_list = manager.list()
     n_procs = 6
-    n_experiments = 50
+    n_experiments = 3
     procs = [
         Process(
             target=_pull_study,

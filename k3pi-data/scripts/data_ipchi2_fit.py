@@ -32,7 +32,9 @@ def _ipchi2s(
     low_t, high_t = time_range
     dfs = (
         dataframe[(low_t < dataframe["time"]) & (dataframe["time"] < high_t)]
-        for dataframe in islice(get.data(year, sign, magnetisation), n_dfs)
+        for dataframe in cuts.cands_cut_dfs(
+            islice(get.data(year, sign, magnetisation), n_dfs)
+        )
     )
     return np.concatenate([np.log(dataframe["D0 ipchi2"]) for dataframe in dfs])
 

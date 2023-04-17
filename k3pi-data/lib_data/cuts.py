@@ -291,3 +291,24 @@ def ipchi2_cut_dfs(dataframes: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]
     """
     for dataframe in dataframes:
         yield ipchi2_cut(dataframe)
+
+
+def cands_cut(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """
+    Perform n cands cuts on dataframe
+
+    Unlike the other fcns in this module, this one is user-facing
+
+    For now, just returns candidate 0
+
+    """
+    return dataframe[dataframe["nCandidate"] == 0]
+
+
+def cands_cut_dfs(dataframes: Iterable[pd.DataFrame]) -> Iterable[pd.DataFrame]:
+    """
+    Perform the multiple candidates cut on the dataframes; returns a generator
+
+    """
+    for dataframe in dataframes:
+        yield cands_cut(dataframe)

@@ -61,7 +61,9 @@ def _ipchi2s(year: str, sign: str, magnetisation: str) -> np.ndarray:
     print(f"{low_t=}\t{high_t=}")
     dfs = (
         dataframe[(low_t < dataframe["time"]) & (dataframe["time"] < high_t)]
-        for dataframe in islice(get.data(year, sign, magnetisation), n_dfs)
+        for dataframe in cuts.cands_cut_dfs(
+            islice(get.data(year, sign, magnetisation), n_dfs)
+        )
     )
     return np.concatenate([np.log(dataframe["D0 ipchi2"]) for dataframe in dfs])
 
@@ -70,7 +72,6 @@ def main(*, year: str, sign: str, magnetisation: str):
     """
     Get the D0 ipchi2 counts from the data
     Fit to them + plot
-
     """
     ipchi2s = _ipchi2s(year, sign, magnetisation)
 

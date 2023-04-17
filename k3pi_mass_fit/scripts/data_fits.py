@@ -259,7 +259,11 @@ def _dataframes(
     return cut_dfs(
         get.binned_generator(
             get.time_binned_generator(
-                cuts.ipchi2_cut_dfs(get.data(year, sign, magnetisation)), low_t, high_t
+                cuts.cands_cut_dfs(
+                    cuts.ipchi2_cut_dfs(get.data(year, sign, magnetisation))
+                ),
+                low_t,
+                high_t,
             ),
             phsp_bin,
         ),
