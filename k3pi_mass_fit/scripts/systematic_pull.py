@@ -104,7 +104,7 @@ def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.nda
     """
     # Scale such that we have the right counts
     scale_factor = n_tot / np.sum(sig_counts)
-    # print(f"{scale_factor=}")
+    print(f"{scale_factor=}", end="\t")
     counts = sig_counts * scale_factor
 
     # Apply Poisson fluctuations
@@ -112,6 +112,7 @@ def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.nda
 
 
 def _pull_study(
+    n_experiments: int,
     out_list: list,
     out_dict: dict,
     rs_signal_counts: np.ndarray,
@@ -129,15 +130,14 @@ def _pull_study(
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
     # we want the signal counts to add up to these
-    n_rs_sig = 800_000
-    n_ws_sig = 3_200
+    n_rs_sig = 10_000
+    n_ws_sig = 3_000
 
     # number to generate for the bkg
     n_bkg = 45_000
 
     # Find the expected number of bkg events from the acceptance area / generating area
 
-    n_experiments = 5
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
@@ -150,6 +150,7 @@ def _pull_study(
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
             ws_sig = _sig(rng, ws_signal_counts, n_ws_sig)
+            print()
 
             # Combine
             rs_counts = rs_sig + rs_bkg
@@ -228,6 +229,10 @@ def _plot_pulls(
     Plot pulls
 
     """
+    # Only plot n sig pulls
+    pulls = pulls[0], pulls[2]
+    labels = labels[0], labels[2]
+
     positions = tuple(range(1, len(labels) + 1))
 
     # Need to do this for the violin plot
@@ -319,10 +324,20 @@ def main():
     out_dict = manager.dict()
     out_list = manager.list()
     n_procs = 6
+    n_experiments = 50
     procs = [
         Process(
             target=_pull_study,
-            args=(out_list, out_dict, rs_count, ws_count, bins, n_underflow, fit_range),
+            args=(
+                n_experiments,
+                out_list,
+                out_dict,
+                rs_count,
+                ws_count,
+                bins,
+                n_underflow,
+                fit_range,
+            ),
         )
         for _ in range(n_procs)
     ]
@@ -351,7 +366,7 @@ def main():
         fig,
         axes["A"],
         pulls,
-        n_procs * len(pulls.T[0]),
+        n_procs * n_experiments,
         out_dict["labels"],
     )
     fig.tight_layout()

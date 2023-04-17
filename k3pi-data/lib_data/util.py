@@ -419,3 +419,15 @@ def relative_angle_branches(tree, prefix_1: str, prefix_2) -> np.ndarray:
     )
 
     return relative_angle(p_1, p_2)
+
+
+def misid_correction(
+    yields: np.ndarray, errors: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Correct yield and errors by the misID fraction
+
+    """
+    factor = 1 - definitions.MISID_FRACTION_PCT / 100.0
+
+    return yields * factor, errors * factor

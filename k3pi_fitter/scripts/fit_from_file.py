@@ -15,6 +15,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fit"))
 
 from lib_data import ipchi2_fit
+from lib_data.util import misid_correction as correct_misid
 from libFit import util as mass_util
 from lib_time_fit import plotting, util, fitter, definitions
 
@@ -28,6 +29,7 @@ def main(
     efficiency: bool,
     alt_bkg: bool,
     sec_correction: bool,
+    misid_correction: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -59,6 +61,10 @@ def main(
 
         ws_yields = ipchi2_fit.correct(ws_yields, ws_sec_frac)
         ws_errs = ipchi2_fit.correct(ws_errs, ws_sec_frac)
+
+    # Do double misID correction if we need to
+    if misid_correction:
+        ws_yields, ws_errs = correct_misid(ws_yields, ws_errs)
 
     ratio = ws_yields / rs_yields
     ratio_err = ratio * np.sqrt((rs_errs / rs_yields) ** 2 + (ws_errs / ws_yields) ** 2)
@@ -120,7 +126,7 @@ def main(
     fig.colorbar(contours, cax=cbar_ax)
     cbar_ax.set_title(r"$\sigma$")
 
-    path = f"fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}.png"
+    path = f"fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
     print(f"plotting {path}")
     fig.savefig(path)
 
@@ -153,6 +159,11 @@ if __name__ == "__main__":
         "--sec_correction",
         action="store_true",
         help="Correct the yields by the secondary fractions in each time bin",
+    )
+    parser.add_argument(
+        "--misid_correction",
+        action="store_true",
+        help="Correct the yields by the double misID fraction",
     )
 
     main(**vars(parser.parse_args()))

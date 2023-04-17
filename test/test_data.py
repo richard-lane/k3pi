@@ -12,7 +12,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
 
 from lib_data import definitions
 from lib_data import stats
-from lib_data.util import flip_momenta, inv_mass, relative_angle
+from lib_data.util import flip_momenta, inv_mass, relative_angle, misid_correction
 
 
 def test_flip_momenta():
@@ -310,3 +310,16 @@ def test_angles():
     expected_angles = np.array([29.805, 14.036])
 
     assert np.allclose(relative_angle(x_axis, y_axis), expected_angles, atol=0.001)
+
+
+def test_misid_correction():
+    """
+    Check we get the right factor
+
+    """
+    yields = np.array([100, 10])
+    expected = yields - (yields * definitions.MISID_FRACTION_PCT / 100)
+
+    corrected, _ = misid_correction(yields, yields)
+
+    assert (corrected == expected).all()

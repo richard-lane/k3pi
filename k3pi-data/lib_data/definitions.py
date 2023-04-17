@@ -10,6 +10,9 @@ D0_LIFETIME_PS = 0.4101
 
 DUMP_DIR = pathlib.Path(__file__).resolve().parents[1] / "dumps"
 
+# Assumed double misID fraction, globally, in percent
+MISID_FRACTION_PCT = 2.3
+
 
 # Column names for momenta
 MOMENTUM_SUFFICES = "PX", "PY", "PZ", "PE"
