@@ -18,7 +18,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fi
 from lib_data import ipchi2_fit
 from lib_data.util import misid_correction as correct_misid
 from libFit import util as mass_util
-from lib_time_fit import plotting, util, fitter, definitions
+from lib_time_fit import plotting, util, fitter, definitions, parabola
 
 
 def _bounding_box(
@@ -98,23 +98,26 @@ def _initial_scan(
     xy_err, xy_corr = xy_err_corr
     n_re, n_im = n_re_im
 
-    allowed_rez = np.linspace(-1, 1, 11)
-    allowed_imz = np.linspace(-1, 1, 11)
-    chi2s = np.ones((len(allowed_rez), len(allowed_imz))) * np.inf
-    for i, re_z in enumerate(allowed_rez):
-        for j, im_z in enumerate(allowed_imz):
-            these_params = util.ScanParams(*initial_rdxy, re_z, im_z)
+    allowed_rez = np.linspace(-1, 1, 20)
+    allowed_imz = np.linspace(-1, 1, 21)
+    chi2s = np.ones((len(allowed_imz), len(allowed_rez))) * np.inf
+    with tqdm(total=len(allowed_imz) * len(allowed_rez)) as pbar:
+        for i, re_z in enumerate(allowed_rez):
+            for j, im_z in enumerate(allowed_imz):
+                these_params = util.ScanParams(*initial_rdxy, re_z, im_z)
 
-            combined_fitter = fitter.combined_fit(
-                ratio,
-                ratio_err,
-                time_bins,
-                these_params,
-                xy_err,
-                xy_corr,
-                phsp_bin,
-            )
-            chi2s[j, i] = combined_fitter.fval
+                combined_fitter = fitter.combined_fit(
+                    ratio,
+                    ratio_err,
+                    time_bins,
+                    these_params,
+                    xy_err,
+                    xy_corr,
+                    phsp_bin,
+                )
+                chi2s[j, i] = combined_fitter.fval
+
+                pbar.update(1)
 
     # Use these chi2s to find the region of interest
     return _bounding_box(chi2s, allowed_rez, allowed_imz, n_re, n_im)
@@ -171,7 +174,7 @@ def main(
     xy_err = (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR)
     xy_corr = definitions.CHARM_XY_CORRELATION
 
-    n_re, n_im = 21, 20  # The number of points we want for the actual scan
+    n_re, n_im = 30, 31  # The number of points we want for the actual scan
     allowed_rez, allowed_imz = _initial_scan(
         initial_rdxy,
         (xy_err, xy_corr),
@@ -218,8 +221,15 @@ def main(
     fig.savefig(path)
     plt.close(fig)
 
+    # Fit a 2d parabola to the chi2 to get width, error, correlation out
+    params, errs = parabola.fit(chi2s, allowed_rez, allowed_imz)
+    for param, err, label in zip(
+        params, errs, ["ReZ", "ImZ", "ReZ width", "ImZ width", "corr"]
+    ):
+        print(f"{label}\t= {param:.3f} +- {err:.3f}")
+
     # Plot a 2d landscape
-    # plotting.surface((allowed_rez, allowed_imz), chi2s)
+    # plotting.surface((allowed_rez, allowed_imz), chi2s, params)
 
     # Convert chi2s to sigma for doing 2d plot
     chi2s -= np.nanmin(chi2s)

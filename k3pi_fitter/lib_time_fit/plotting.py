@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.contour import QuadContourSet
 
-from . import models, util
+from . import models, util, parabola
 
 
 def no_mixing(
@@ -233,12 +233,15 @@ def projections(
     return fig, axes
 
 
-def surface(allowed_z: Tuple[np.ndarray, np.ndarray], chi2s: np.ndarray):
+def surface(
+    allowed_z: Tuple[np.ndarray, np.ndarray], chi2s: np.ndarray, fit_vals: np.ndarray
+):
     """
     Plot 2d surface plot of chi2 projections and show it
 
     :param allowed_z: tuple of allowed rez, allowed imZ points
     :param chi2s: 2d array of chi2s (not sqrted)
+    :param fit_vals: parabola fit vals
 
     """
     allowed_rez, allowed_imz = allowed_z
@@ -251,9 +254,13 @@ def surface(allowed_z: Tuple[np.ndarray, np.ndarray], chi2s: np.ndarray):
     # Make the plot nicer by assigning vals that are too big to NaN
     delta_chi2s[delta_chi2s > max_chi2] = np.nan
 
-    axis.plot_surface(
-        *np.meshgrid(*allowed_z), delta_chi2s, linewidth=0, cmap=cm.coolwarm
-    )
+    pts = np.meshgrid(*allowed_z)
+    axis.plot_surface(*pts, delta_chi2s, linewidth=0, cmap=cm.coolwarm)
+
+    # Plot also the fit vals
+    vals = parabola.parabola(fit_vals, *allowed_z)
+    axis.plot_surface(*pts, vals, linewidth=0.1, cmap=cm.gray, alpha=0.5)
+
     axis.set_xlim(-1, 1)
     axis.set_ylim(-1, 1)
     axis.set_zlim(0, max_chi2)
