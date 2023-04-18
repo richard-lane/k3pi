@@ -27,7 +27,7 @@ def fit_model(
     del_x = pts[0] - x_mean
     del_y = pts[1] - y_mean
 
-    pre_factor = 0.5 / (1 - (correlation ** 2))
+    pre_factor = 0.5 / (1 - (correlation**2))
     x_term = del_x / x_width
     y_term = del_y / y_width
     cross_term = correlation * x_term * y_term
