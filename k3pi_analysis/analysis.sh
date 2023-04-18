@@ -183,8 +183,6 @@ done
 unset pids
 
 # Plot yields for all phsp bins + also for bin integrated
-python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated
-python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut
 python k3pi_mass_fit/scripts/plot_yield_from_file.py $YEAR $MAG 0 1 2 3 --integrated --bdt_cut --efficiency
 
 # Plot the fits using the no mixing/mixing hypotheses
