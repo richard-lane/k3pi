@@ -21,45 +21,6 @@ from libFit import util as mass_util
 from lib_time_fit import plotting, util, fitter, definitions
 
 
-def _profiles(
-    allowed_z,
-    chi2s,
-    year,
-    magnetisation,
-    bdt_cut,
-    efficiency,
-    phsp_bin,
-    alt_bkg,
-    sec_correction,
-    misid_correction,
-) -> None:
-    """
-    Plot 1d profiles of chi2s
-
-    """
-    (allowed_rez, allowed_imz) = allowed_z
-
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True, sharex=True)
-    rez_chi2 = np.min(chi2s, axis=0)
-    imz_chi2 = np.min(chi2s, axis=1)
-
-    axes[0].plot(allowed_rez, rez_chi2**2)
-    axes[1].plot(allowed_imz, imz_chi2**2)
-
-    axes[0].set_ylabel(r"$\Delta \chi^2$")
-    axes[0].set_xlabel(r"Re(Z)")
-    axes[1].set_xlabel(r"Im(Z)")
-
-    axes[0].set_xlim(-1, 1)
-    axes[0].set_ylim(0, axes[0].get_ylim()[1])
-
-    fig.tight_layout()
-
-    path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
-    fig.savefig(path)
-    plt.close(fig)
-
-
 def _bounding_box(
     chi2s, allowed_rez, allowed_imz, n_re, n_im
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -68,25 +29,25 @@ def _bounding_box(
 
     """
     # Transform to sigma
-    chi2s -= np.nanmin(chi2s)
-    chi2s = np.sqrt(chi2s)
+    sigma = chi2s - np.nanmin(chi2s)
+    sigma = np.sqrt(sigma)
 
     # Find the maximum along each axis
-    rez_chi2 = np.nanmin(chi2s, axis=0)
-    imz_chi2 = np.nanmin(chi2s, axis=1)
+    rez_sigma = np.nanmin(sigma, axis=0)
+    imz_sigma = np.nanmin(sigma, axis=1)
 
     # Find where the sigma reaches a maximum
     max_sigma = 4
-    allowed_rez = allowed_rez[rez_chi2 < max_sigma]
-    allowed_imz = allowed_imz[imz_chi2 < max_sigma]
+    allowed_rez = allowed_rez[rez_sigma < max_sigma]
+    allowed_imz = allowed_imz[imz_sigma < max_sigma]
     rez_range = allowed_rez[:: len(allowed_rez) - 1]
     imz_range = allowed_imz[:: len(allowed_imz) - 1]
 
-    rez_centre = (rez_range[1] - rez_range[0]) / 2
-    imz_centre = (imz_range[1] - imz_range[0]) / 2
+    rez_centre = (rez_range[1] + rez_range[0]) / 2
+    imz_centre = (imz_range[1] + imz_range[0]) / 2
 
     # Make them a bit wider
-    scale = 1.25
+    scale = 1.3
     rez_range = (rez_centre - (rez_centre - rez_range[0]) * scale), (
         rez_centre + (rez_range[1] - rez_centre) * scale
     )
@@ -94,7 +55,69 @@ def _bounding_box(
         imz_centre + (imz_range[1] - imz_centre) * scale
     )
 
+    # Dont go above 1 or below -1
+    rez_range = (
+        rez_range[0] if rez_range[0] > -1 else -1,
+        rez_range[1] if rez_range[1] < 1 else 1,
+    )
+    imz_range = (
+        imz_range[0] if imz_range[0] > -1 else -1,
+        imz_range[1] if imz_range[1] < 1 else 1,
+    )
+    print(rez_range, imz_range)
+
     return np.linspace(*rez_range, n_re), np.linspace(*imz_range, n_im)
+
+
+def _initial_scan(
+    initial_rdxy: Tuple,
+    xy_err_corr: Tuple,
+    ratio: np.ndarray,
+    ratio_err: np.ndarray,
+    time_bins: np.ndarray,
+    n_re_im: Tuple,
+    phsp_bin: int,
+) -> Tuple[Tuple, Tuple]:
+    """
+    Do an initial scan of fits to find out which region we should focus our efforts on
+
+    Returns two ranges of ReZ, ImZ values to focus our efforts on
+
+    :param initial_rdxy: initial guess at (rd, x, y)
+    :param xy_err_corr: error and correlation on x and y
+    :param ratio: WS/RS ratio in each bin
+    :param ratio_err: error on the WS/RS ratio in each bin
+    :param time_bins: time bins
+    :param n_re_im: number of re and im z we want in our grid
+    :param phsp_bin: bin number
+
+    :returns: array of allowed rez points
+    :returns: array of allowed imz points
+
+    """
+    xy_err, xy_corr = xy_err_corr
+    n_re, n_im = n_re_im
+
+    allowed_rez = np.linspace(-1, 1, 11)
+    allowed_imz = np.linspace(-1, 1, 11)
+    chi2s = np.ones((len(allowed_rez), len(allowed_imz))) * np.inf
+    for i, re_z in enumerate(allowed_rez):
+        for j, im_z in enumerate(allowed_imz):
+            these_params = util.ScanParams(*initial_rdxy, re_z, im_z)
+
+            combined_fitter = fitter.combined_fit(
+                ratio,
+                ratio_err,
+                time_bins,
+                these_params,
+                xy_err,
+                xy_corr,
+                phsp_bin,
+            )
+            chi2s[j, i] = combined_fitter.fval
+
+    # Use these chi2s to find the region of interest
+    return _bounding_box(chi2s, allowed_rez, allowed_imz, n_re, n_im)
 
 
 def main(
@@ -117,8 +140,6 @@ def main(
         rs_sec_frac = ipchi2_fit.sec_fracs("cf")
         ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
     yield_file_path = mass_util.yield_file(
         year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
     )
@@ -129,7 +150,6 @@ def main(
     time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
         yield_file_path
     )
-    axes[0].set_xlim(0, time_bins[-1])
 
     # Do secondary fraction correction if we need to
     if sec_correction:
@@ -150,35 +170,21 @@ def main(
     initial_rdxy = 0.0055, definitions.CHARM_X, definitions.CHARM_Y
     xy_err = (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR)
     xy_corr = definitions.CHARM_XY_CORRELATION
-    allowed_rez = np.linspace(-1, 1, 11)
-    allowed_imz = np.linspace(-1, 1, 11)
-    chi2s = np.ones((len(allowed_rez), len(allowed_imz))) * np.inf
-    for i, re_z in enumerate(allowed_rez):
-        for j, im_z in enumerate(allowed_imz):
-            these_params = util.ScanParams(*initial_rdxy, re_z, im_z)
 
-            combined_fitter = fitter.combined_fit(
-                ratio,
-                ratio_err,
-                time_bins,
-                these_params,
-                xy_err,
-                xy_corr,
-                phsp_bin,
-            )
-            chi2s[j, i] = combined_fitter.fval
-
-    # Do the proper scan of fits
-    n_re, n_im = 21, 20
-
-    # Linspace between first and last elements
-    allowed_rez, allowed_imz = _bounding_box(
-        chi2s, allowed_rez, allowed_imz, n_re, n_im
+    n_re, n_im = 21, 20  # The number of points we want for the actual scan
+    allowed_rez, allowed_imz = _initial_scan(
+        initial_rdxy,
+        (xy_err, xy_corr),
+        ratio,
+        ratio_err,
+        time_bins,
+        (n_re, n_im),
+        phsp_bin,
     )
 
+    # Do the proper scan of fits
     chi2s = np.ones((n_im, n_re)) * np.inf
     fit_params = np.ones((n_im, n_re), dtype=object) * np.inf
-
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
@@ -205,24 +211,23 @@ def main(
 
                 pbar.update(1)
 
+    # Plot 1d profiles
+    fig, _ = plotting.projections((allowed_rez, allowed_imz), chi2s)
+    path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
+    plt.close(fig)
+
+    # Plot a 2d landscape
+    # plotting.surface((allowed_rez, allowed_imz), chi2s)
+
+    # Convert chi2s to sigma for doing 2d plot
     chi2s -= np.nanmin(chi2s)
     chi2s = np.sqrt(chi2s)
 
-    # Plot 1d profiles
-    _profiles(
-        (allowed_rez, allowed_imz),
-        chi2s,
-        year,
-        magnetisation,
-        bdt_cut,
-        efficiency,
-        phsp_bin,
-        alt_bkg,
-        sec_correction,
-        misid_correction,
-    )
-
     # Plot scan, fits
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].set_xlim(0, time_bins[-1])
     contours = plotting.fits_and_scan(
         axes, (allowed_rez, allowed_imz), chi2s, fit_params, 4
     )

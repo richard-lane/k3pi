@@ -5,6 +5,7 @@ Utils for plotting
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.contour import QuadContourSet
 
 from . import models, util
@@ -197,3 +198,68 @@ def fits_and_scan(
     scan_ax.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))
 
     return contours
+
+
+def projections(
+    allowed_z: Tuple[np.ndarray, np.ndarray], chi2s: np.ndarray
+) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    Plot 1d profile chi2 projections of a scan
+
+    :param allowed_z: tuple of allowed rez, allowed imZ points
+    :param chi2s: 2d array of chi2s (not sqrted)
+
+    """
+    allowed_rez, allowed_imz = allowed_z
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True, sharex=True)
+
+    min_chi2 = np.min(chi2s)
+    rez_chi2 = np.min(chi2s, axis=0) - min_chi2
+    imz_chi2 = np.min(chi2s, axis=1) - min_chi2
+
+    axes[0].plot(allowed_rez, rez_chi2)
+    axes[1].plot(allowed_imz, imz_chi2)
+
+    axes[0].set_ylabel(r"$\Delta \chi^2$")
+    axes[0].set_xlabel(r"Re(Z)")
+    axes[1].set_xlabel(r"Im(Z)")
+
+    axes[0].set_xlim(-1, 1)
+    axes[0].set_ylim(0, axes[0].get_ylim()[1])
+
+    fig.tight_layout()
+
+    return fig, axes
+
+
+def surface(allowed_z: Tuple[np.ndarray, np.ndarray], chi2s: np.ndarray):
+    """
+    Plot 2d surface plot of chi2 projections and show it
+
+    :param allowed_z: tuple of allowed rez, allowed imZ points
+    :param chi2s: 2d array of chi2s (not sqrted)
+
+    """
+    allowed_rez, allowed_imz = allowed_z
+
+    fig, axis = plt.subplots(subplot_kw={"projection": "3d"})
+
+    delta_chi2s = chi2s - np.min(chi2s)
+
+    max_chi2 = 49
+    # Make the plot nicer by assigning vals that are too big to NaN
+    delta_chi2s[delta_chi2s > max_chi2] = np.nan
+
+    axis.plot_surface(
+        *np.meshgrid(*allowed_z), delta_chi2s, linewidth=0, cmap=cm.coolwarm
+    )
+    axis.set_xlim(-1, 1)
+    axis.set_ylim(-1, 1)
+    axis.set_zlim(0, max_chi2)
+
+    axis.set_xlabel("Re(Z)")
+    axis.set_ylabel("Im(Z)")
+    axis.set_zlabel(r"$\Delta \chi^2$")
+
+    plt.show()
