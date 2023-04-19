@@ -88,7 +88,9 @@ def main(*, year: str, sign: str, magnetisation: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot effect of BDT cut on training data")
+    parser = argparse.ArgumentParser(
+        description="Plot effect of BDT cut on training data"
+    )
     parser.add_argument(
         "year",
         type=str,

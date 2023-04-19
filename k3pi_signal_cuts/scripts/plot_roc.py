@@ -143,7 +143,9 @@ def main(*, year: str, magnetisation: str, sign: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot ROC curve for simulation data (testing sample)")
+    parser = argparse.ArgumentParser(
+        description="Plot ROC curve for simulation data (testing sample)"
+    )
     parser.add_argument(
         "year",
         type=str,

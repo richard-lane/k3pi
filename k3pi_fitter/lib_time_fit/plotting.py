@@ -214,9 +214,9 @@ def projections(
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True, sharex=True)
 
-    min_chi2 = np.min(chi2s)
-    rez_chi2 = np.min(chi2s, axis=0) - min_chi2
-    imz_chi2 = np.min(chi2s, axis=1) - min_chi2
+    min_chi2 = np.nanmin(chi2s)
+    rez_chi2 = np.nanmin(chi2s, axis=0) - min_chi2
+    imz_chi2 = np.nanmin(chi2s, axis=1) - min_chi2
 
     axes[0].plot(allowed_rez, rez_chi2)
     axes[1].plot(allowed_imz, imz_chi2)

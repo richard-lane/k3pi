@@ -137,7 +137,9 @@ def main(*, year: str, sign: str, magnetisation: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Plot histograms showing cuts for simulation data (testing sample)")
+    parser = argparse.ArgumentParser(
+        description="Plot histograms showing cuts for simulation data (testing sample)"
+    )
     parser.add_argument(
         "year",
         type=str,
