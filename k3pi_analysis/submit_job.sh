@@ -12,7 +12,6 @@ fi
 
 SCRIPT="k3pi_analysis/submit_${1}_${2}.sub"
 echo "submitting $SCRIPT"
-
-condor_submit "k3pi_analysis/submit.sub"
+condor_submit $SCRIPT
 
 condor_q
