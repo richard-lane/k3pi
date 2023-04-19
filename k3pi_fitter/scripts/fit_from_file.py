@@ -64,7 +64,6 @@ def _bounding_box(
         imz_range[0] if imz_range[0] > -1 else -1,
         imz_range[1] if imz_range[1] < 1 else 1,
     )
-    print(rez_range, imz_range)
 
     return np.linspace(*rez_range, n_re), np.linspace(*imz_range, n_im)
 
@@ -214,19 +213,27 @@ def main(
 
                 pbar.update(1)
 
-    # Plot 1d profiles
-    fig, _ = plotting.projections((allowed_rez, allowed_imz), chi2s)
-    path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
-    print(f"plotting {path}")
-    fig.savefig(path)
-    plt.close(fig)
+    # Find the best fit value of Z
+    min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
+    best_z = allowed_rez[min_re], allowed_imz[min_im]
+    print(f"{best_z=}")
 
     # Fit a 2d parabola to the chi2 to get width, error, correlation out
-    params, errs = parabola.fit(chi2s, allowed_rez, allowed_imz)
+    max_chi2 = 9
+    params, errs = parabola.fit(chi2s, allowed_rez, allowed_imz, best_z, max_chi2)
     for param, err, label in zip(
         params, errs, ["ReZ", "ImZ", "ReZ width", "ImZ width", "corr"]
     ):
         print(f"{label}\t= {param:.3f} +- {err:.3f}")
+
+    # Plot 1d profiles
+    fig, axes = plotting.projections((allowed_rez, allowed_imz), chi2s)
+    parabola.plot_projection(axes, params, max_chi2)
+    path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
+    axes[0].legend()
+    print(f"plotting {path}")
+    fig.savefig(path)
+    plt.close(fig)
 
     # Plot a 2d landscape
     # plotting.surface((allowed_rez, allowed_imz), chi2s, params)

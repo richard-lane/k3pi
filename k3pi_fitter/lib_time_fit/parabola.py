@@ -3,7 +3,9 @@ Fit a parabola to the output of the Z scan
 
 """
 from typing import Tuple
+
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 
@@ -36,7 +38,11 @@ def fit_model(
 
 
 def fit(
-    chi2s: np.ndarray, re_z: np.ndarray, im_z: np.ndarray
+    chi2s: np.ndarray,
+    re_z: np.ndarray,
+    im_z: np.ndarray,
+    initial_means: Tuple,
+    max_chi2: float,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Fit a 2d parabola to (some of) a chi2 scan
@@ -44,6 +50,9 @@ def fit(
     :param chi2s: 2d array of chi2 values (not sqrted)
     :param re_z: real Z used in the scan
     :param im_z: imag Z used in the scan
+    :param initial_means: tuple of initial guess at (x_mean, y_mean). The other initial
+                          guesses are hard coded
+    :param max_chi2: max chi2 value to fit to
 
     :returns: array of (x mean, y mean, x width, y width, correlation) fit values
     :returns: array of (x mean, y mean, x width, y width, correlation) errors
@@ -54,7 +63,6 @@ def fit(
     delta_chi2 = delta_chi2.ravel()
 
     # Toss away values that are too big - we only want to fit where the likelihood is parabolic
-    max_chi2 = 9
     delta_chi2[delta_chi2 > max_chi2] = np.nan
 
     # Make 2d grids of Z points
@@ -71,8 +79,8 @@ def fit(
         fit_model,
         x_data,
         delta_chi2,
-        p0=(0.75, -0.25, 0.1, 0.2, 0.0),
-        bounds=((-1.5, -1.5, 0.0, 0.0, 0.0), (1.5, 1.5, np.inf, np.inf, 1.0)),
+        p0=(*initial_means, 0.05, 0.15, -0.1),
+        bounds=((-1.5, -1.5, 0.0, 0.0, -1.0), (1.5, 1.5, np.inf, np.inf, 1.0)),
         maxfev=50000,
     )
 
@@ -92,3 +100,40 @@ def parabola(params: np.ndarray, re_z: np.ndarray, im_z: np.ndarray) -> np.ndarr
     pts = np.vstack((x_x.ravel(), y_y.ravel()))
 
     return fit_model(pts, *params).reshape((len(im_z), len(re_z)))
+
+
+def plot_projection(
+    axes: Tuple[plt.Axes, plt.Axes], params: np.ndarray, max_chi2: float
+) -> None:
+    """
+    Plot projections of the fit on two axes
+
+    """
+    # Turn off y axis auto scaling
+    for axis in axes:
+        axis.autoscale(enable=False, axis="y")
+
+    # Evaluate on a big grid
+    n_pts = 100
+    pts = np.linspace(-1, 1, n_pts)
+    x_x, y_y = np.meshgrid(pts, pts)
+
+    f_eval = fit_model(np.vstack((x_x.ravel(), y_y.ravel())), *params).reshape(
+        (n_pts, n_pts)
+    )
+
+    # Get the minimum along each axis
+    x_min = np.nanmin(f_eval, axis=0)
+    y_min = np.nanmin(f_eval, axis=1)
+
+    # Don't plot anything above the max value provided
+    x_min[x_min > max_chi2] = np.nan
+    y_min[y_min > max_chi2] = np.nan
+
+    # Plot projections
+    axes[0].plot(pts, x_min, color="k", label="Fit", linestyle="--")
+    axes[1].plot(pts, y_min, color="k", label="Fit", linestyle="--")
+
+    # Turn y axis auto scaling back on
+    for axis in axes:
+        axis.autoscale(enable=True, axis="y")
