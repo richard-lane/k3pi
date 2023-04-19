@@ -37,6 +37,9 @@ def main(
     and plot a fit to their ratio
 
     """
+    if year == "all":
+        assert magnetisation == "all"
+
     if sec_correction:
         rs_sec_frac = ipchi2_fit.sec_fracs("cf")
         ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
@@ -45,18 +48,24 @@ def main(
     if phsp_bin == -1:
         phsp_bin = None
 
+    if year == "all":
+        time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.all_yields(
+            phsp_bin, bdt_cut, efficiency, alt_bkg
+        )
+
+    else:
+        yield_file_path = mass_util.yield_file(
+            year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
+        )
+
+        assert yield_file_path.exists()
+
+        # Get time bins, yields and errors
+        time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
+            yield_file_path
+        )
+
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-    yield_file_path = mass_util.yield_file(
-        year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
-    )
-
-    assert yield_file_path.exists()
-
-    # Get time bins, yields and errors
-    time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
-        yield_file_path
-    )
     axes[0].set_xlim(0, time_bins[-1])
 
     # Do secondary fraction correction if we need to
@@ -143,13 +152,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "year",
         type=str,
-        choices={"2017", "2018"},
+        choices={"2017", "2018", "all"},
         help="Data taking year.",
     )
     parser.add_argument(
         "magnetisation",
         type=str,
-        choices={"magup", "magdown"},
+        choices={"magup", "magdown", "all"},
         help="magnetisation direction",
     )
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")

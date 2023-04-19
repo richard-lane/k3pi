@@ -424,6 +424,56 @@ def read_yield(path: pathlib.Path) -> Tuple:
     )
 
 
+def combine_yields(*yield_files: str) -> Tuple:
+    """
+    Returns the time bins and combined ws + rs yields + errors from a collection of files
+
+    """
+    file_contents = [read_yield(path) for path in yield_files]
+
+    bins = file_contents[0][0]
+    n_bins = len(bins) - 1
+
+    rs_total = np.zeros(n_bins)
+    rs_errs = np.zeros(n_bins)
+
+    ws_total = np.zeros(n_bins)
+    ws_errs = np.zeros(n_bins)
+
+    # Check the time bins are the same across all files passed in
+    for these_bins, rs_yield, rs_err, ws_yield, ws_err in file_contents:
+        assert (these_bins == bins).all()
+
+        # Total yields are just a straight sum
+        rs_total += rs_yield
+        ws_total += ws_yield
+
+        # Errors combine in quadrature
+        rs_errs += rs_err**2
+        ws_errs += ws_err**2
+
+    rs_errs = np.sqrt(rs_errs)
+    ws_errs = np.sqrt(ws_errs)
+
+    return bins, rs_total, rs_errs, ws_total, ws_errs
+
+
+def all_yields(phsp_bin: int, bdt_cut: bool, efficiency: bool, alt_bkg: bool) -> Tuple:
+    """
+    Get the sum of yields from all years (2017 and 2018) and all magnetisations
+    (magup and magdown)
+
+    """
+    files = []
+    for year in ("2017", "2018"):
+        for magnetisation in ("magup", "magdown"):
+            files.append(
+                yield_file(year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg)
+            )
+
+    return combine_yields(*files)
+
+
 def scaled_yield_file_path(yield_file_path: pathlib.Path) -> pathlib.Path:
     """
     Path to a yield file where the CF counts/errors are scaled by the right amount
