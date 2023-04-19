@@ -4,6 +4,7 @@ Plot ROC curve for our classifier
 """
 import sys
 import pathlib
+import argparse
 from typing import Tuple
 
 import numpy as np
@@ -107,12 +108,11 @@ def _plot_roc(
     )
 
 
-def main():
+def main(*, year: str, magnetisation: str, sign: str):
     """
     ROC curve
 
     """
-    year, sign, magnetisation = "2018", "dcs", "magdown"
     classifier = get_clf(year, sign, magnetisation)
 
     fig, axis = plt.subplots()
@@ -143,4 +143,27 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Plot ROC curve for simulation data (testing sample)")
+    parser.add_argument(
+        "year",
+        type=str,
+        choices={"2017", "2018"},
+        help="Data taking year.",
+    )
+    parser.add_argument(
+        "sign",
+        type=str,
+        choices={"dcs", "cf"},
+        help="Type of decay - favoured or suppressed."
+        "D0->K+3pi is DCS; Dbar0->K+3pi is CF (or conjugate).",
+    )
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown", "magup"},
+        help="magnetisation direction",
+    )
+
+    args = parser.parse_args()
+
+    main(**vars(parser.parse_args()))

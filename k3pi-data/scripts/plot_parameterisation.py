@@ -4,6 +4,7 @@ Make plots of phase space variables to make sure everything looks like we expect
 """
 import sys
 import pathlib
+import argparse
 import resource
 from typing import List, Tuple
 from itertools import islice
@@ -89,12 +90,11 @@ def _max_usage() -> int:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1_000_000
 
 
-def main():
+def main(*, year: str, magnetisation: str):
     """
     Create a plot
 
     """
-    year, magnetisation = "2018", "magdown"
     # These return generators
     n_dfs = 5
     rs_data = _parameterise(
@@ -170,4 +170,20 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "year",
+        type=str,
+        choices={"2017", "2018"},
+        help="Data taking year.",
+    )
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown", "magup"},
+        help="magnetisation direction",
+    )
+
+    args = parser.parse_args()
+
+    main(**vars(parser.parse_args()))

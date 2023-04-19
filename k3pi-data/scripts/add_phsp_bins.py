@@ -75,7 +75,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "year",
         type=str,
-        choices={"2018"},
+        choices={"2017", "2018"},
         help="Data taking year.",
     )
     parser.add_argument(
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "magnetisation",
         type=str,
-        choices={"magdown"},
+        choices={"magup", "magdown"},
         help="magnetisation direction",
     )
 

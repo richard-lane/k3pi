@@ -4,6 +4,7 @@ Plot testing data variables before and after cuts
 """
 import sys
 import pathlib
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -61,13 +62,12 @@ def _plot(
     axis.hist(bkg[bkg_predictions == 1], label="bkg", alpha=0.5, color="r", **hist_kw)
 
 
-def main():
+def main(*, year: str, sign: str, magnetisation: str):
     """
     Show plots before and after applying cuts with the classifier
 
     """
     # Read dataframes of stuff
-    year, sign, magnetisation = "2018", "dcs", "magdown"
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
 
@@ -137,4 +137,27 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Plot histograms showing cuts for simulation data (testing sample)")
+    parser.add_argument(
+        "year",
+        type=str,
+        choices={"2017", "2018"},
+        help="Data taking year.",
+    )
+    parser.add_argument(
+        "sign",
+        type=str,
+        choices={"dcs", "cf"},
+        help="Type of decay - favoured or suppressed."
+        "D0->K+3pi is DCS; Dbar0->K+3pi is CF (or conjugate).",
+    )
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown", "magup"},
+        help="magnetisation direction",
+    )
+
+    args = parser.parse_args()
+
+    main(**vars(parser.parse_args()))

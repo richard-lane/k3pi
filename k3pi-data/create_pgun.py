@@ -87,6 +87,10 @@ def main(
     *, year: str, sign: str, magnetisation: str, n_files: int, verbose: bool
 ) -> None:
     """Create a DataFrame holding AmpGen momenta"""
+    # If requested 2017, actually just make 2018 because its the same
+    if year == "2017":
+        year = "2018"
+
     # Hopefully it'll be obvious if this is
     # writing the right info, if we pause generation and
     # resume later...
@@ -145,8 +149,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "year",
         type=str,
-        choices={"2018", "2016"},
-        help="Year - for trigger information",
+        choices={"2018", "2017"},
+        help="Year - for trigger information. Doesn't matter",
     )
     parser.add_argument(
         "sign",

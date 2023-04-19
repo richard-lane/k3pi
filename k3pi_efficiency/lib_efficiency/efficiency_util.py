@@ -129,7 +129,7 @@ def pgun_df(
     """
     assert decay_type in {"dcs", "cf", "false"}
     assert k_charge in {"k_plus", "k_minus", "both"}
-    assert year in {"2018", "2016"}
+    assert year in {"2018", "2017"}
     assert magnetisation in {"magdown", "magup"}
 
     if decay_type == "false":

@@ -43,12 +43,15 @@ def particle_gun(
     """
     Get the particle gun dataframes, concatenate them and return
 
-    :param year: "2018" or "2016". 2017 is covered by 2018
+    :param year: "2018" or "2017". they're the same
     :param sign: "cf" or "dcs"
     :param magnetisation: "magdown" or "magup"
     :param show_progress: whether to display a progress bar
 
     """
+    if year == "2017":
+        year = "2018"
+
     dfs = []
     paths = glob.glob(str(definitions.pgun_dir(year, sign, magnetisation) / "*.pkl"))
 
@@ -80,6 +83,9 @@ def pgun_n_gen_file(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     :returns: path object
 
     """
+    if year == "2017":
+        year = "2018"
+
     return definitions.pgun_dir(year, sign, magnetisation) / "n_gen.txt"
 
 
@@ -158,9 +164,9 @@ def mc(year: str, sign: str, magnetisation: str) -> pd.DataFrame:
     Sign should be cf or dcs
 
     """
-    assert year in {"2018"}
+    assert year in {"2017", "2018"}
     assert sign in {"cf", "dcs"}
-    assert magnetisation in {"magdown"}
+    assert magnetisation in {"magup", "magdown"}
 
     try:
         with open(definitions.mc_dump(year, sign, magnetisation), "rb") as df_f:

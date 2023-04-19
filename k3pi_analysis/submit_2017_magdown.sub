@@ -1,0 +1,25 @@
+executable = k3pi_analysis/run_on_grid.sh
+universe   = vanilla
+output     = output.$(cluster).$(process).out
+error      = error.$(cluster).$(process).err
+log        = log.$(cluster).$(process).log
+
+RequestCpus = 8
+RequestGpus = 0
+# RequestDisk = 32GB
+# RequestMemory = 16GB
+
++MaxRuntime = 28800
+
+transfer_input_files = python.tar.gz, rs_Dbar02piKpipi.root, ws_D02piKpipi.root
+
+stream_output=True
+stream_error=True
+
+environment = "CONDOR_JOB_ID=$(cluster).$(process) YEAR=2017 MAG=magdown"
+transfer_output_files = out_files_$(cluster).$(process).tar.gz
+
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
+
+queue 1

@@ -122,7 +122,7 @@ def pgun_dir(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     sign should be "cf" or "dcs"
 
     """
-    assert year in {"2016", "2018"}
+    assert year in {"2017", "2018"}
     assert sign in {"cf", "dcs"}
     assert magnetisation in {"magdown", "magup"}
 

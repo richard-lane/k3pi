@@ -39,9 +39,9 @@ def reweighter_path(
     Where the efficiency correction reweighter lives
 
     """
-    assert year in {"2018"}
+    assert year in {"2018", "2017"}
     assert sign in {"cf", "dcs"}
-    assert magnetisation in {"magdown"}
+    assert magnetisation in {"magdown", "magup"}
     assert k_sign in {"k_plus", "k_minus", "both"}
 
     suffix = "_time_fit" if time_fit else ""

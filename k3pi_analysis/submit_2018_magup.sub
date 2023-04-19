@@ -16,7 +16,7 @@ transfer_input_files = python.tar.gz, rs_Dbar02piKpipi.root, ws_D02piKpipi.root
 stream_output=True
 stream_error=True
 
-environment = CONDOR_JOB_ID=$(cluster).$(process)
+environment = "CONDOR_JOB_ID=$(cluster).$(process) YEAR=2018 MAG=magup"
 transfer_output_files = out_files_$(cluster).$(process).tar.gz
 
 should_transfer_files = YES

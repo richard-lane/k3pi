@@ -18,6 +18,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fit"))
 
 from lib_data import ipchi2_fit
+from lib_data.util import misid_correction as correct_misid
 from libFit import util as mass_util
 from lib_time_fit import plotting, util, fitter, definitions
 
@@ -114,13 +115,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "year",
         type=str,
-        choices={"2018"},
+        choices={"2017", "2018"},
         help="Data taking year.",
     )
     parser.add_argument(
         "magnetisation",
         type=str,
-        choices={"magdown"},
+        choices={"magup", "magdown"},
         help="magnetisation direction",
     )
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")

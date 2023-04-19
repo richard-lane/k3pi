@@ -1,7 +1,9 @@
 #/bin/bash
 
-YEAR=2018
-MAG=magdown
+# These need to be set as env vars
+set -u
+echo "YEAR: $YEAR MAG: $MAG"
+set +u
 
 # Run the whole analysis
 # Gets the data, trains "BDT-cut" classifier, trains efficiency reweighter,
@@ -150,15 +152,15 @@ python k3pi-data/scripts/data_ipchi2_fit.py $YEAR cf $MAG
 pids[1]=$!
 
 # Plot BDT stuff
-python k3pi_signal_cuts/scripts/plot_roc.py &
+python k3pi_signal_cuts/scripts/plot_roc.py $YEAR dcs $MAG &
 pids[2]=$!
-python k3pi_signal_cuts/scripts/plot_cuts.py &
+python k3pi_signal_cuts/scripts/plot_cuts.py $YEAR dcs $MAG &
 pids[3]=$!
-python k3pi_signal_cuts/scripts/plot_data_cuts.py &
+python k3pi_signal_cuts/scripts/plot_data_cuts.py $YEAR dcs $MAG &
 pids[4]=$!
 
 # Plot projections of data
-python k3pi-data/scripts/plot_parameterisation.py &
+python k3pi-data/scripts/plot_parameterisation.py $YEAR $MAG &
 pids[5]=$!
 
 for pid in ${pids[*]}; do

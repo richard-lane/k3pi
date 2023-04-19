@@ -4,6 +4,7 @@ Plot real data variables before and after cuts
 """
 import sys
 import pathlib
+import argparse
 from itertools import islice
 import numpy as np
 import pandas as pd
@@ -34,14 +35,12 @@ def _plot(
     axis.hist(var[predictions == 1], bins=bins, label="after", alpha=0.5, color="b")
 
 
-def main():
+def main(*, year: str, sign: str, magnetisation: str):
     """
     Show plots before and after applying cuts with the classifier
 
     """
     # Read dataframes of stuff
-    year, sign, magnetisation = "2018", "dcs", "magdown"
-
     n_dfs = 100
     dataframes = list(
         tqdm(
@@ -89,4 +88,27 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Plot effect of BDT cut on training data")
+    parser.add_argument(
+        "year",
+        type=str,
+        choices={"2017", "2018"},
+        help="Data taking year.",
+    )
+    parser.add_argument(
+        "sign",
+        type=str,
+        choices={"dcs", "cf"},
+        help="Type of decay - favoured or suppressed."
+        "D0->K+3pi is DCS; Dbar0->K+3pi is CF (or conjugate).",
+    )
+    parser.add_argument(
+        "magnetisation",
+        type=str,
+        choices={"magdown", "magup"},
+        help="magnetisation direction",
+    )
+
+    args = parser.parse_args()
+
+    main(**vars(parser.parse_args()))

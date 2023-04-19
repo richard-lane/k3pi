@@ -1,5 +1,4 @@
-"""
-Common utilities for running scripts
+""" Common utilities for running scripts
 
 """
 import argparse
@@ -18,7 +17,7 @@ def parser(description: str) -> argparse.ArgumentParser:
     retval.add_argument(
         "year",
         type=str,
-        choices={"2018"},
+        choices={"2017", "2018"},
         help="Data taking year, so we know which reweighter to open",
     )
     retval.add_argument(
@@ -36,7 +35,7 @@ def parser(description: str) -> argparse.ArgumentParser:
     retval.add_argument(
         "magnetisation",
         type=str,
-        choices={"magdown"},
+        choices={"magup", "magdown"},
         help="So we know which reweighter to open",
     )
     retval.add_argument(

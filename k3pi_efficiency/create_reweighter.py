@@ -101,8 +101,8 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create efficiency reweighters")
     parser.add_argument("sign", type=str, choices={"cf", "dcs"})
-    parser.add_argument("year", type=str, choices={"2018"})
-    parser.add_argument("magnetisation", type=str, choices={"magdown"})
+    parser.add_argument("year", type=str, choices={"2017", "2018"})
+    parser.add_argument("magnetisation", type=str, choices={"magup", "magdown"})
     parser.add_argument(
         "k_sign",
         type=str,
