@@ -352,7 +352,7 @@ def check_year_mag_sign(year: str, magnetisation: str, sign: str) -> None:
     Raises AssertionError otherwise
 
     """
-    assert year in {"2018"}
+    assert year in {"2017", "2018"}
     assert magnetisation in {"magdown", "magup"}
     assert sign in {"dcs", "cf"}
 
