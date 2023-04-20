@@ -39,10 +39,21 @@ def main(*, year: str, magnetisation: str, sign: str):
 
     # Find phase space points
     points = np.column_stack((helicity_param(*util.k_3pi(pgun_df)), pgun_df["time"]))
-    t_bins = TIME_BINS[1:-1]
+    t_bins = TIME_BINS[2:-1]
 
     # Only keep points in the time bins
     keep = (t_bins[0] < points[:, -1]) & (points[:, -1] < t_bins[-1])
+    weights = weights[keep]
+    points = points[keep]
+
+    # Scale to approximate WS statistics - throw away pts to achieve this
+    rng = np.random.default_rng()
+    # time-bin integrated yield
+    expected_ws_yield = 2000 * (len(t_bins) - 1)
+    keep_frac = expected_ws_yield / len(points)
+    print(f"{keep_frac=}")
+    keep = rng.random(len(points)) < keep_frac
+
     weights = weights[keep]
     points = points[keep]
 
@@ -88,7 +99,7 @@ def main(*, year: str, magnetisation: str, sign: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Make + store histograms of D0 eta and P"
+        description="Make histograms of phsp/time, scaled to expected WS stats"
     )
     parser.add_argument("year", type=str, help="data taking year", choices={"2018"})
     parser.add_argument(
