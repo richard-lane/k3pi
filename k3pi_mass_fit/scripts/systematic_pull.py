@@ -29,15 +29,18 @@ class GaussKDE:
     """
     Callable for KDE
 
-    Unused
     """
 
     def __init__(self, positions: np.ndarray, counts: np.ndarray, width: float):
         """
         Tell us where to put the Gaussians and how strong to make them
+
         """
-        self._gaussians = (norm(loc=position, scale=width) for position in positions)
+        assert len(positions) == len(counts)
+
+        self._gaussians = [norm(loc=position, scale=width) for position in positions]
         self._counts = counts
+        self._total = np.sum(counts)
 
     def __call__(self, points: np.ndarray):
         """
@@ -50,13 +53,14 @@ class GaussKDE:
         for gaussian, count in zip(self._gaussians, self._counts):
             retval += count * gaussian.pdf(points)
 
-        retval /= np.sum(self._counts)
+        # Scale so the KDE is normalised
+        retval /= self._total
 
         return retval
 
 
 def _sig_counts(
-    year: str, sign: str, magnetisation: str, bins: np.ndarray
+    year: str, sign: str, magnetisation: str, bins: np.ndarray, n_underflow: int
 ) -> np.ndarray:
     """
     binned MC counts
@@ -65,7 +69,7 @@ def _sig_counts(
 
     """
     # Read the right dataframe
-    mc_df = get.particle_gun(year, sign, magnetisation)
+    mc_df = get.particle_gun(year, sign, magnetisation, show_progress=True)
 
     # Perform BDT cut
     clf = get_clf(year, "dcs", magnetisation)
@@ -78,6 +82,12 @@ def _sig_counts(
     count, _ = stats.counts(mass_util.delta_m(mc_df), bins)
     print(f"total sig: {np.sum(count)}")
 
+    # Smooth out with a KDE
+    # Assume bins are constant width past the underflow
+    # centres = (bins[:-1] + bins[1:]) / 2
+    # kde = GaussKDE(centres[n_underflow:], count[n_underflow:], 0.6 * (bins[-1] - bins[-2]))
+
+    # Don't use the KDE because I don't like it
     return count
 
 
@@ -317,8 +327,8 @@ def main():
         (low, fit_range[0], high), (n_underflow, 150)
     )
 
-    rs_count = _sig_counts(year, "cf", magnetisation, bins)
-    ws_count = _sig_counts(year, "dcs", magnetisation, bins)
+    rs_count = _sig_counts(year, "cf", magnetisation, bins, n_underflow)
+    ws_count = _sig_counts(year, "dcs", magnetisation, bins, n_underflow)
 
     manager = Manager()
     out_dict = manager.dict()
