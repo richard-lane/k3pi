@@ -41,8 +41,6 @@ def main(
     if sec_correction:
         rs_sec_frac = ipchi2_fit.sec_fracs("cf")
         ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
-    if misid_correction:
-        ws_yields, ws_errs = correct_misid(ws_yields, ws_errs)
 
     # Want the phsp-bin integrated yields
     yield_file_path = mass_util.yield_file(
@@ -63,6 +61,10 @@ def main(
 
         ws_yields = ipchi2_fit.correct(ws_yields, ws_sec_frac)
         ws_errs = ipchi2_fit.correct(ws_errs, ws_sec_frac)
+
+    # Do misid correction if we need to
+    if misid_correction:
+        ws_yields, ws_errs = correct_misid(ws_yields, ws_errs)
 
     ratio = ws_yields / rs_yields
     ratio_err = ratio * np.sqrt((rs_errs / rs_yields) ** 2 + (ws_errs / ws_yields) ** 2)
