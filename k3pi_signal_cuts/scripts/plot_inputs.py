@@ -67,7 +67,7 @@ def main():
     # Plot
     fig, ax = plt.subplots(3, 3, figsize=(8, 8))
 
-    columns = list(training_vars.training_var_names()) + ["D0 mass", "D* mass"]
+    columns = list(training_vars.training_var_names()) + ["Dst_ReFit_D0_M", "D* mass"]
     for col, axis in zip(columns, ax.ravel()):
         _plot(axis, mc_df[col], uppermass_df[col], sig_wt)
 
@@ -77,8 +77,8 @@ def main():
     # Let's also plot the mass difference
     _plot(
         ax.ravel()[-1],
-        mc_df["D* mass"] - mc_df["D0 mass"],
-        uppermass_df["D* mass"] - uppermass_df["D0 mass"],
+        mc_df["D* mass"] - mc_df["Dst_ReFit_D0_M"],
+        uppermass_df["D* mass"] - uppermass_df["Dst_ReFit_D0_M"],
         sig_wt,
     )
     ax.ravel()[-1].set_title(r"$\Delta$M*")
