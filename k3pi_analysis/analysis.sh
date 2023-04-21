@@ -251,18 +251,18 @@ done
 unset pids
 
 # Plot them, and the PDF
-python k3pi_mass_fit/scripts/plot_bkg.py $YEAR $MAG
+python k3pi_mass_fit/scripts/plot_bkg.py $YEAR $MAG --bdt_cut
 
 # Perform mass fits with alternate background model
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut --alt_bkg &
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut --alt_bkg --efficiency &
 pids[0]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 --bdt_cut --alt_bkg &
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 --bdt_cut --alt_bkg --efficiency &
 pids[1]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 --bdt_cut --alt_bkg &
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 --bdt_cut --alt_bkg --efficiency &
 pids[2]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 --bdt_cut --alt_bkg &
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 --bdt_cut --alt_bkg --efficiency &
 pids[3]=$!
-python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG --bdt_cut --alt_bkg &
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG --bdt_cut --alt_bkg --efficiency &
 pids[4]=$!
 for pid in ${pids[*]}; do
     wait $pid
