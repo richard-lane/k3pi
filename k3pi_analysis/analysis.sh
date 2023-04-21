@@ -240,6 +240,19 @@ python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 1 --bdt_cut --sec_correct
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --sec_correction --misid_correction
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --sec_correction --misid_correction
 
+# Create bkg pdf dumps
+python k3pi_mass_fit/scripts/create_bkg.py $YEAR $MAG dcs --n_repeats 250 --bdt_cut &
+pids[0]=$!
+python k3pi_mass_fit/scripts/create_bkg.py $YEAR $MAG cf --n_repeats 250 --bdt_cut &
+pids[1]=$!
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
+
+# Plot them, and the PDF
+python k3pi_mass_fit/scripts/plot_bkg.py $YEAR $MAG
+
 # Perform mass fits with alternate background model
 python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 --bdt_cut --alt_bkg &
 pids[0]=$!

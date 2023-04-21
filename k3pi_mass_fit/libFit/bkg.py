@@ -134,7 +134,9 @@ def pdf(
         year, magnetisation, sign, extended_bins, bdt_cut=bdt_cut
     )
 
-    assert np.sum(ext_counts), "Empty histogram - have you created the dump?"
+    assert np.sum(
+        ext_counts
+    ), f"Empty histogram {year} {magnetisation} {sign} - have you created the dump?"
 
     print(f"{ext_counts[0]} underflow; {ext_counts[-1]} overflow")
 
