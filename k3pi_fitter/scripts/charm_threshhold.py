@@ -82,7 +82,7 @@ def main():
     parabola.plot_projection(axes, params, max_chi2)
     axes[0].set_ylim(0, 16)
     axes[0].legend()
-    plt.show()
+    fig.savefig("charm_combination_parabola.png")
     plt.close(fig)
 
     # Transform from chi2s to sigma
@@ -91,21 +91,22 @@ def main():
     combined_vals = np.sqrt(combined_vals)
 
     # Plot sigma bands
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axes = plt.subplot_mosaic(
+        "AAABBBCCCD\nAAABBBCCCD\nAAABBBCCCD", figsize=(19, 6)
+    )
     contour_kw = {"cmap": "turbo"}
     levels = [0, 1, 2, 3, 4]
-    plotting.scan(axes[0], re_z, im_z, cleo_chi2_vals, levels, contour_kw)
-    plotting.scan(axes[1], re_z, im_z, bes_chi2_vals, levels, contour_kw)
-    contours = plotting.scan(axes[2], re_z, im_z, combined_vals, levels, contour_kw)
+    plotting.scan(axes["A"], re_z, im_z, cleo_chi2_vals, levels, contour_kw)
+    plotting.scan(axes["B"], re_z, im_z, bes_chi2_vals, levels, contour_kw)
+    contours = plotting.scan(axes["C"], re_z, im_z, combined_vals, levels, contour_kw)
 
-    for axis in axes:
-        axis.add_patch(Circle((0, 0), radius=1, facecolor="none", edgecolor="k"))
-        axis.set_aspect("equal")
+    for label in ("A", "B", "C"):
+        axes[label].add_patch(Circle((0, 0), radius=1, facecolor="none", edgecolor="k"))
+        axes[label].set_aspect("equal")
 
-    fig.colorbar(contours, ax=axes.ravel()[-1])
-    fig.tight_layout()
+    fig.colorbar(contours, cax=axes["D"])
+    # fig.tight_layout()
     fig.savefig(f"charm_bin_{bin_number}.png")
-    plt.show()
 
 
 if __name__ == "__main__":

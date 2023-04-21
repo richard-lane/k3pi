@@ -84,7 +84,7 @@ def main(*, year: str, sign: str, magnetisation: str):
 
     fig.tight_layout()
 
-    plt.savefig("dcs_data_cuts.png")
+    plt.savefig(f"{sign}_data_cuts.png")
 
 
 if __name__ == "__main__":
