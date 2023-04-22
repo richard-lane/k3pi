@@ -234,9 +234,7 @@ def _plot_fit(
         )
     )
     n_bkg = np.sum(
-        pdfs.bin_areas(
-            lambda pts: params[3] * bkg_fcn(pts), np.linspace(*sig_region)
-        )
+        pdfs.bin_areas(lambda pts: params[3] * bkg_fcn(pts), np.linspace(*sig_region))
     )
     print(f"{n_signal=:.4f}, {n_bkg=:.4f}")
     fig.suptitle(f"signal fraction {n_signal / (n_signal + n_bkg):.4f}")

@@ -20,6 +20,9 @@ cd k3pi
 # Run the analysis
 ./k3pi_analysis/analysis.sh
 
+# Allow errors now that the analysis has actually run
+set +e
+
 # Move all the output stuff into a special dir
 mkdir out_stuff/
 mv *.png out_stuff/

@@ -75,9 +75,9 @@ python k3pi_efficiency/create_reweighter.py --cut dcs $YEAR $MAG both &
 dcs_eff_pid=$!
 
 # Create real data dataframes now as well; this is also slow
-python k3pi-data/create_real.py $YEAR cf $MAG --n_procs 3 &
+python k3pi-data/create_real.py $YEAR cf $MAG --n_procs 3 -n 51 &
 cf_data_pid=$!
-python k3pi-data/create_real.py $YEAR dcs $MAG --n_procs 3 &
+python k3pi-data/create_real.py $YEAR dcs $MAG --n_procs 3 -n 51 &
 dcs_data_pid=$!
 
 # This should be most of the analysis, in terms of time
@@ -178,6 +178,22 @@ pids[2]=$!
 python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 --bdt_cut --efficiency &
 pids[3]=$!
 python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG --bdt_cut --efficiency &
+pids[4]=$!
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
+
+# mass fits without bdt or efficiency, just becuase
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 0 &
+pids[0]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 1 &
+pids[1]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 2 &
+pids[2]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG 3 &
+pids[3]=$!
+python k3pi_mass_fit/scripts/data_fits.py $YEAR $MAG &
 pids[4]=$!
 for pid in ${pids[*]}; do
     wait $pid
