@@ -246,7 +246,7 @@ def binned_generator(
 
     :param generator: generator of dataframes
     :param phsp_bin: phsp bin index, 0/1/2/3 or None
-                     if None, this fcn returns all of them
+                     if None, this fcn returns all of them (but not the Ks veto)
 
     """
     if phsp_bin is None:
