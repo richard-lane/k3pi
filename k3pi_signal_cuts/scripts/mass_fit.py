@@ -20,6 +20,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_mass_fit"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_fitter"))
 
+from lib_cuts.get import classifier as get_clf, cut_dfs
 from libFit import plotting, definitions, pdfs
 from libFit.fit import binned_simultaneous_fit
 from libFit import util
@@ -243,7 +244,9 @@ def _plot_fit(
     return fig, axes
 
 
-def _dataframes(year: str, sign: str, magnetisation: str) -> Iterable[pd.DataFrame]:
+def _dataframes(
+    year: str, sign: str, magnetisation: str, cut: bool
+) -> Iterable[pd.DataFrame]:
     """
     Get the dataframes for the mass ft
 
@@ -251,19 +254,25 @@ def _dataframes(year: str, sign: str, magnetisation: str) -> Iterable[pd.DataFra
     low_t, high_t = TIME_BINS[2:4]
     phsp_bin = 0
 
-    return get.binned_generator(
-        get.time_binned_generator(
-            cuts.cands_cut_dfs(
-                cuts.ipchi2_cut_dfs(get.data(year, sign, magnetisation))
+    clf = get_clf(year, "dcs", magnetisation) if cut else None
+
+    return cut_dfs(
+        get.binned_generator(
+            get.time_binned_generator(
+                cuts.cands_cut_dfs(
+                    cuts.ipchi2_cut_dfs(get.data(year, sign, magnetisation))
+                ),
+                low_t,
+                high_t,
             ),
-            low_t,
-            high_t,
+            phsp_bin,
         ),
-        phsp_bin,
+        clf,
+        perform_cut=cut,
     )
 
 
-def main(*, year: str, magnetisation: str):
+def main(*, year: str, magnetisation: str, cut: bool):
     """
     Create plots for the mass fits in the
 
@@ -277,10 +286,10 @@ def main(*, year: str, magnetisation: str):
 
     # Get the data in phsp bin 0 and time bin 1
     rs_count, rs_err = stats.counts_generator(
-        util.delta_m_generator(_dataframes(year, "cf", magnetisation)), mass_bins
+        util.delta_m_generator(_dataframes(year, "cf", magnetisation, cut)), mass_bins
     )
     ws_count, ws_err = stats.counts_generator(
-        util.delta_m_generator(_dataframes(year, "dcs", magnetisation)), mass_bins
+        util.delta_m_generator(_dataframes(year, "dcs", magnetisation, cut)), mass_bins
     )
 
     rs_total = np.sum(rs_count)
@@ -328,5 +337,10 @@ if __name__ == "__main__":
         type=str,
         choices={"magup", "magdown"},
         help="magnetisation direction",
+    )
+    parser.add_argument(
+        "--cut",
+        action="store_true",
+        help="Whether to do the BDT cut",
     )
     main(**vars(parser.parse_args()))
