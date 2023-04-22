@@ -58,6 +58,8 @@ def main(path: str, sign: str) -> None:
 
     # If the dir doesnt exist, create it
     if not definitions.AMPGEN_DIR.is_dir():
+        # This can occasionally fail if there is another process running this script
+        # which makes the directory after the check has been performed
         os.mkdir(definitions.AMPGEN_DIR)
 
     # We need a random number generator to decide which elements are test/train
