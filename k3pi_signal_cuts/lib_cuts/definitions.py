@@ -14,7 +14,7 @@ EXPECTED_N_TOT_SIG_REGION = EXPECTED_N_SIG_SIG_REGION + EXPECTED_N_BKG_SIG_REGIO
 EXPECTED_SIG_FRAC = EXPECTED_N_SIG_SIG_REGION / EXPECTED_N_TOT_SIG_REGION
 
 # Optimal threshhold for the BDT - hopefully
-THRESHOLD = 0.198
+THRESHOLD = 0.28
 
 
 def classifier_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
