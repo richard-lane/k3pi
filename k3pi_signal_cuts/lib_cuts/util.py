@@ -2,6 +2,8 @@
 Utility functions
 
 """
+from typing import Iterable
+
 import numpy as np
 
 
@@ -86,3 +88,13 @@ def resample_mask(
     retval[discard] = False
 
     return retval
+
+
+def discard(gen: np.random.Generator, iterable: Iterable, n_desired: float) -> Iterable:
+    """
+    Randomly throw away entries from an iterable to have approximately n_desired entries
+
+    """
+    n_tot = len(iterable)
+
+    return iterable[gen.random(n_tot) < (n_desired / n_tot)]

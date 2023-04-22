@@ -15,7 +15,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts import util, definitions
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars, d0_mc_corrections, cuts
+from lib_data import get, training_vars, cuts
 from libFit.util import delta_m
 
 
@@ -25,7 +25,6 @@ def _plot(
     bkg: np.ndarray,
     sig_predictions: np.ndarray,
     bkg_predictions: np.ndarray,
-    mc_corr_wts: np.ndarray,
 ) -> None:
     """
     Plot signal + bkg on an axis
@@ -45,9 +44,7 @@ def _plot(
 
     # Plot before cuts
     hist_kw = {"bins": bins}
-    axis.hist(
-        signal, label="sig", histtype="step", color="b", weights=mc_corr_wts, **hist_kw
-    )
+    axis.hist(signal, label="sig", histtype="step", color="b", **hist_kw)
     axis.hist(bkg, label="bkg", histtype="step", color="r", **hist_kw)
 
     # Plot after cuts
@@ -56,7 +53,6 @@ def _plot(
         label="sig",
         alpha=0.5,
         color="b",
-        weights=mc_corr_wts[sig_predictions == 1],
         **hist_kw,
     )
     axis.hist(bkg[bkg_predictions == 1], label="bkg", alpha=0.5, color="r", **hist_kw)
@@ -69,14 +65,9 @@ def main(*, year: str, sign: str, magnetisation: str):
     """
     # Read dataframes of stuff
     sig_df = get.mc(year, sign, magnetisation)
-    bkg_df = pd.concat(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
-
-    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    # mc_corr_wts /= np.mean(mc_corr_wts)
-    mc_corr_wts = np.ones(len(sig_df))
+    bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
     # We only want the testing data here
-    mc_corr_wts = mc_corr_wts[~sig_df["train"]]
     sig_df = sig_df[~sig_df["train"]]
     bkg_df = bkg_df[~bkg_df["train"]]
 
@@ -87,16 +78,15 @@ def main(*, year: str, sign: str, magnetisation: str):
 
     # Lets also undersample so we get the same amount of signal/bkg that we expect to see
     # in the data
-    sig_frac = 0.0852
+    sig_frac = definitions.EXPECTED_SIG_FRAC
     keep_frac = util.weight(
         np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))),
         sig_frac,
-        np.concatenate((mc_corr_wts, np.ones(len(bkg_df)))),
+        np.ones(len(sig_df) + len(bkg_df)),
     )
     sig_keep = np.random.default_rng().random(len(sig_df)) < keep_frac
 
     sig_df = sig_df[sig_keep]
-    mc_corr_wts = mc_corr_wts[sig_keep]
 
     threshhold = definitions.THRESHOLD
     sig_predictions = clf.predict_proba(sig_df[training_labels])[:, 1] > threshhold
@@ -112,7 +102,6 @@ def main(*, year: str, sign: str, magnetisation: str):
             bkg_df[col],
             sig_predictions,
             bkg_predictions,
-            mc_corr_wts,
         )
 
         title = col if col in training_vars.training_var_names() else col + "*"
@@ -125,7 +114,6 @@ def main(*, year: str, sign: str, magnetisation: str):
         delta_m(bkg_df),
         sig_predictions,
         bkg_predictions,
-        mc_corr_wts,
     )
     ax.ravel()[-1].set_title(r"$\Delta$M*")
 
@@ -133,7 +121,7 @@ def main(*, year: str, sign: str, magnetisation: str):
 
     fig.tight_layout()
 
-    plt.savefig("cuts.png")
+    plt.savefig(f"cuts_{year}_{sign}_{magnetisation}.png")
 
 
 if __name__ == "__main__":

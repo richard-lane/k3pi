@@ -5,6 +5,15 @@ Useful definitions and things
 import pathlib
 from sklearn.ensemble import GradientBoostingClassifier as Classifier
 
+# Expected absolute number in the signal region, roughly
+EXPECTED_N_SIG_SIG_REGION = 2_500
+EXPECTED_N_BKG_SIG_REGION = 12_000
+EXPECTED_N_TOT_SIG_REGION = EXPECTED_N_SIG_SIG_REGION + EXPECTED_N_BKG_SIG_REGION
+
+# Expected signal fraction in the signal region, roughly
+EXPECTED_SIG_FRAC = EXPECTED_N_SIG_SIG_REGION / EXPECTED_N_TOT_SIG_REGION
+
+# Optimal threshhold for the BDT - hopefully
 THRESHOLD = 0.198
 
 

@@ -27,7 +27,7 @@ pids[1]=$!
 
 # Create the right dataframes
 # First create uppermass + MC
-python k3pi-data/create_uppermass.py $YEAR dcs $MAG -n 36 &
+python k3pi-data/create_uppermass.py $YEAR dcs $MAG -n 100 --n_procs 6 &
 pids[0]=$!
 
 python k3pi-data/create_mc.py $YEAR dcs $MAG &
@@ -35,26 +35,32 @@ pids[1]=$!
 python k3pi-data/create_mc.py $YEAR cf $MAG &
 pids[2]=$!
 
+wait ${pids[1]}
+wait ${pids[2]}
+
 # Start creating particle gun dfs
 python k3pi-data/create_pgun.py $YEAR dcs $MAG -v &
-pids[3]=$!
+pids[1]=$!
 python k3pi-data/create_pgun.py $YEAR cf $MAG -v &
-pids[4]=$!
+pids[2]=$!
+
+wait ${pids[1]}
+wait ${pids[2]}
 
 # Start creating ampgen dfs
 # Need to point the AmpGen scripts at the ROOT files that
 # were generated with AmpGen
 # when using HTcondor, these were brought over and live in the worker node's home dir
 python k3pi-data/create_ampgen.py ../ws_D02piKpipi.root dcs &
-pids[5]=$!
+pids[1]=$!
 python k3pi-data/create_ampgen.py ../rs_Dbar02piKpipi.root cf &
-pids[6]=$!
+pids[2]=$!
 
 # Wait for the dfs to be made
-echo "waiting for upper mass + MC dfs"
 wait ${pids[0]}
 wait ${pids[1]}
 wait ${pids[2]}
+unset pids
 
 # Train BDT
 python k3pi_signal_cuts/create_classifier.py $YEAR dcs $MAG &
@@ -75,9 +81,9 @@ python k3pi_efficiency/create_reweighter.py --cut dcs $YEAR $MAG both &
 dcs_eff_pid=$!
 
 # Create real data dataframes now as well; this is also slow
-python k3pi-data/create_real.py $YEAR cf $MAG --n_procs 3 -n 51 &
+python k3pi-data/create_real.py $YEAR cf $MAG --n_procs 3 &
 cf_data_pid=$!
-python k3pi-data/create_real.py $YEAR dcs $MAG --n_procs 3 -n 51 &
+python k3pi-data/create_real.py $YEAR dcs $MAG --n_procs 3 &
 dcs_data_pid=$!
 
 # This should be most of the analysis, in terms of time
@@ -158,10 +164,12 @@ python k3pi_signal_cuts/scripts/plot_cuts.py $YEAR dcs $MAG &
 pids[3]=$!
 python k3pi_signal_cuts/scripts/plot_data_cuts.py $YEAR dcs $MAG &
 pids[4]=$!
+python k3pi_signal_cuts/scripts/plot_signal_significance.py $YEAR dcs $MAG &
+pids[5]=$!
 
 # Plot projections of data
 python k3pi-data/scripts/plot_parameterisation.py $YEAR $MAG &
-pids[5]=$!
+pids[6]=$!
 
 for pid in ${pids[*]}; do
     wait $pid
@@ -257,7 +265,7 @@ python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 2 --bdt_cut --sec_correct
 python k3pi_fitter/scripts/fit_from_file.py $YEAR $MAG 3 --bdt_cut --sec_correction --misid_correction
 
 # Create bkg pdf dumps
-python k3pi_mass_fit/scripts/create_bkg.py $YEAR $MAG dcs --n_repeats 250 --bdt_cut &
+python k3pi_mass_fit/scripts/create_bkg.py $YEAR $MAG dcs --n_repeats 500 --bdt_cut &
 pids[0]=$!
 python k3pi_mass_fit/scripts/create_bkg.py $YEAR $MAG cf --n_repeats 250 --bdt_cut &
 pids[1]=$!

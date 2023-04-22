@@ -16,8 +16,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import classification_report
 
-from lib_cuts import definitions
-from lib_cuts import util
+from lib_cuts import definitions, util
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1] / "k3pi_mass_fit"))
@@ -33,9 +32,7 @@ def _train_test_dfs(year, sign, magnetisation):
     Returns also weights for the MC correction
     """
     sig_df = get.mc(year, sign, magnetisation)
-    bkg_df = pd.concat(
-        list(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
-    )
+    bkg_df = pd.concat(list(get.uppermass(year, sign, magnetisation)))
 
     # Add delta M column cus its easier
     sig_df["delta M"] = delta_m(sig_df)
@@ -246,9 +243,9 @@ def main(year: str, sign: str, magnetisation: str):
 
     # We want to train the classifier on a realistic proportion of signal + background
     # Get this from running `scripts/mass_fit.py`
-    # using this number for now
-    sig_frac = 0.0852
-    train_weights = util.weights(train_label, sig_frac, train_d0_wts)
+    train_weights = util.weights(
+        train_label, definitions.EXPECTED_SIG_FRAC, train_d0_wts
+    )
 
     # Plot delta M and D mass distributions before weighting
     _plot_masses(
@@ -269,7 +266,7 @@ def main(year: str, sign: str, magnetisation: str):
 
     # Type is defined in lib_cuts.definitions
     clf = definitions.Classifier(
-        n_estimators=100, max_depth=8, learning_rate=0.15, loss="exponential"
+        n_estimators=200, max_depth=6, learning_rate=0.15, loss="exponential"
     )
 
     # We only want to use some of our variables for training
@@ -280,12 +277,14 @@ def main(year: str, sign: str, magnetisation: str):
 
     # Resample for the testing part of the classification report
     gen = np.random.default_rng()
-    test_mask = util.resample_mask(gen, test_label, sig_frac, test_d0_wts)
-    print(
-        classification_report(
-            test_label[test_mask], clf.predict(test_df[training_labels][test_mask])
-        )
+    test_mask = util.resample_mask(
+        gen, test_label, definitions.EXPECTED_SIG_FRAC, test_d0_wts
     )
+    test_label = test_label[test_mask]
+    test_df = test_df[test_mask]
+
+    print(classification_report(test_label, clf.predict(test_df[training_labels])))
+    print(f"{len(test_label)=}\t{np.sum(test_label)=}")
 
     with open(clf_path, "wb") as f:
         pickle.dump(clf, f)

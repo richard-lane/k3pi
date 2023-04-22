@@ -30,13 +30,13 @@ def _dataframe(
     """
     # Read dataframes of stuff
     sig_df = get.mc(year, sign, magnetisation)
-    bkg_df = pd.concat(cuts.ipchi2_cut_dfs(get.uppermass(year, sign, magnetisation)))
+    bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
     # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
     # mc_corr_wts /= np.mean(mc_corr_wts)
     mc_corr_wts = np.ones(len(sig_df))
 
-    # We only want the testing data here
+    # We only want the testing/training data here
     sig_mask = sig_df["train"] if train else ~sig_df["train"]
     bkg_mask = bkg_df["train"] if train else ~bkg_df["train"]
 
@@ -44,20 +44,16 @@ def _dataframe(
     sig_df = sig_df[sig_mask]
     bkg_df = bkg_df[bkg_mask]
 
-    # Lets also undersample so we get the same amount of signal/bkg that we expect to see
-    # in the data
-    sig_frac = 0.0969
-    keep_frac = util.weight(
-        np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df)))),
-        sig_frac,
-        np.concatenate((mc_corr_wts, np.ones(len(bkg_df)))),
-    )
-    sig_keep = np.random.default_rng().random(len(sig_df)) < keep_frac
-
-    sig_df = sig_df[sig_keep]
-
     combined_df = pd.concat((sig_df, bkg_df))
     combined_y = np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df))))
+
+    # Lets also undersample so we get the same amount of signal/bkg that we expect to see
+    # in the data
+    mask = util.resample_mask(
+        np.random.default_rng(), combined_y, definitions.EXPECTED_SIG_FRAC
+    )
+    combined_df = combined_df[mask]
+    combined_y = combined_y[mask]
 
     return combined_df, combined_y
 
@@ -139,7 +135,7 @@ def main(*, year: str, magnetisation: str, sign: str):
     axis.legend()
     fig.tight_layout()
 
-    plt.savefig("roc.png")
+    plt.savefig(f"roc_{year}_{magnetisation}_{sign}.png")
 
 
 if __name__ == "__main__":

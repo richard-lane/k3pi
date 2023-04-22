@@ -12,6 +12,7 @@ import time
 import pickle
 import pathlib
 import argparse
+from multiprocessing import get_context
 
 import uproot
 import numpy as np
@@ -43,10 +44,15 @@ def _uppermass_df(gen: np.random.Generator, tree) -> pd.DataFrame:
     # Rename branch -> column names
     util.rename_cols(dataframe)
 
+    dataframe = cuts.cands_cut(dataframe)
+    dataframe = cuts.ipchi2_cut(dataframe)
+
     print(f"read/cut : {read_time:.3f}/{cut_time:.3f}")
 
     # Train test
-    util.add_train_column(gen, dataframe)
+    # More data for training than testing, since we only need ~12k evts for testing
+    # since that's the expected stats
+    util.add_train_column(gen, dataframe, train_fraction=0.85)
 
     return dataframe
 
@@ -102,8 +108,12 @@ def main(args: argparse.Namespace) -> None:
         for path in data_paths
     ][:n_files]
 
-    for data_path, dump_path in tqdm(zip(data_paths, dump_paths)):
-        _create_dump(data_path, dump_path, definitions.data_tree(sign))
+    # Iterable of the tree names so we can iterate over them in parallel with starmap
+    tree_names = (definitions.data_tree(sign) for _ in range(n_files))
+
+    with get_context("spawn").Pool(args.n_procs) as pool:
+        pool.starmap(_create_dump, zip(data_paths, dump_paths, tree_names))
+        pool.close()
 
 
 if __name__ == "__main__":
@@ -134,5 +144,7 @@ if __name__ == "__main__":
         default=None,
         help="number of files to process; defaults to all of them",
     )
+
+    parser.add_argument("--n_procs", type=int, default=2, help="number of processes")
 
     main(parser.parse_args())

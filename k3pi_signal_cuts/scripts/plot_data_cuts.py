@@ -51,7 +51,7 @@ def main(*, year: str, sign: str, magnetisation: str):
     dataframe = pd.concat(dataframes)
 
     # Predict which of these are signal and background using our classifier
-    # trained the clf on DCS, i think...
+    # trained the clf on DCS
     clf = get_clf(year, "dcs", magnetisation)
 
     training_labels = list(training_vars.training_var_names())
