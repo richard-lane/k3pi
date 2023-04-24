@@ -10,7 +10,7 @@ from matplotlib.patches import Circle
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-from lib_time_fit import parabola, plotting
+from lib_time_fit import parabola, plotting, definitions
 from lib_time_fit.charm_threshhold import likelihoods
 
 
@@ -26,7 +26,8 @@ def main():
     Choose some values for r_D and y; scan the CLEO likelihood value over the complex plane
 
     """
-    r_d, y, x = 0.0553431, 0.00681448, 0.0036
+    # r_d, y, x = 0.0553431, 0.00681448, 0.0036
+    r_d, y, x = 0.0553431, definitions.CHARM_Y, definitions.CHARM_X
     bin_number = int(sys.argv[1]) if len(sys.argv) > 1 else 0
 
     n_re, n_im = 100, 101
@@ -94,8 +95,10 @@ def main():
     fig, axes = plt.subplot_mosaic(
         "AAABBBCCCD\nAAABBBCCCD\nAAABBBCCCD", figsize=(19, 6)
     )
-    contour_kw = {"cmap": "turbo"}
-    levels = [0, 1, 2, 3, 4]
+    levels = [0, 1, 2, 3]
+    contour_kw = {
+        "colors": plt.rcParams["axes.prop_cycle"].by_key()["color"][: len(levels)]
+    }
     plotting.scan(axes["A"], re_z, im_z, cleo_chi2_vals, levels, contour_kw)
     plotting.scan(axes["B"], re_z, im_z, bes_chi2_vals, levels, contour_kw)
     contours = plotting.scan(axes["C"], re_z, im_z, combined_vals, levels, contour_kw)

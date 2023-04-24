@@ -38,21 +38,31 @@ def main(
     and plot a fit to their ratio
 
     """
+    if year == "all":
+        assert magnetisation == "all"
+
     if sec_correction:
         rs_sec_frac = ipchi2_fit.sec_fracs("cf")
         ws_sec_frac = ipchi2_fit.sec_fracs("dcs")
 
     # Want the phsp-bin integrated yields
-    yield_file_path = mass_util.yield_file(
-        year, magnetisation, None, bdt_cut, efficiency, alt_bkg
-    )
+    phsp_bin = None
 
-    assert yield_file_path.exists()
+    if year == "all":
+        time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.all_yields(
+            phsp_bin, bdt_cut, efficiency, alt_bkg
+        )
+    else:
+        yield_file_path = mass_util.yield_file(
+            year, magnetisation, phsp_bin, bdt_cut, efficiency, alt_bkg
+        )
 
-    # Get time bins, yields and errors
-    time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
-        yield_file_path
-    )
+        assert yield_file_path.exists()
+
+        # Get time bins, yields and errors
+        time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
+            yield_file_path
+        )
 
     # Do secondary fraction correction if we need to
     if sec_correction:
@@ -103,6 +113,15 @@ def main(
     p_val = 1 - scipy_chi2.cdf(chi2_diff, 2)
     fig.suptitle(rf"$\Delta\chi^2\Rightarrow$No Mixing p value p={p_val:.3E}")
 
+    # Indicate rD from the fit on the plot
+    world_r_d = 0.055
+    tick_width = 0.0075
+    r_d = unconstrained_fitter.values[1]
+    axes[1].axhline(
+        world_r_d**2, xmin=-tick_width, xmax=tick_width, color="r", clip_on=False
+    )
+    axes[1].axhline(r_d, xmin=-tick_width, xmax=tick_width, color="g", clip_on=False)
+
     fig.tight_layout()
 
     path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}.png"
@@ -117,13 +136,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "year",
         type=str,
-        choices={"2017", "2018"},
+        choices={"2017", "2018", "all"},
         help="Data taking year.",
     )
     parser.add_argument(
         "magnetisation",
         type=str,
-        choices={"magup", "magdown"},
+        choices={"magup", "magdown", "all"},
         help="magnetisation direction",
     )
     parser.add_argument("--bdt_cut", action="store_true", help="BDT cut the data")

@@ -239,6 +239,10 @@ def main(
     parabola.plot_projection(axes, params, max_chi2)
     path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
     axes[0].legend()
+    axes[0].set_title(f"{params[0]:.3f}$\pm${errs[0]:.3f}")
+    axes[1].set_title(f"{params[1]:.3f}$\pm${errs[1]:.3f}")
+    fig.tight_layout()
+
     print(f"plotting {path}")
     fig.savefig(path)
     plt.close(fig)
