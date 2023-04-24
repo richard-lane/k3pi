@@ -97,8 +97,8 @@ def _initial_scan(
     xy_err, xy_corr = xy_err_corr
     n_re, n_im = n_re_im
 
-    allowed_rez = np.linspace(-1, 1, 20)
-    allowed_imz = np.linspace(-1, 1, 21)
+    allowed_rez = np.linspace(-1, 1, 15)
+    allowed_imz = np.linspace(-1, 1, 16)
     chi2s = np.ones((len(allowed_imz), len(allowed_rez))) * np.inf
     with tqdm(total=len(allowed_imz) * len(allowed_rez)) as pbar:
         for i, re_z in enumerate(allowed_rez):
@@ -132,6 +132,7 @@ def main(
     alt_bkg: bool,
     sec_correction: bool,
     misid_correction: bool,
+    quiet: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -181,7 +182,7 @@ def main(
     xy_err = (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR)
     xy_corr = definitions.CHARM_XY_CORRELATION
 
-    n_re, n_im = 30, 31  # The number of points we want for the actual scan
+    n_re, n_im = 31, 30  # The number of points we want for the actual scan
     allowed_rez, allowed_imz = _initial_scan(
         initial_rdxy,
         (xy_err, xy_corr),
@@ -228,22 +229,27 @@ def main(
     # Fit a 2d parabola to the chi2 to get width, error, correlation out
     max_chi2 = 9
     params, errs = parabola.fit(chi2s, allowed_rez, allowed_imz, best_z, max_chi2)
-    for param, err, label in zip(
-        params, errs, ["ReZ", "ImZ", "ReZ width", "ImZ width", "corr"]
-    ):
-        print(f"{label}\t= {param:.3f} +- {err:.3f}")
+    if not quiet:
+        for param, err, label in zip(
+            params, errs, ["ReZ", "ImZ", "ReZ width", "ImZ width", "corr"]
+        ):
+            print(f"{label}\t= {param:.3f} +- {err:.3f}")
 
     # Plot 1d profiles
     fig, axes = plotting.projections((allowed_rez, allowed_imz), chi2s)
     parabola.plot_projection(axes, params, max_chi2)
     path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
     axes[0].legend()
-    axes[0].set_title(f"{params[0]:.3f}$\pm${errs[0]:.3f}")
-    axes[1].set_title(f"{params[1]:.3f}$\pm${errs[1]:.3f}")
+    axes[0].set_title(f"{params[0]:.3f}+-{errs[0]:.3f}")
+    axes[1].set_title(f"{params[1]:.3f}+-{errs[1]:.3f}")
     fig.tight_layout()
 
     fig.savefig(path)
     plt.close(fig)
+
+    # Print the fit params
+    print(f"\tReZ: {params[0]:.3f}\pm{params[2]:.3f}")
+    print(f"\tImZ: {params[1]:.3f}\pm{params[3]:.3f}")
 
     # Plot a 2d landscape
     # plotting.surface((allowed_rez, allowed_imz), chi2s, params)
@@ -274,7 +280,8 @@ def main(
     cbar_ax.set_title(r"$\sigma$")
 
     path = f"fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
-    print(f"plotting {path}")
+    if not quiet:
+        print(f"plotting {path}")
     fig.savefig(path)
 
 
@@ -311,6 +318,9 @@ if __name__ == "__main__":
         "--misid_correction",
         action="store_true",
         help="Correct the yields by the double misID fraction",
+    )
+    parser.add_argument(
+        "--quiet", action="store_true", help="Print only bare minimum info"
     )
 
     main(**vars(parser.parse_args()))
