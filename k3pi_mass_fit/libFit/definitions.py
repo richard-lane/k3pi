@@ -9,6 +9,16 @@ import numpy as np
 from . import pdfs
 
 
+# From the systematic pull study
+# We will scale the statistical errors by these amounts
+# When assessing the systematic error associated
+RS_PHSP_BINNED_PULL = 1.23
+WS_PHSP_BINNED_PULL = 0.12
+# Since we have 4x the stats
+RS_PHSP_INT_PULL = 2 * RS_PHSP_BINNED_PULL
+WS_PHSP_INT_PULL = 2 * WS_PHSP_BINNED_PULL
+
+
 def mass_bins(n_bins: int = 100) -> np.ndarray:
     """
     Bins used for mass fit

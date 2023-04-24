@@ -82,6 +82,7 @@ def _sig_counts(
     count, _ = stats.counts(mass_util.delta_m(mc_df), bins)
     print(f"total sig: {np.sum(count)}")
 
+    # Removed this because it just changes the peak shape
     # Smooth out with a KDE
     # Assume bins are constant width past the underflow
     # centres = (bins[:-1] + bins[1:]) / 2
@@ -140,11 +141,12 @@ def _pull_study(
     rng = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
     # we want the signal counts to add up to these
-    n_rs_sig = 80_000
-    n_ws_sig = 3_000
+    n_rs_sig = 400_000
+    n_ws_sig = 6_000
 
     # number to generate for the bkg
-    n_bkg = 45_000
+    n_rs_bkg = 100_000
+    n_ws_bkg = 80_000
 
     # Find the expected number of bkg events from the acceptance area / generating area
 
@@ -154,8 +156,8 @@ def _pull_study(
         # Keep trying until a fit converges
         while True:
             # Generate bkg
-            rs_bkg = _bkg(rng, n_bkg, bins=bins, sign="cf")
-            ws_bkg = _bkg(rng, n_bkg, bins=bins, sign="dcs")
+            rs_bkg = _bkg(rng, n_rs_bkg, bins=bins, sign="cf")
+            ws_bkg = _bkg(rng, n_ws_bkg, bins=bins, sign="dcs")
 
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
@@ -191,9 +193,9 @@ def _pull_study(
             fit_vals = binned_fitter.values
             fit_errs = binned_fitter.errors
             rs_sig_pull = (fit_vals[0] - n_rs_sig) / fit_errs[0]
-            rs_bkg_pull = (fit_vals[1] - n_bkg) / fit_errs[1]
+            rs_bkg_pull = (fit_vals[1] - n_rs_bkg) / fit_errs[1]
             ws_sig_pull = (fit_vals[2] - n_ws_sig) / fit_errs[2]
-            ws_bkg_pull = (fit_vals[3] - n_bkg) / fit_errs[3]
+            ws_bkg_pull = (fit_vals[3] - n_ws_bkg) / fit_errs[3]
 
             pulls[0][i] = rs_sig_pull
             pulls[1][i] = rs_bkg_pull
@@ -334,7 +336,7 @@ def main():
     out_dict = manager.dict()
     out_list = manager.list()
     n_procs = 6
-    n_experiments = 3
+    n_experiments = 30
     procs = [
         Process(
             target=_pull_study,

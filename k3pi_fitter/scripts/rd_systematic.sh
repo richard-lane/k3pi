@@ -19,3 +19,6 @@ python $SCRIPT all all --bdt_cut --efficiency --misid_correction
 
 echo -ne 'misid corr:\t'
 python $SCRIPT all all --bdt_cut --efficiency --sec_correction
+
+echo -ne 'massfit signal:\t'
+python $SCRIPT all all --bdt_cut --efficiency --sec_correction --misid_correction --fit_systematic

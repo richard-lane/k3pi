@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from iminuit.util import ValueView
 
+from . import definitions
+
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_efficiency"))
@@ -529,3 +531,22 @@ def write_scaled_yield(
             out_str = "\t".join((str(num) for num in stuff))
             out_str += "\n"
             yield_f.write(out_str)
+
+
+def systematic_pull_scale(errs: np.ndarray, sign: str, *, binned: bool) -> np.ndarray:
+    """
+    Scale errors by the amount expected to result from the systematic pull
+
+    """
+    assert sign in {"dcs", "cf"}
+
+    if sign == "cf":
+        scale = (
+            definitions.RS_PHSP_BINNED_PULL if binned else definitions.RS_PHSP_INT_PULL
+        )
+    else:
+        scale = (
+            definitions.WS_PHSP_BINNED_PULL if binned else definitions.WS_PHSP_INT_PULL
+        )
+
+    return errs * (1 + scale)

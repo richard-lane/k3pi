@@ -32,6 +32,7 @@ def main(
     alt_bkg: bool,
     sec_correction: bool,
     misid_correction: bool,
+    fit_systematic: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -63,6 +64,13 @@ def main(
         time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
             yield_file_path
         )
+
+    # Scale the errors by the systematic pull if we need to
+    if fit_systematic:
+        binned = phsp_bin is not None
+
+        rs_errs = mass_util.systematic_pull_scale(rs_errs, "cf", binned=binned)
+        ws_errs = mass_util.systematic_pull_scale(ws_errs, "dcs", binned=binned)
 
     # Do secondary fraction correction if we need to
     if sec_correction:
@@ -118,7 +126,7 @@ def main(
     tick_width = 0.0075
     r_d = unconstrained_fitter.values[0]
     r_d_err = unconstrained_fitter.errors[0]
-    print(f"{r_d:.5f}")
+    print(f"{r_d:.6f}+-{r_d_err:.6f}")
     axes[1].axhline(
         world_r_d**2, xmin=-tick_width, xmax=tick_width, color="r", clip_on=False
     )
@@ -140,7 +148,7 @@ def main(
 
     fig.tight_layout()
 
-    path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}.png"
+    path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}_{fit_systematic=}.png"
     fig.savefig(path)
 
 
@@ -176,6 +184,11 @@ if __name__ == "__main__":
         "--misid_correction",
         action="store_true",
         help="Correct the yields by the double misID fraction",
+    )
+    parser.add_argument(
+        "--fit_systematic",
+        action="store_true",
+        help="Scale the statistical errors up by a constant to account for a possible signal shape mismodelling systematic",
     )
 
     main(**vars(parser.parse_args()))
