@@ -224,7 +224,6 @@ def main(
     # Find the best fit value of Z
     min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
     best_z = allowed_rez[min_re], allowed_imz[min_im]
-    print(f"{best_z=}")
 
     # Fit a 2d parabola to the chi2 to get width, error, correlation out
     max_chi2 = 9
@@ -243,7 +242,6 @@ def main(
     axes[1].set_title(f"{params[1]:.3f}$\pm${errs[1]:.3f}")
     fig.tight_layout()
 
-    print(f"plotting {path}")
     fig.savefig(path)
     plt.close(fig)
 

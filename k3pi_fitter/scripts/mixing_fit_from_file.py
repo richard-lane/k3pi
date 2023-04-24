@@ -116,16 +116,31 @@ def main(
     # Indicate rD from the fit on the plot
     world_r_d = 0.055
     tick_width = 0.0075
-    r_d = unconstrained_fitter.values[1]
+    r_d = unconstrained_fitter.values[0]
+    r_d_err = unconstrained_fitter.errors[0]
+    print(f"{r_d:.5f}")
     axes[1].axhline(
         world_r_d**2, xmin=-tick_width, xmax=tick_width, color="r", clip_on=False
     )
-    axes[1].axhline(r_d, xmin=-tick_width, xmax=tick_width, color="g", clip_on=False)
+
+    # Shade the error area
+    # Fractional Error in rd^2 is twice the fractional error in rD
+    # then can cancel one of the r_ds
+    rd_sq_err = 2 * r_d * r_d_err
+    rd_sq = r_d**2
+    axes[1].fill_between(
+        [0.0, 1.0],
+        [rd_sq + rd_sq_err] * 2,
+        [rd_sq - rd_sq_err] * 2,
+        color="r",
+        edgecolor=None,
+        alpha=0.3,
+    )
+    axes[1].text(-0.5, rd_sq, r"$r_D^2$", color="r")
 
     fig.tight_layout()
 
     path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}.png"
-    print(f"plotting {path}")
     fig.savefig(path)
 
 
