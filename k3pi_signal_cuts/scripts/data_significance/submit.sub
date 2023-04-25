@@ -9,9 +9,9 @@ RequestGpus = 0
 # RequestDisk = 32GB
 # RequestMemory = 16GB
 
-+MaxRuntime = 10000
++MaxRuntime = 15000
 
-transfer_input_files = python.tar.gz
+transfer_input_files = python.tar.gz, k3pi_signal_cuts/classifiers/2018_dcs_magdown.pkl
 
 stream_output=True
 stream_error=True
