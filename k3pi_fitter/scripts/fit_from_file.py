@@ -249,7 +249,7 @@ def main(
     axes[0].legend()
     axes[0].set_title(f"ReZ={params[0]:.3f}+{params[3]:.3f}-{params[2]:.3f}")
     axes[1].set_title(f"ImZ={params[1]:.3f}+{params[4]:.3f}-{params[5]:.3f}")
-    fig.suptitle(fr"$\rho=${params[6]:.3f}$\pm${errs[6]:.3f}")
+    fig.suptitle(rf"$\rho=${params[6]:.3f}$\pm${errs[6]:.3f}")
     fig.tight_layout()
 
     fig.savefig(path)

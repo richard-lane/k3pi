@@ -6,19 +6,19 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 echo -ne 'all:\t\t'
 SCRIPT=$SCRIPT_DIR/mixing_fit_from_file.py
-python $SCRIPT all all --bdt_cut --efficiency --sec_correction --misid_correction
+python $SCRIPT all all --bdt_cut --efficiency --sec_correction --misid_correction --fit_systematic
 
 echo -ne 'efficiency:\t'
-python $SCRIPT all all --bdt_cut --sec_correction --misid_correction
+python $SCRIPT all all --bdt_cut --sec_correction --misid_correction --fit_systematic
 
 echo -ne 'alt bkg:\t'
-python $SCRIPT all all --bdt_cut --efficiency --alt_bkg --sec_correction --misid_correction
+python $SCRIPT all all --bdt_cut --efficiency --alt_bkg --sec_correction --misid_correction --fit_systematic
 
 echo -ne 'sec corr:\t'
-python $SCRIPT all all --bdt_cut --efficiency --misid_correction
+python $SCRIPT all all --bdt_cut --efficiency --misid_correction --fit_systematic
 
 echo -ne 'misid corr:\t'
-python $SCRIPT all all --bdt_cut --efficiency --sec_correction
+python $SCRIPT all all --bdt_cut --efficiency --sec_correction --fit_systematic
 
 echo -ne 'massfit signal:\t'
-python $SCRIPT all all --bdt_cut --efficiency --sec_correction --misid_correction --fit_systematic
+python $SCRIPT all all --bdt_cut --efficiency --sec_correction --misid_correction

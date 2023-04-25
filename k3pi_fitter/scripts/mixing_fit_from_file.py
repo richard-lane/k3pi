@@ -148,7 +148,7 @@ def main(
 
     fig.tight_layout()
 
-    path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}_{fit_systematic=}.png"
+    path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}_{misid_correction=}_{fit_systematic=}.png"
     fig.savefig(path)
 
 
