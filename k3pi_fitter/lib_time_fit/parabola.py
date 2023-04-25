@@ -9,12 +9,26 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 
+def _gaussian(del_x, del_y, x_width, y_width, correlation):
+    """a 2d gaussian (centred on 0, which is why you pass in delta x and delta y)"""
+    x_term = del_x / x_width
+    y_term = del_y / y_width
+
+    cross_term = correlation * x_term * y_term
+
+    pre_factor = 0.5 / (1 - (correlation**2))
+
+    return pre_factor * (x_term**2 + y_term**2 - 2 * cross_term)
+
+
 def fit_model(
     pts: np.ndarray,
     x_mean: float,
     y_mean: float,
-    x_width: float,
-    y_width: float,
+    x_width_l: float,
+    x_width_r: float,
+    y_width_l: float,
+    y_width_r: float,
     correlation: float,
 ) -> np.ndarray:
     """
@@ -29,12 +43,36 @@ def fit_model(
     del_x = pts[0] - x_mean
     del_y = pts[1] - y_mean
 
-    pre_factor = 0.5 / (1 - (correlation**2))
-    x_term = del_x / x_width
-    y_term = del_y / y_width
-    cross_term = correlation * x_term * y_term
+    # Boolean masks for sign
+    x_left = del_x < 0
+    y_left = del_y < 0
 
-    return pre_factor * (x_term**2 + y_term**2 - 2 * cross_term)
+    retval = np.ones(len(del_x))
+    # Both L
+    mask = x_left & y_left
+    retval[mask] = _gaussian(
+        del_x[mask], del_y[mask], x_width_l, y_width_l, correlation
+    )
+
+    # X L
+    mask = x_left & ~y_left
+    retval[mask] = _gaussian(
+        del_x[mask], del_y[mask], x_width_l, y_width_r, correlation
+    )
+
+    # Y L
+    mask = ~x_left & y_left
+    retval[mask] = _gaussian(
+        del_x[mask], del_y[mask], x_width_r, y_width_l, correlation
+    )
+
+    # Both R
+    mask = ~x_left & ~y_left
+    retval[mask] = _gaussian(
+        del_x[mask], del_y[mask], x_width_r, y_width_r, correlation
+    )
+
+    return retval
 
 
 def fit(
@@ -79,8 +117,11 @@ def fit(
         fit_model,
         x_data,
         delta_chi2,
-        p0=(*initial_means, 0.05, 0.15, -0.1),
-        bounds=((-1.5, -1.5, 0.0, 0.0, -1.0), (1.5, 1.5, np.inf, np.inf, 1.0)),
+        p0=(*initial_means, 0.05, 0.05, 0.15, 0.15, -0.1),
+        bounds=(
+            (-1.5, -1.5, 0.0, 0.0, 0.0, 0.0, -1.0),
+            (1.5, 1.5, np.inf, np.inf, np.inf, np.inf, 1.0),
+        ),
         maxfev=50000,
     )
 

@@ -133,6 +133,7 @@ def main(
     sec_correction: bool,
     misid_correction: bool,
     quiet: bool,
+    fit_systematic: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -161,6 +162,12 @@ def main(
         time_bins, rs_yields, rs_errs, ws_yields, ws_errs = mass_util.read_yield(
             yield_file_path
         )
+
+    if fit_systematic:
+        binned = phsp_bin is not None
+
+        rs_errs = mass_util.systematic_pull_scale(rs_errs, "cf", binned=binned)
+        ws_errs = mass_util.systematic_pull_scale(ws_errs, "dcs", binned=binned)
 
     # Do secondary fraction correction if we need to
     if sec_correction:
@@ -238,10 +245,11 @@ def main(
     # Plot 1d profiles
     fig, axes = plotting.projections((allowed_rez, allowed_imz), chi2s)
     parabola.plot_projection(axes, params, max_chi2)
-    path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
+    path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}_{fit_systematic=}.png"
     axes[0].legend()
-    axes[0].set_title(f"{params[0]:.3f}+-{errs[0]:.3f}")
-    axes[1].set_title(f"{params[1]:.3f}+-{errs[1]:.3f}")
+    axes[0].set_title(f"ReZ={params[0]:.3f}+{params[3]:.3f}-{params[2]:.3f}")
+    axes[1].set_title(f"ImZ={params[1]:.3f}+{params[4]:.3f}-{params[5]:.3f}")
+    fig.suptitle(fr"$\rho=${params[6]:.3f}$\pm${errs[6]:.3f}")
     fig.tight_layout()
 
     fig.savefig(path)
@@ -321,6 +329,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--quiet", action="store_true", help="Print only bare minimum info"
+    )
+    parser.add_argument(
+        "--fit_systematic",
+        action="store_true",
+        help="Scale the statistical errors up by a constant to account for a possible signal shape mismodelling systematic",
     )
 
     main(**vars(parser.parse_args()))
