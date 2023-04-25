@@ -118,10 +118,11 @@ def main(*, year: str, magnetisation: str):
             )
         except pdfs.ZeroCountsError:
             print(f"0 count {threshold=}")
-            continue
+            break
 
         # Calculate signal significance
         n_sig, n_bkg = fitter.values[2], fitter.values[3]
+
         significances.append(metrics.signal_significance(n_sig, n_bkg))
         plot_thresholds.append(threshold)
 
