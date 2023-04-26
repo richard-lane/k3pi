@@ -19,6 +19,7 @@ from lib_data import ipchi2_fit
 from lib_data.util import misid_correction as correct_misid
 from libFit import util as mass_util
 from lib_time_fit import plotting, util, fitter, definitions
+from lib_time_fit.charm_threshhold import likelihoods
 
 
 def main(
@@ -31,6 +32,7 @@ def main(
     alt_bkg: bool,
     sec_correction: bool,
     misid_correction: bool,
+    fit_systematic: bool,
 ):
     """
     From a file of yields, time bins etc., find the yields
@@ -80,6 +82,12 @@ def main(
     if misid_correction:
         ws_yields, ws_errs = correct_misid(ws_yields, ws_errs)
 
+    if fit_systematic:
+        binned = phsp_bin is not None
+
+        rs_errs = mass_util.systematic_pull_scale(rs_errs, "cf", binned=binned)
+        ws_errs = mass_util.systematic_pull_scale(ws_errs, "dcs", binned=binned)
+
     ratio = ws_yields / rs_yields
     ratio_err = ratio * np.sqrt((rs_errs / rs_yields) ** 2 + (ws_errs / ws_yields) ** 2)
 
@@ -90,8 +98,11 @@ def main(
     chi2s = np.ones((n_im, n_re)) * np.inf
     fit_params = np.ones((n_im, n_re), dtype=object) * np.inf
 
-    # TODO get these from somewhere
-    initial_rdxy = 0.0055, definitions.CHARM_X, definitions.CHARM_Y
+    charm_chi2 = np.full(chi2s.shape, np.inf)
+    cleo_fcn = likelihoods.cleo_fcn()
+    bes_fcn = likelihoods.bes_fcn()
+
+    initial_rdxy = 0.0553431, definitions.CHARM_X, definitions.CHARM_Y
     xy_err = (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR)
     xy_corr = definitions.CHARM_XY_CORRELATION
     with tqdm(total=n_re * n_im) as pbar:
@@ -117,6 +128,18 @@ def main(
                     im_z=im_z,
                 )
 
+                # Charm threshold only, if we're restricted to 1 phsp bin
+                if phsp_bin is not None:
+                    charm_chi2[j, i] = likelihoods.combined_chi2(
+                        phsp_bin,
+                        re_z,
+                        im_z,
+                        *initial_rdxy[1:],
+                        initial_rdxy[0],
+                        cleo_fcn=cleo_fcn,
+                        bes_fcn=bes_fcn,
+                    )
+
                 pbar.update(1)
 
     chi2s -= np.nanmin(chi2s)
@@ -125,6 +148,18 @@ def main(
     # Plot scan, fits
     contours = plotting.fits_and_scan(
         axes, (allowed_rez, allowed_imz), chi2s, fit_params, 4
+    )
+
+    # Plot charm only scan
+    charm_chi2 -= np.nanmin(charm_chi2)
+    charm_chi2 = np.sqrt(charm_chi2)
+    plotting.scan(
+        axes[1],
+        allowed_rez,
+        allowed_imz,
+        charm_chi2,
+        [0, 1, 2, 3],
+        plot_kw={"alpha": 0.5, "cmap": "Greys"},
     )
 
     # Plot ratio on the axis
@@ -142,7 +177,7 @@ def main(
     if phsp_bin is None:
         phsp_bin = "bin_integrated"
 
-    path = f"lhcb_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}.png"
+    path = f"lhcb_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}_{fit_systematic=}.png"
     print(f"plotting {path}")
     fig.savefig(path)
 
@@ -183,6 +218,11 @@ if __name__ == "__main__":
         "--misid_correction",
         action="store_true",
         help="Correct the yields by the double misID fraction",
+    )
+    parser.add_argument(
+        "--fit_systematic",
+        action="store_true",
+        help="Scale the statistical errors up by a constant to account for a possible signal shape mismodelling systematic",
     )
 
     main(**vars(parser.parse_args()))
