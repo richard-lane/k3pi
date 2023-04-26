@@ -350,4 +350,4 @@ def mc_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     Weights for MC -> data
 
     """
-    return mc_wt_df(get.mc(year, sign, magnetisation))
+    return mc_wt_df(get.mc(year, sign, magnetisation), year, magnetisation)

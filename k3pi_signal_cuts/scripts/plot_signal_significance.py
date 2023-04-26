@@ -15,7 +15,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 
 from lib_cuts import util, metrics, definitions
 from lib_cuts.get import classifier as get_clf
-from lib_data import get, training_vars
+from lib_data import get, training_vars, d0_mc_corrections
 
 
 def main(*, year: str, sign: str, magnetisation: str):
@@ -36,17 +36,28 @@ def main(*, year: str, sign: str, magnetisation: str):
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
     # We only want the testing data here
-    sig_df = sig_df[~sig_df["train"]]
+    sig_mask = ~sig_df["train"]
+    sig_df = sig_df[sig_mask]
     bkg_df = bkg_df[~bkg_df["train"]]
+
+    # Get MC corr weights
+    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)[sig_mask]
 
     # throw away data to get realistic yields
     gen = np.random.default_rng()
-    sig_df = util.discard(gen, sig_df, definitions.EXPECTED_N_SIG_SIG_REGION)
     bkg_df = util.discard(gen, bkg_df, definitions.EXPECTED_N_BKG_SIG_REGION)
 
+    sig_mask = gen.random(len(sig_df)) < (
+        definitions.EXPECTED_N_SIG_SIG_REGION / len(sig_df)
+    )
+    sig_df = sig_df[sig_mask]
+    mc_corr_wts = mc_corr_wts[sig_mask]
+
+    print(f"{np.mean(mc_corr_wts)=:.3f}")
+    n_sig_tot = np.sum(mc_corr_wts)
     print(
-        f"sig frac {len(sig_df):,} / {len(sig_df) + len(bkg_df):,}"
-        f"= {100 * len(sig_df) / (len(sig_df) + len(bkg_df)):.4f}%"
+        f"sig frac {n_sig_tot:,} / {n_sig_tot + len(bkg_df):,}"
+        f"= {100 * n_sig_tot / (n_sig_tot + len(bkg_df)):.4f}%"
     )
 
     # Find signal probabilities
@@ -57,14 +68,10 @@ def main(*, year: str, sign: str, magnetisation: str):
 
     # For various values of the threshhold, find the signal significance
     def sig(threshhold: float) -> float:
-        n_sig = np.sum(sig_probs > threshhold)
+        n_sig = np.sum(mc_corr_wts[sig_probs > threshhold])
         n_bkg = np.sum(bkg_probs > threshhold)
 
-        # Scale the number of signal and background by the expected amount of signal
-        total_expected = 1697700  # Total DCS magdown expected in signal region
-        scale_factor = total_expected / (len(sig_probs) + len(bkg_probs))
-
-        return metrics.signal_significance(scale_factor * n_sig, scale_factor * n_bkg)
+        return metrics.signal_significance(n_sig, n_bkg)
 
     x_range = 0.0, 0.90
     threshholds = np.linspace(*x_range, 51)
@@ -85,7 +92,7 @@ def main(*, year: str, sign: str, magnetisation: str):
     ax.plot(max_threshhold, max_response, "ro")
 
     # Plot an arrow
-    length = 100
+    length = 10
     plt.arrow(
         max_threshhold,
         max_response - length,

@@ -39,11 +39,7 @@ def _train_test_dfs(year, sign, magnetisation):
     bkg_df["delta M"] = delta_m(bkg_df)
 
     # Find MC correction wts for the sig df
-    # Scale st their average is 1.0
-    # TODO put this back
-    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    # mc_corr_wts /= np.mean(mc_corr_wts)
-    mc_corr_wts = np.ones(len(sig_df))
+    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
 
     combined_df = pd.concat((sig_df, bkg_df))
 

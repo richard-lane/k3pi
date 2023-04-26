@@ -69,7 +69,7 @@ def main(
 
     # Do the BDT cut
     # Find D0 MC correction weights
-    mc_corr_wts = pgun_wt_df(pgun_df, year, magnetisation)
+    mc_corr_wts = d0_mc_corrections.pgun_wt_df(pgun_df, year, magnetisation)
 
     # Just to check stuff let's plot some projections
     plotting.projections(mc_pts, ag_pts, mc_corr_wts)

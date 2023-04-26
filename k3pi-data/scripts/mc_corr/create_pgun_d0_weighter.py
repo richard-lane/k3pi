@@ -26,10 +26,16 @@ def _dataframe(year: str, magnetisation: str) -> pd.DataFrame:
     Get the right dataframe - sliced
 
     """
-    # TODO change this to use the training part of the data...
-    n_dfs = 1
+    n_dfs = 5
     dataframe = pd.concat(
-        list(islice(cuts.ipchi2_cut_dfs(get.data(year, "cf", magnetisation)), n_dfs))
+        list(
+            islice(
+                cuts.cands_cut_dfs(
+                    cuts.ipchi2_cut_dfs(get.data(year, "cf", magnetisation))
+                ),
+                n_dfs,
+            )
+        )
     )
 
     # Do a time cut as well for some reason

@@ -37,6 +37,8 @@ def points(
     """
     6d phsp + time points
 
+    k3pi should be momentum ordered
+
     """
     return np.column_stack(
         (

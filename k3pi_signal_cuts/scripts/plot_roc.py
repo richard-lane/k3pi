@@ -32,9 +32,7 @@ def _dataframe(
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
-    # mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
-    # mc_corr_wts /= np.mean(mc_corr_wts)
-    mc_corr_wts = np.ones(len(sig_df))
+    mc_corr_wts = d0_mc_corrections.mc_weights(year, sign, magnetisation)
 
     # We only want the testing/training data here
     sig_mask = sig_df["train"] if train else ~sig_df["train"]
@@ -46,11 +44,15 @@ def _dataframe(
 
     combined_df = pd.concat((sig_df, bkg_df))
     combined_y = np.concatenate((np.ones(len(sig_df)), np.zeros(len(bkg_df))))
+    mc_corr_wts = np.concatenate((mc_corr_wts, np.ones(len(bkg_df))))
 
     # Lets also undersample so we get the same amount of signal/bkg that we expect to see
     # in the data
     mask = util.resample_mask(
-        np.random.default_rng(), combined_y, definitions.EXPECTED_SIG_FRAC
+        np.random.default_rng(),
+        combined_y,
+        definitions.EXPECTED_SIG_FRAC,
+        evt_wts=mc_corr_wts,
     )
     combined_df = combined_df[mask]
     combined_y = combined_y[mask]
