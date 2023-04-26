@@ -35,7 +35,7 @@ def phsp_labels() -> Tuple:
 
 
 def projections(
-    mc: np.ndarray, ag: np.ndarray, mc_wt: np.ndarray = None
+    mc: np.ndarray, ag: np.ndarray, mc_wt: np.ndarray = None, mc_before_wt=None
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Plot projections of 6d points
@@ -53,9 +53,20 @@ def projections(
     hist_kw = {"density": True, "histtype": "step"}
     for axis, ag_x, mc_x, label in zip(ax.ravel(), ag.T, mc.T, phsp_labels()):
         contents, bins, _ = axis.hist(ag_x, bins=100, label="AG", **hist_kw)
-        axis.hist(mc_x, bins=bins, label="MC", **hist_kw, alpha=0.5)
+        axis.hist(
+            mc_x, bins=bins, label="MC", **hist_kw, alpha=0.5, weights=mc_before_wt
+        )
         if mc_wt is not None:
-            axis.hist(mc_x, bins=bins, label="Reweighted", **hist_kw, weights=mc_wt)
+            if mc_before_wt is not None:
+                axis.hist(
+                    mc_x,
+                    bins=bins,
+                    label="Reweighted",
+                    **hist_kw,
+                    weights=mc_wt * mc_before_wt,
+                )
+            else:
+                axis.hist(mc_x, bins=bins, label="Reweighted", **hist_kw, weights=mc_wt)
         axis.set_ylim(0, np.max(contents) * 1.1)
 
         axis.set_xlabel(label)
@@ -156,24 +167,37 @@ def _plot_ratio(
 
 
 def plot_ratios(
-    rs_mc_t, ws_mc_t, rs_ag_t, ws_ag_t, rs_mc_wt, ws_mc_wt, bins: np.ndarray
+    rs_mc_t,
+    ws_mc_t,
+    rs_ag_t,
+    ws_ag_t,
+    rs_mc_wt,
+    ws_mc_wt,
+    bins: np.ndarray,
+    rs_d0_wt,
+    ws_d0_wt,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Plot WS/RS ratios for mc, ampgen, reweighted
 
     """
     fig, ax = plt.subplots(1, 3, figsize=(9, 3))
-    mc_chi2 = _plot_ratio(
-        ax[0], ws_mc_t, rs_mc_t, np.ones_like(ws_mc_t), np.ones_like(rs_mc_t), bins
-    )
+    mc_chi2 = _plot_ratio(ax[0], ws_mc_t, rs_mc_t, ws_d0_wt, rs_d0_wt, bins)
+
     ag_chi2 = _plot_ratio(
         ax[1], ws_ag_t, rs_ag_t, np.ones_like(ws_ag_t), np.ones_like(rs_ag_t), bins
     )
-    reweighted_chi2 = _plot_ratio(ax[2], ws_mc_t, rs_mc_t, ws_mc_wt, rs_mc_wt, bins)
 
-    ax[0].set_title(rf"MC, $\chi^2=${mc_chi2:.3f}")
-    ax[1].set_title(rf"AmpGen, $\chi^2=${ag_chi2:.3f}")
-    ax[2].set_title(rf"Reweighted, $\chi^2=${reweighted_chi2:.3f}")
+    reweighted_chi2 = _plot_ratio(
+        ax[2], ws_mc_t, rs_mc_t, ws_mc_wt * ws_d0_wt, rs_mc_wt * rs_d0_wt, bins
+    )
+
+    # ax[0].set_title(rf"MC, $\chi^2=${mc_chi2:.3f}")
+    # ax[1].set_title(rf"AmpGen, $\chi^2=${ag_chi2:.3f}")
+    # ax[2].set_title(rf"Reweighted, $\chi^2=${reweighted_chi2:.3f}")
+    ax[0].set_title("MC")
+    ax[1].set_title("AmpGen")
+    ax[2].set_title("Reweighted")
 
     ax[0].set_ylabel(r"$\frac{WS}{RS}$ ratio")
     for a in ax:
@@ -262,6 +286,7 @@ def z_scatter(
     orig_pi2: np.ndarray,
     orig_pi3: np.ndarray,
     orig_wt: np.ndarray,
+    orig_mc_wt: np.ndarray,
     n: int,
     default_scale: bool = True,
 ) -> Tuple[plt.Figure, plt.Axes, float, float]:
@@ -280,6 +305,7 @@ def z_scatter(
     :param orig_pi2: (4, N) numpy array of pi2 (px, py, pz, E). Assumes pi-
     :param orig_pi3: (4, N) numpy array of pi3 (px, py, pz, E). Assumes pi+
     :param orig_wt: weights to apply to the original dataset
+    :param orig_mc_wt: MC correction weights
     :param n: number of chunks to spit our arrays into
     :param default_scale: whether to use matplotlib's default scaling (True), or to zoom out
                           and plot both axes from -1 to +1
@@ -292,9 +318,11 @@ def z_scatter(
 
     fig, ax = plt.subplots()
 
-    orig_points = _chunks_z(orig_k, orig_pi1, orig_pi2, orig_pi3, n)
+    orig_points = _chunks_z(orig_k, orig_pi1, orig_pi2, orig_pi3, n, orig_mc_wt)
     target_points = _chunks_z(target_k, target_pi1, target_pi2, target_pi3, n)
-    reweighted_points = _chunks_z(orig_k, orig_pi1, orig_pi2, orig_pi3, n, orig_wt)
+    reweighted_points = _chunks_z(
+        orig_k, orig_pi1, orig_pi2, orig_pi3, n, orig_mc_wt * orig_wt
+    )
 
     # Plot stuff
     ax.plot([x[0] for x in orig_points], [x[1] for x in orig_points], "+", color="r")

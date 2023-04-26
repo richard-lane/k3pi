@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 
 import common
 from lib_efficiency import (
@@ -19,6 +21,11 @@ from lib_efficiency import (
     plotting,
     efficiency_model,
 )
+from lib_efficiency.get import reweighter_dump
+
+from lib_data import d0_mc_corrections
+from lib_cuts.get import classifier as get_clf, signal_cut_df
+from lib_cuts.definitions import THRESHOLD
 
 
 def main(args: argparse.Namespace):
@@ -32,35 +39,47 @@ def main(args: argparse.Namespace):
     ampgen_df = efficiency_util.ampgen_df(
         args.decay_type, args.data_k_charge, train=False
     )
+    # We might want to do BDT cut
+    if args.cut:
+        # Always use DCS classifier for BDT cut, even on RS data
+        pgun_df = signal_cut_df(
+            pgun_df, get_clf(args.year, "dcs", args.magnetisation), THRESHOLD
+        )
 
-    # Just pass the arrays into the efficiency function and it should find the right weights
-    ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
+    reweighter = reweighter_dump(
+        args.year,
+        args.weighter_type,
+        args.magnetisation,
+        args.weighter_k_charge,
+        args.fit,
+        args.cut,
+        verbose=True,
+    )
+    weights = efficiency_util.wts_df(pgun_df, reweighter)
+
+    # Get D0 MC corr wts
+    mc_corr_wt = d0_mc_corrections.pgun_wt_df(pgun_df, args.year, args.magnetisation)
+
     # Have to convert to 64-bit floats for the amplitude models to evaluate
     # everything correctly, since they convert numpy arrays to
     # C-arrays
     mc_k, mc_pi1, mc_pi2, mc_pi3 = (
         a.astype(np.float64) for a in efficiency_util.k_3pi(pgun_df)
     )
+    ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
 
-    mc_t = pgun_df["time"]
-
-    weights = efficiency_model.weights(
+    plotting.z_scatter(
+        ag_k,
+        ag_pi1,
+        ag_pi2,
+        ag_pi3,
         mc_k,
         mc_pi1,
         mc_pi2,
         mc_pi3,
-        mc_t,
-        args.weighter_k_charge,
-        args.year,
-        args.weighter_type,
-        args.magnetisation,
-        args.fit,
-        args.cut,
-        verbose=True,
-    )
-
-    plotting.z_scatter(
-        ag_k, ag_pi1, ag_pi2, ag_pi3, mc_k, mc_pi1, mc_pi2, mc_pi3, weights, 5
+        weights,
+        mc_corr_wt,
+        5,
     )
 
     fit_suffix = "_fit" if args.fit else ""

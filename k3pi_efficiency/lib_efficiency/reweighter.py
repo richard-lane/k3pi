@@ -45,13 +45,18 @@ class TimeFitReweighter:
         """
         self.fit_vals = None
 
-    def fit(self, _, times: np.ndarray):
+    def fit(self, _, times: np.ndarray, original_weight: np.ndarray):
         """
         Perform the fit
 
         The dummy var is for API consistency with BinsReweighter.fit
 
         """
+        # Only works with unweighted stuff
+        assert (
+            original_weight == 1.0
+        ).all(), "Cannot do weighted time fit (unless all weights are 1)"
+
         # These initial parameters seem to do the right thing, mostly
         # We can't store the fitter as an attribute since it's unserialisable
         fitter = time_fitter.fit(times, (0.21, 1.0, 2.0, 1.0, 2.0, 1.0))
@@ -105,7 +110,9 @@ class TimeWeighter:
             else BinsReweighter(n_bins=n_bins, n_neighs=n_neighs)
         )
 
-    def fit(self, mc_times: np.ndarray, ampgen_times: np.ndarray):
+    def fit(
+        self, mc_times: np.ndarray, ampgen_times: np.ndarray, mc_weights: np.ndarray
+    ):
         """
         ampgen times arg is unused if we're doing a fit
 
@@ -119,7 +126,7 @@ class TimeWeighter:
             )
 
             # Reweight AmpGen to MC to avoid getting huge weights
-            self.fitter.fit(ampgen_times, mc_times)
+            self.fitter.fit(ampgen_times, mc_times, target_weight=mc_weights)
 
         else:
             print(
@@ -168,6 +175,8 @@ class EfficiencyWeighter:
         self,
         target: np.ndarray,
         original: np.ndarray,
+        original_weight: np.ndarray,
+        *,
         fit: bool,
         min_t: float,
         n_bins: int = 20000,
@@ -196,7 +205,7 @@ class EfficiencyWeighter:
         target_t = target[:, 5]
 
         self._time_weighter = TimeWeighter(min_t, fit, n_bins, n_neighs)
-        self._time_weighter.fit(original[:, 5], target[:, 5])
+        self._time_weighter.fit(original[:, 5], target[:, 5], original_weight)
 
         self._phsp_weighter = GBReweighter(**train_kwargs)
 
@@ -212,6 +221,7 @@ class EfficiencyWeighter:
             target_weight=self._time_weighter.apply_efficiency(
                 target_t[target_above_min]
             ),
+            original_weight=original_weight[orig_above_min],
         )
 
     def time_weights(self, times: np.ndarray) -> np.ndarray:

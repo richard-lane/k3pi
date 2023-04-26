@@ -53,12 +53,13 @@ class EtaPWeighter:
 
     def weights(self, points: np.ndarray, wts: np.ndarray = None) -> np.ndarray:
         """
-        Weights for an array of points; not normalised
+        Weights for an array of points; normalised
 
         :param points: (2, N) shape array of (eta, P)
 
         """
-        return self._reweighter.predict_weights(points.T, original_weight=wts)
+        retval = self._reweighter.predict_weights(points.T, original_weight=wts)
+        return retval / np.mean(retval)
 
     @staticmethod
     def _fig_ax() -> Tuple[plt.Figure, np.ndarray]:
@@ -318,14 +319,30 @@ def get_mc(year: str, sign: str, magnetisation: str) -> EtaPWeighter:
         return pickle.load(dump_f)
 
 
+def pgun_wt_df(dataframe: pd.DataFrame, year: str, magnetisation: str) -> np.ndarray:
+    """
+    Weights for a dataframe
+
+    """
+    weighter = get_pgun(year, "cf", magnetisation)
+    return weighter.weights(d0_points(dataframe))
+
+
 def pgun_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     """
     Weights for particle gun -> data
 
     """
-    weighter = get_pgun(year, "cf", magnetisation)
+    return pgun_wt_df(get.particle_gun(year, sign, magnetisation))
 
-    return weighter.weights(d0_points(get.particle_gun(year, sign, magnetisation)))
+
+def mc_wt_df(dataframe: pd.DataFrame, year: str, magnetisation: str) -> np.ndarray:
+    """
+    Weights for a dataframe
+
+    """
+    weighter = get_mc(year, "cf", magnetisation)
+    return weighter.weights(d0_points(dataframe))
 
 
 def mc_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
@@ -333,6 +350,4 @@ def mc_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     Weights for MC -> data
 
     """
-    weighter = get_mc(year, "cf", magnetisation)
-
-    return weighter.weights(d0_points(get.mc(year, sign, magnetisation)))
+    return mc_wt_df(get.mc(year, sign, magnetisation))

@@ -108,7 +108,7 @@ def main(*, year: str, magnetisation: str, sign: str):
     bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
     weighter.plot_distribution("target", bins, f"d0_distributions_{sign}_target.png")
     weighter.plot_distribution(
-        "original", bins, f"dcs_d0_distributions_{sign}_original.png"
+        "original", bins, f"d0_distributions_{sign}_original.png"
     )
     weighter.plot_ratio(bins, f"d0_distributions_{sign}_ratio.png")
 

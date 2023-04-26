@@ -8,18 +8,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi_signal_cuts"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[0]))
 
 import common
-from lib_data import util
+from lib_data import util, d0_mc_corrections
 from lib_efficiency import (
     efficiency_util,
     plotting,
     efficiency_model,
     efficiency_definitions,
 )
+from lib_efficiency.get import reweighter_dump
 
 from lib_cuts.get import classifier as get_clf, signal_cut_df
 from lib_cuts.definitions import THRESHOLD
@@ -50,30 +52,29 @@ def main(
         # Always use DCS classifier for BDT cut, even on RS data
         pgun_df = signal_cut_df(pgun_df, get_clf(year, "dcs", magnetisation), THRESHOLD)
 
-    # Just pass the arrays into the efficiency function and it should find the right weights
-    ag_k, ag_pi1, ag_pi2, ag_pi3 = util.k_3pi(ampgen_df)
-    mc_k, mc_pi1, mc_pi2, mc_pi3 = util.k_3pi(pgun_df)
-
-    ag_t, mc_t = ampgen_df["time"], pgun_df["time"]
-
-    weights = efficiency_model.weights(
-        mc_k,
-        mc_pi1,
-        mc_pi2,
-        mc_pi3,
-        mc_t,
-        weighter_k_charge,
+    reweighter = reweighter_dump(
         year,
         weighter_type,
         magnetisation,
+        weighter_k_charge,
         fit,
         cut,
         verbose=True,
     )
+    weights = efficiency_util.wts_df(pgun_df, reweighter)
 
-    # For plotting we will want to momentum order
+    # Get D0 MC corr wts
+    mc_corr_wt = d0_mc_corrections.pgun_wt_df(pgun_df, year, magnetisation)
+
+    # Get arrays
+    ag_k, ag_pi1, ag_pi2, ag_pi3 = util.k_3pi(ampgen_df)
+    mc_k, mc_pi1, mc_pi2, mc_pi3 = util.k_3pi(pgun_df)
+
+    # Momentum order for the plot
     ag_pi1, ag_pi2 = util.momentum_order(ag_k, ag_pi1, ag_pi2)
     mc_pi1, mc_pi2 = util.momentum_order(mc_k, mc_pi1, mc_pi2)
+
+    ag_t, mc_t = ampgen_df["time"], pgun_df["time"]
 
     ag = np.column_stack((helicity_param(ag_k, ag_pi1, ag_pi2, ag_pi3), ag_t))
     mc = np.column_stack((helicity_param(mc_k, mc_pi1, mc_pi2, mc_pi3), mc_t))

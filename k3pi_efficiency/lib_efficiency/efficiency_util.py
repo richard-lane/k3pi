@@ -36,6 +36,7 @@ def points(
 ) -> np.ndarray:
     """
     6d phsp + time points
+
     """
     return np.column_stack(
         (
@@ -212,6 +213,11 @@ def scale_weights(
     return rs_wts, scaled_ws_wts
 
 
+def wts_df(dataframe: pd.DataFrame, weighter: EfficiencyWeighter) -> np.ndarray:
+    """weights from a dataframe"""
+    return weighter.weights(points(*util.k_3pi(dataframe), dataframe["time"]))
+
+
 def wts_generator(
     dataframes: Iterable[pd.DataFrame], weighter: EfficiencyWeighter
 ) -> Iterable[np.ndarray]:
@@ -225,4 +231,4 @@ def wts_generator(
 
     """
     for dataframe in dataframes:
-        yield weighter.weights(points(*util.k_3pi(dataframe), dataframe["time"]))
+        yield wts_df(dataframe, weighter)

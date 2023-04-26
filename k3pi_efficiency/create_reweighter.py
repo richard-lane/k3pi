@@ -17,28 +17,18 @@ from lib_efficiency.reweighter import EfficiencyWeighter
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi_signal_cuts"))
 
-from lib_data import util
+from lib_data import util, d0_mc_corrections
 from lib_cuts.get import classifier as get_clf, signal_cut_df
 from lib_cuts.definitions import THRESHOLD
 
 
 def _points(
     dataframe: pd.DataFrame,
-    *,
-    bdt_cut: bool,
-    year: str = None,
-    magnetisation: str = None,
 ) -> np.ndarray:
     """
     Phsp points used in parameterisation
 
     """
-    if bdt_cut:
-        # Always use the DCS BDT for doing cuts
-        dataframe = signal_cut_df(
-            dataframe, get_clf(year, "dcs", magnetisation), THRESHOLD
-        )
-
     # Get the right arrays
     k, pi1, pi2, pi3 = util.k_3pi(dataframe)
 
@@ -67,16 +57,22 @@ def main(
     if not efficiency_definitions.REWEIGHTER_DIR.is_dir():
         os.mkdir(efficiency_definitions.REWEIGHTER_DIR)
 
-    ag_pts = _points(efficiency_util.ampgen_df(sign, k_sign, train=True), bdt_cut=False)
-    mc_pts = _points(
-        efficiency_util.pgun_df(year, magnetisation, sign, k_sign, train=True),
-        bdt_cut=cut,
-        year=year,
-        magnetisation=magnetisation,
-    )
+    # AmpGen points
+    ag_pts = _points(efficiency_util.ampgen_df(sign, k_sign, train=True))
+
+    # pgun points
+    pgun_df = efficiency_util.pgun_df(year, magnetisation, sign, k_sign, train=True)
+    if cut:
+        # Always use the DCS BDT for doing cuts
+        pgun_df = signal_cut_df(pgun_df, get_clf(year, "dcs", magnetisation), THRESHOLD)
+    mc_pts = _points(pgun_df)
+
+    # Do the BDT cut
+    # Find D0 MC correction weights
+    mc_corr_wts = pgun_wt_df(pgun_df, year, magnetisation)
 
     # Just to check stuff let's plot some projections
-    plotting.projections(mc_pts, ag_pts)
+    plotting.projections(mc_pts, ag_pts, mc_corr_wts)
     suffix = f"{'_fit' if fit else ''}{'_cut' if cut else ''}"
     path = f"training_proj_{year}_{sign}_{magnetisation}_{k_sign}{suffix}.png"
     plt.savefig(path)
@@ -84,13 +80,18 @@ def main(
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 550,
+        "n_estimators": 10,
         "max_depth": 3,
         "learning_rate": 0.15,
         "min_samples_leaf": 1800,
     }
     reweighter = EfficiencyWeighter(
-        ag_pts, mc_pts, fit, efficiency_definitions.MIN_TIME, **train_kwargs
+        ag_pts,
+        mc_pts,
+        mc_corr_wts,
+        fit=fit,
+        min_t=efficiency_definitions.MIN_TIME,
+        **train_kwargs,
     )
 
     # Dump it
