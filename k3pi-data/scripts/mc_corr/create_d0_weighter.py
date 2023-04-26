@@ -1,5 +1,5 @@
 """
-Create a weighted for correcting particle gun D0 momentum
+Create a weighted for correcting D0 momentum
 distributions
 
 """
@@ -39,7 +39,7 @@ def _dataframe(year: str, magnetisation: str) -> pd.DataFrame:
     )
 
     # Do a time cut as well for some reason
-    low_t, high_t = (TIME_BINS[0], TIME_BINS[-2])
+    low_t, high_t = (TIME_BINS[1], TIME_BINS[-2])
     keep = (low_t < dataframe["time"]) & (dataframe["time"] < high_t)
 
     return dataframe[keep]
@@ -48,14 +48,14 @@ def _dataframe(year: str, magnetisation: str) -> pd.DataFrame:
 def _train_proj(
     weighter: d0_mc_corrections.EtaPWeighter,
     data_pts: np.ndarray,
-    pgun_pts: np.ndarray,
+    mc_pts: np.ndarray,
     path: str,
 ) -> None:
     """
     Plot projections of the training data after reweighting
 
     """
-    weights = weighter.weights(pgun_pts)
+    weights = weighter.weights(mc_pts)
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
@@ -64,16 +64,12 @@ def _train_proj(
 
     hist_kw = {"histtype": "step", "density": True}
     axes[0].hist(data_pts[0], bins=eta_bins, label="Data", **hist_kw)
-    axes[0].hist(pgun_pts[0], bins=eta_bins, label="Particle Gun", alpha=0.5, **hist_kw)
-    axes[0].hist(
-        pgun_pts[0], bins=eta_bins, label="Particle Gun", weights=weights, **hist_kw
-    )
+    axes[0].hist(mc_pts[0], bins=eta_bins, label="MC", alpha=0.5, **hist_kw)
+    axes[0].hist(mc_pts[0], bins=eta_bins, label="MC", weights=weights, **hist_kw)
 
     axes[1].hist(data_pts[1], bins=p_bins, label="Data", **hist_kw)
-    axes[1].hist(pgun_pts[1], bins=p_bins, label="Particle Gun", alpha=0.5, **hist_kw)
-    axes[1].hist(
-        pgun_pts[1], bins=p_bins, label="Particle Gun", weights=weights, **hist_kw
-    )
+    axes[1].hist(mc_pts[1], bins=p_bins, label="MC", alpha=0.5, **hist_kw)
+    axes[1].hist(mc_pts[1], bins=p_bins, label="MC", weights=weights, **hist_kw)
 
     axes[0].set_title(r"$\eta$")
     axes[1].set_title(r"$p$")
@@ -87,17 +83,24 @@ def _train_proj(
     fig.savefig(path)
 
 
-def main(*, year: str, magnetisation: str, sign: str):
+def main(*, year: str, magnetisation: str, data_type: str):
     """
     Get particle gun, MC and data dataframe
     Make 1 and 2d histograms of D0 eta and P
     Plot and show them
 
     """
+    sign = "cf"
+
+    pgun = data_type == "pgun"
     # Get the D0 eta and P points
-    pgun_df = get.particle_gun(year, sign, magnetisation, show_progress=True)
-    pgun_df = pgun_df[pgun_df["train"]]
-    pgun_pts = d0_mc_corrections.d0_points(pgun_df)
+    mc_df = (
+        get.particle_gun(year, sign, magnetisation, show_progress=True)
+        if pgun
+        else get.mc(year, sign, magnetisation)
+    )
+    mc_df = mc_df[mc_df["train"]]
+    mc_pts = d0_mc_corrections.d0_points(mc_df)
 
     data_df = _dataframe(year, magnetisation)
     data_pts = d0_mc_corrections.d0_points(data_df)
@@ -105,28 +108,37 @@ def main(*, year: str, magnetisation: str, sign: str):
     # Create reweighter
     weighter = d0_mc_corrections.EtaPWeighter(
         data_pts,
-        pgun_pts,
+        mc_pts,
         n_bins=75,
         n_neighs=0.5,
     )
 
     # Plot the data used for training
     bins = (np.linspace(1.5, 5.5, 100), np.linspace(0.0, 500000, 100))
-    weighter.plot_distribution("target", bins, f"d0_distributions_{sign}_target.png")
     weighter.plot_distribution(
-        "original", bins, f"d0_distributions_{sign}_original.png"
+        "target", bins, f"{data_type}_d0_distributions_{sign}_target.png"
     )
-    weighter.plot_ratio(bins, f"d0_distributions_{sign}_ratio.png")
+    weighter.plot_distribution(
+        "original", bins, f"{data_type}_d0_distributions_{sign}_original.png"
+    )
+    weighter.plot_ratio(bins, f"{data_type}_d0_distributions_{sign}_ratio.png")
 
     # Plot the projections after training
     _train_proj(
-        weighter, data_pts, pgun_pts, f"d0_distributions_{sign}_train_weighted.png"
+        weighter,
+        data_pts,
+        mc_pts,
+        f"{data_type}_d0_distributions_{sign}_train_weighted.png",
     )
 
     # Store the reweighter in a pickle dump
     d0_mc_corrections.weighter_dir().mkdir(exist_ok=True)
 
-    dump_path = d0_mc_corrections.pgun_path(year, sign, magnetisation)
+    dump_path = (
+        d0_mc_corrections.pgun_path(year, sign, magnetisation)
+        if pgun
+        else d0_mc_corrections.mc_path(year, sign, magnetisation)
+    )
 
     with open(str(dump_path), "wb") as weighter_f:
         pickle.dump(weighter, weighter_f)
@@ -134,12 +146,14 @@ def main(*, year: str, magnetisation: str, sign: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Make + store histograms of D0 eta and P"
+        description="Make + store histograms of D0 eta and P + a reweighter"
     )
     parser.add_argument("year", type=str, help="data taking year", choices={"2018"})
     parser.add_argument(
         "magnetisation", type=str, help="mag direction", choices={"magup", "magdown"}
     )
-    parser.add_argument("sign", type=str, help="sign of particle gun to use")
+    parser.add_argument(
+        "data_type", type=str, help="pgun or mc", choices={"pgun", "mc"}
+    )
 
     main(**vars(parser.parse_args()))
