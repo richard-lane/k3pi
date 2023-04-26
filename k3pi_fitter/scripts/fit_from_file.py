@@ -256,8 +256,8 @@ def main(
     plt.close(fig)
 
     # Print the fit params
-    print(f"\tReZ: {params[0]:.3f}\pm{params[2]:.3f}")
-    print(f"\tImZ: {params[1]:.3f}\pm{params[3]:.3f}")
+    print(f"\tReZ: {params[0]:.3f}+{params[3]:.3f}-{params[2]:.3f}")
+    print(f"\tImZ: {params[1]:.3f}+{params[5]:.3f}-{params[4]:.3f}")
 
     # Plot a 2d landscape
     # plotting.surface((allowed_rez, allowed_imz), chi2s, params)
