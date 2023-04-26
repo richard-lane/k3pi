@@ -415,8 +415,12 @@ def main(
 
     # Get the bkg pdfs if we need
     if alt_bkg:
-        rs_bkg_pdf = bkg.pdf(mass_bins, year, magnetisation, "cf", bdt_cut=bdt_cut)
-        ws_bkg_pdf = bkg.pdf(mass_bins, year, magnetisation, "dcs", bdt_cut=bdt_cut)
+        rs_bkg_pdf = bkg.pdf(
+            mass_bins[n_underflow:], year, magnetisation, "cf", bdt_cut=bdt_cut
+        )
+        ws_bkg_pdf = bkg.pdf(
+            mass_bins[n_underflow:], year, magnetisation, "dcs", bdt_cut=bdt_cut
+        )
 
     for i, (low_t, high_t) in enumerate(zip(time_bins[:-1], time_bins[1:])):
         # Get generators of dataframes
