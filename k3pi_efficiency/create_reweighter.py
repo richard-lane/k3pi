@@ -80,7 +80,7 @@ def main(
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 10,
+        "n_estimators": 550,
         "max_depth": 3,
         "learning_rate": 0.15,
         "min_samples_leaf": 1800,
