@@ -25,6 +25,17 @@ pids[0]=$!
 ./k3pi_fitter/lib_time_fit/charm_threshhold/build.sh &
 pids[1]=$!
 
+# Create a small number of real data dataframes before anything else - we'll use them for the MC corrections
+python k3pi-data/create_real.py $YEAR cf $MAG --n_procs 3 -n 10 &
+pids[2]=$!
+python k3pi-data/create_real.py $YEAR dcs $MAG --n_procs 3 -n 10 &
+pids[3]=$!
+
+for pid in ${pids[*]}; do
+    wait $pid
+done
+unset pids
+
 # Create the right dataframes
 # First create uppermass + MC
 python k3pi-data/create_uppermass.py $YEAR dcs $MAG -n 100 --n_procs 6 &
@@ -61,6 +72,10 @@ wait ${pids[0]}
 wait ${pids[1]}
 wait ${pids[2]}
 unset pids
+
+# Create MC correction reweighters
+python k3pi-data/scripts/mc_corr/create_d0_weighter.py $YEAR $MAG pgun
+python k3pi-data/scripts/mc_corr/create_d0_weighter.py $YEAR $MAG mc
 
 # Train BDT
 python k3pi_signal_cuts/create_classifier.py $YEAR dcs $MAG &

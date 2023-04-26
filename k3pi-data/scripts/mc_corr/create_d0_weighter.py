@@ -148,7 +148,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Make + store histograms of D0 eta and P + a reweighter"
     )
-    parser.add_argument("year", type=str, help="data taking year", choices={"2018"})
+    parser.add_argument(
+        "year", type=str, help="data taking year", choices={"2018", "2017"}
+    )
     parser.add_argument(
         "magnetisation", type=str, help="mag direction", choices={"magup", "magdown"}
     )
