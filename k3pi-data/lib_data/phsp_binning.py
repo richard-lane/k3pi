@@ -81,7 +81,7 @@ def interference_terms(dataframe: pd.DataFrame) -> np.ndarray:
     minus_dcs = amplitudes.dcs_amplitudes(*k3pi_minus, -1) * ampdef.DCS_OFFSET
 
     # Find the angle between them
-    retval[k_plus] = plus_dcs.conj() * plus_cf
-    retval[~k_plus] = minus_dcs.conj() * minus_cf
+    retval[k_plus] = plus_cf.conj() * plus_dcs
+    retval[~k_plus] = minus_cf.conj() * minus_dcs
 
     return retval
