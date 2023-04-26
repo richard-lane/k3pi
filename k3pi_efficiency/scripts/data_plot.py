@@ -24,20 +24,26 @@ from lib_efficiency.reweighter import EfficiencyWeighter
 from lib_efficiency.efficiency_util import points
 from libFit.util import delta_m_generator
 from libFit.definitions import mass_bins
+from lib_cuts.get import classifier as get_clf, cut_dfs
 
 
 def _dataframes(
-    year: str, decay_type: str, magnetisation: str
+    year: str, decay_type: str, magnetisation: str, cut: bool
 ) -> Iterable[pd.DataFrame]:
     """
     Get a generator of the right dataframes
 
     """
-    return get.data(year, decay_type, magnetisation)
+    dfs = get.data(year, decay_type, magnetisation)
+    if cut:
+        clf = get_clf(year, "dcs", magnetisation)
+        return cut_dfs(dfs, clf)
+
+    return dfs
 
 
 def _weights(
-    year: str, decay_type: str, magnetisation: str, reweighter: EfficiencyWeighter
+    year: str, decay_type: str, magnetisation: str, reweighter: EfficiencyWeighter, cut
 ) -> Iterable[np.ndarray]:
     """
     Efficiency weights
@@ -45,20 +51,22 @@ def _weights(
     """
     return (
         reweighter.weights(points(*k_3pi(dataframe), dataframe["time"]))
-        for dataframe in _dataframes(year, decay_type, magnetisation)
+        for dataframe in _dataframes(year, decay_type, magnetisation, cut)
     )
 
 
-def _delta_m(year: str, decay_type: str, magnetisation: str) -> Iterable[np.ndarray]:
+def _delta_m(
+    year: str, decay_type: str, magnetisation: str, cut: bool
+) -> Iterable[np.ndarray]:
     """
     Generator of delta M
 
     """
-    return delta_m_generator(_dataframes(year, decay_type, magnetisation))
+    return delta_m_generator(_dataframes(year, decay_type, magnetisation, cut))
 
 
 def _plot_delta_m(
-    year: str, decay_type: str, magnetisation: str, reweighter: EfficiencyWeighter
+    year: str, decay_type: str, magnetisation: str, reweighter: EfficiencyWeighter, cut
 ) -> None:
     """
     Make a plot of delta M before and after the correction
@@ -67,13 +75,13 @@ def _plot_delta_m(
     bins = mass_bins(200)
 
     count_before, err_before = stats.counts_generator(
-        _delta_m(year, decay_type, magnetisation), bins
+        _delta_m(year, decay_type, magnetisation, cut), bins
     )
 
     count_after, err_after = stats.counts_generator(
-        _delta_m(year, decay_type, magnetisation),
+        _delta_m(year, decay_type, magnetisation, cut),
         bins,
-        _weights(year, decay_type, magnetisation, reweighter),
+        _weights(year, decay_type, magnetisation, reweighter, cut),
     )
 
     centres = (bins[1:] + bins[:-1]) / 2.0
@@ -125,7 +133,7 @@ def _plot_delta_m(
 
 
 def _phsp_points(
-    year: str, decay_type: str, magnetisation: str
+    year: str, decay_type: str, magnetisation: str, cut
 ) -> Iterable[np.ndarray]:
     """
     Generator of (one dimension of) phase space points
@@ -133,12 +141,12 @@ def _phsp_points(
     """
     return (
         points(*k_3pi(dataframe), dataframe["time"])[:, -2]
-        for dataframe in _dataframes(year, decay_type, magnetisation)
+        for dataframe in _dataframes(year, decay_type, magnetisation, cut)
     )
 
 
 def _plot_phsp(
-    year: str, decay_type: str, magnetisation: str, reweighter: EfficiencyWeighter
+    year: str, decay_type: str, magnetisation: str, reweighter: EfficiencyWeighter, cut
 ) -> None:
     """
     Make a plot of phase space parameters before and after the correction
@@ -148,13 +156,13 @@ def _plot_phsp(
     bins = np.linspace(-np.pi, np.pi, 201)
 
     count_before, err_before = stats.counts_generator(
-        _phsp_points(year, decay_type, magnetisation), bins
+        _phsp_points(year, decay_type, magnetisation, cut), bins
     )
 
     count_after, err_after = stats.counts_generator(
-        _phsp_points(year, decay_type, magnetisation),
+        _phsp_points(year, decay_type, magnetisation, cut),
         bins,
-        _weights(year, decay_type, magnetisation, reweighter),
+        _weights(year, decay_type, magnetisation, reweighter, cut),
     )
 
     centres = (bins[1:] + bins[:-1]) / 2.0
@@ -223,10 +231,6 @@ def main(
     if decay_type not in {"dcs", "cf"}:
         raise ValueError("cant have false sign data")
 
-    # Generator of real data dataframes
-    if cut:
-        raise NotImplementedError("bdt cut the dfs")
-
     if data_k_charge != "both":
         raise NotImplementedError("haven't done this yet")
 
@@ -243,7 +247,7 @@ def main(
 
     # Delta M plot
     procs = [
-        Process(target=fcn, args=(year, decay_type, magnetisation, reweighter))
+        Process(target=fcn, args=(year, decay_type, magnetisation, reweighter, cut))
         for fcn in (_plot_delta_m, _plot_phsp)
     ]
     for p in procs:
