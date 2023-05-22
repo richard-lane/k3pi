@@ -4,6 +4,7 @@ to check that the MC looks like the data
 
 """
 import sys
+import pickle
 import pathlib
 from itertools import islice
 
@@ -26,21 +27,26 @@ def main():
     # Read dataframes of stuff
     # Want CF as CF data is mostly signal
     # We can therefore compare it to MC
-    year, sign, magnetisation = "2018", "cf", "magdown"
-    sig_df = get.mc(year, sign, magnetisation)
+    fig, ax = plt.subplots()
+
+    year, magnetisation = "2018", "magdown"
+    clf = get_clf(year, "dcs", magnetisation)
+
+    # Trained the classifer on DCS stuff
+    sig_df = get.mc(year, "dcs", magnetisation)
     bkg_df = pd.concat(get.uppermass(year, "dcs", magnetisation))
 
-    data_dfs = islice(get.data(year, sign, magnetisation), 50)
+    # Compare it to RS data
+    data_dfs = islice(get.data(year, "cf", magnetisation), None)
 
     # Predict which of these are signal and background using our classifier
-    clf = get_clf(year, "dcs", magnetisation)
     var_names = list(training_vars.training_var_names())
+
     sig_proba = clf.predict_proba(sig_df[var_names])[:, 1]
     bkg_proba = clf.predict_proba(bkg_df[var_names])[:, 1]
     data_probas = (clf.predict_proba(data_df[var_names])[:, 1] for data_df in data_dfs)
 
     # Plot histograms of probability
-    fig, ax = plt.subplots()
     bins = np.linspace(0, 1, 100)
     hist_kw = {"bins": bins, "histtype": "step", "density": True}
     ax.hist(sig_proba, label="Signal (CF MC)", **hist_kw)
@@ -60,6 +66,8 @@ def main():
     fig.tight_layout()
 
     plt.savefig("mc_data_response.png")
+    with open("plot_pkls/mc_data_response.pkl", "wb") as f:
+        pickle.dump((fig, ax), f)
 
 
 if __name__ == "__main__":
