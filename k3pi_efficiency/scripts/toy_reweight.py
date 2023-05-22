@@ -247,7 +247,7 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
     target_pts = _pts(train)
     orig_pts = target_pts[keep]
     train_kwargs = {
-        "n_estimators": 6,
+        "n_estimators": 10,
         "max_depth": 5,
         "learning_rate": 0.7,
         "min_samples_leaf": 1800,

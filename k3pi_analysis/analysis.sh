@@ -123,10 +123,14 @@ python k3pi_efficiency/scripts/plot_z_scatter.py $YEAR dcs dcs $MAG both both --
 pids[3]=$!
 python k3pi_efficiency/scripts/plot_time_ratio.py $YEAR $MAG both both --cut &
 pids[4]=$!
+python k3pi_efficiency/scripts/plot_alt_proj.py $YEAR cf cf $MAG both both --cut &
+pids[5]=$!
+python k3pi_efficiency/scripts/plot_alt_proj.py $YEAR dcs dcs $MAG both both --cut &
+pids[6]=$!
 
 # Create false sign dumps
 python k3pi-data/create_false_sign_pgun.py &
-pids[5]=$!
+pids[7]=$!
 
 for pid in ${pids[*]}; do
     wait $pid
