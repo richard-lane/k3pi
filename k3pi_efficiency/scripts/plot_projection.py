@@ -89,8 +89,8 @@ def main(
     path = "proj_{year}_{magnetisation}_data_{decay_type}_{data_k_charge}_weighter_{weighter_type}_{weighter_k_charge}_{fit=}_{cut=}.png"
     plt.savefig(path)
 
-    with open(path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
 
 
 if __name__ == "__main__":

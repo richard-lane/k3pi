@@ -80,8 +80,8 @@ def _train_proj(
     fig.tight_layout()
 
     print(f"plotting {path}")
-    with open(path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
 
     fig.savefig(path)
 

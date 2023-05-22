@@ -152,8 +152,8 @@ def main(
     path = f"mixing_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{alt_bkg=}_{sec_correction=}_{misid_correction=}_{fit_systematic=}.png"
     fig.savefig(path)
 
-    with open(path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
 
 
 if __name__ == "__main__":

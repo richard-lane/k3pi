@@ -88,8 +88,8 @@ def main(*, year: str, sign: str, magnetisation: str):
     path = f"{sign}_data_cuts.png"
     plt.savefig(path)
 
-    with open(path, "wb") as f:
-        pickle.dump((fig, ax), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, ax), f)
 
 
 if __name__ == "__main__":

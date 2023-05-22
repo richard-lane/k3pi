@@ -86,8 +86,8 @@ def main(args: argparse.Namespace):
     fit_suffix = "_fit" if args.fit else ""
     path = f"z_{args.year}_{args.magnetisation}_data_{args.decay_type}_{args.data_k_charge}_weighter_{args.weighter_type}_{args.weighter_k_charge}{fit_suffix}.png"
     plt.savefig(path)
-    with open(path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
 
 
 if __name__ == "__main__":

@@ -141,8 +141,8 @@ def main(*, year: str, magnetisation: str, sign: str):
     path = f"roc_{year}_{magnetisation}_{sign}.png"
     plt.savefig(path)
 
-    with open(path, "wb") as f:
-        pickle.dump((fig, axis), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axis), f)
 
 
 if __name__ == "__main__":

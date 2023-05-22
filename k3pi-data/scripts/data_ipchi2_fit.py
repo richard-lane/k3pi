@@ -161,8 +161,8 @@ def main(*, year: str, sign: str, magnetisation: str):
         fig.savefig(path)
         plt.close(fig)
 
-        with open(path, "wb") as f:
-            pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+        with open(f"plot_pkls/{path}.pkl", "wb") as f:
+            pickle.dump((fig, axes), f)
 
     sec_fracs = np.array(sec_fracs)
 

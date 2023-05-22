@@ -76,8 +76,8 @@ def main(
     suffix = f"{'_fit' if fit else ''}{'_cut' if cut else ''}"
     path = f"training_proj_{year}_{sign}_{magnetisation}_{k_sign}{suffix}.png"
 
-    with open(path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
 
     plt.savefig(path)
     print(f"saved {path}")

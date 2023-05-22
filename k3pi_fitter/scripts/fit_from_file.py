@@ -254,8 +254,8 @@ def main(
     fig.tight_layout()
 
     fig.savefig(path)
-    with open(path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
     plt.close(fig)
 
     # Print the fit params
