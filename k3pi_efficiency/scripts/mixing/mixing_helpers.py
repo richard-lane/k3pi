@@ -101,7 +101,7 @@ def _scan(
     Returns arrays of chi2 and fit params and a tuple of (allowed_rez, allowed_imz)
 
     """
-    n_re, n_im = 50, 51
+    n_re, n_im = 20, 21
     n_fits = n_re * n_im
     allowed_rez = np.linspace(-1, 1, n_re)
     allowed_imz = np.linspace(-1, 1, n_im)

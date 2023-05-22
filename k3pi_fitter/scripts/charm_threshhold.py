@@ -75,7 +75,7 @@ def main():
     max_chi2 = 9
     params, errs = parabola.fit(combined_vals, re_z, im_z, best_z, max_chi2)
     for param, err, label in zip(
-        params, errs, ["ReZ", "ImZ", "ReZ width", "ImZ width", "corr"]
+        params, errs, ["ReZ", "ImZ", "ReZ widthL", "ReZ width R", "imz w L", "imz w R", "corr"]
     ):
         print(f"{label}\t= {param:.3f} +- {err:.3f}")
 
@@ -83,7 +83,7 @@ def main():
     parabola.plot_projection(axes, params, max_chi2)
     axes[0].set_ylim(0, 16)
     axes[0].legend()
-    fig.savefig("charm_combination_parabola.png")
+    fig.savefig(f"charm_combination_parabola_{bin_number}.png")
     plt.close(fig)
 
     # Transform from chi2s to sigma

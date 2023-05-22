@@ -91,16 +91,14 @@ def main(*, year: str, magnetisation: str, sign: str, data_type: str):
     axes[0].hist(mc_pts[0], bins=eta_bins, label="weighted", weights=weights, **hist_kw)
 
     axes[1].hist(data_pts[1], bins=p_bins, label="Data", **hist_kw)
-    axes[1].hist(mc_pts[1], bins=p_bins, label="Particle Gun", alpha=0.5, **hist_kw)
+    axes[1].hist(mc_pts[1], bins=p_bins, label="Particle Gun" if pgun else "MC", alpha=0.5, **hist_kw)
     axes[1].hist(
-        mc_pts[1], bins=p_bins, label="Particle Gun", weights=weights, **hist_kw
+        mc_pts[1], bins=p_bins, label="Weighted", weights=weights, **hist_kw
     )
 
     axes[0].set_title(r"$\eta$")
     axes[1].set_title(r"$p$")
     axes[1].legend()
-
-    fig.suptitle("Training Data")
 
     fig.tight_layout()
 
