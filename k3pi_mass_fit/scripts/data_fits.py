@@ -3,6 +3,7 @@ Simultaneous and individual fits to RS and WS
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Callable
@@ -108,9 +109,11 @@ def _separate_fit(
     )
     fig.tight_layout()
 
-    fig.tight_layout()
     print(f"Saving {plot_path}")
     fig.savefig(plot_path)
+    with open(plot_path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{plot_path}.pkl")
+
     plt.close(fig)
 
 
@@ -232,6 +235,10 @@ def _fit(
 
     print(f"Saving {plot_path}")
     fig.savefig(plot_path)
+
+    with open(plot_path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{plot_path}.pkl")
+
     plt.close(fig)
 
     return (

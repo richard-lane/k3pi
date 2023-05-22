@@ -149,7 +149,11 @@ def main(*, year: str, sign: str, magnetisation: str):
         + f"\n{fitter.valid=}"
     )
 
-    fig.savefig(f"ipchi2_fit_lowtime_{sign}.png")
+    path = f"ipchi2_fit_lowtime_{sign}.png"
+    fig.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

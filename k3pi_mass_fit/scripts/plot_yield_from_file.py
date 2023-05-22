@@ -3,6 +3,7 @@ Plot yields from a file on a weird histogram type thing
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import List
@@ -118,6 +119,9 @@ def main(
         path = f"scaled_{path}"
     print(f"plotting {path}")
     fig.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

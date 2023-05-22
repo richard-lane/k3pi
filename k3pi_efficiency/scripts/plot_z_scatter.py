@@ -5,6 +5,7 @@ Test data
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 import numpy as np
@@ -68,7 +69,7 @@ def main(args: argparse.Namespace):
     )
     ag_k, ag_pi1, ag_pi2, ag_pi3 = efficiency_util.k_3pi(ampgen_df)
 
-    plotting.z_scatter(
+    fig, axes, *_ = plotting.z_scatter(
         ag_k,
         ag_pi1,
         ag_pi2,
@@ -83,10 +84,10 @@ def main(args: argparse.Namespace):
     )
 
     fit_suffix = "_fit" if args.fit else ""
-    plt.savefig(
-        f"z_{args.year}_{args.magnetisation}_data_{args.decay_type}_{args.data_k_charge}"
-        f"_weighter_{args.weighter_type}_{args.weighter_k_charge}{fit_suffix}.png"
-    )
+    path = f"z_{args.year}_{args.magnetisation}_data_{args.decay_type}_{args.data_k_charge}_weighter_{args.weighter_type}_{args.weighter_k_charge}{fit_suffix}.png"
+    plt.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

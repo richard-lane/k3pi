@@ -3,6 +3,7 @@ Make plots of the variables used in the reweighting, before and after the reweig
 
 """
 import sys
+import pickle
 import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
@@ -82,13 +83,14 @@ def main(
     # Only keep ampgen events above the mean time so that the plots are scaled the same
     ag = ag[ag[:, -1] > efficiency_definitions.MIN_TIME]
 
-    plotting.projections(mc, ag, mc_wt=weights)
+    fig, axes = plotting.projections(mc, ag, mc_wt=weights)
 
     fit_suffix = "_fit" if fit else ""
-    plt.savefig(
-        f"proj_{year}_{magnetisation}_data_{decay_type}_{data_k_charge}"
-        f"_weighter_{weighter_type}_{weighter_k_charge}_{fit=}_{cut=}.png"
-    )
+    path = "proj_{year}_{magnetisation}_data_{decay_type}_{data_k_charge}_weighter_{weighter_type}_{weighter_k_charge}_{fit=}_{cut=}.png"
+    plt.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

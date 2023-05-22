@@ -3,6 +3,7 @@ Make plots of phase space variables to make sure everything looks like we expect
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 import resource
@@ -66,6 +67,9 @@ def _plot(
 
     print(f"plotting {path}")
     fig.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 def _parameterise(data_frame: pd.DataFrame):

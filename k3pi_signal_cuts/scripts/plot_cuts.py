@@ -3,6 +3,7 @@ Plot testing data variables before and after cuts
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 import numpy as np
@@ -139,7 +140,10 @@ def main(*, year: str, sign: str, magnetisation: str):
 
     fig.tight_layout()
 
-    plt.savefig(f"cuts_{year}_{sign}_{magnetisation}.png")
+    path = f"cuts_{year}_{sign}_{magnetisation}.png"
+    plt.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, ax), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

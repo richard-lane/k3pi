@@ -3,6 +3,7 @@ Plot real data variables before and after cuts
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from itertools import islice
@@ -84,7 +85,11 @@ def main(*, year: str, sign: str, magnetisation: str):
 
     fig.tight_layout()
 
-    plt.savefig(f"{sign}_data_cuts.png")
+    path = f"{sign}_data_cuts.png"
+    plt.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, ax), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

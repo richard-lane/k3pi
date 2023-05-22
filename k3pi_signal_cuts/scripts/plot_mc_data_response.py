@@ -16,6 +16,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
 
 from lib_cuts.get import classifier as get_clf
+from lib_cuts.definitions import THRESHOLD
 from lib_data import get, training_vars
 
 
@@ -50,7 +51,7 @@ def main():
     bins = np.linspace(0, 1, 100)
     hist_kw = {"bins": bins, "histtype": "step", "density": True}
     ax.hist(sig_proba, label="Signal (CF MC)", **hist_kw)
-    # ax.hist(bkg_proba, label="Bkg (Upper Mass Sideband)", **hist_kw)
+    ax.hist(bkg_proba, label="Bkg (Upper Mass Sideband)", **hist_kw)
     ax.hist(np.concatenate(list(data_probas)), label="RS Data", **hist_kw)
 
     # Plot the WS data as well
@@ -62,6 +63,8 @@ def main():
     ax.set_xlabel("Probability")
     ax.set_ylabel("Count (normalised)")
     ax.set_title("BDT Signal Classification Probability")
+
+    ax.axvline(THRESHOLD, color="r")
 
     fig.tight_layout()
 

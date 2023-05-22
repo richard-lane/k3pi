@@ -3,6 +3,7 @@ Plot fit to WS/RS ratio from a text file of yields
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Tuple
@@ -253,6 +254,8 @@ def main(
     fig.tight_layout()
 
     fig.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
     plt.close(fig)
 
     # Print the fit params
@@ -291,6 +294,8 @@ def main(
     if not quiet:
         print(f"plotting {path}")
     fig.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

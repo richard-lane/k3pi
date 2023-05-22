@@ -161,6 +161,9 @@ def main(*, year: str, sign: str, magnetisation: str):
         fig.savefig(path)
         plt.close(fig)
 
+        with open(path, "wb") as f:
+            pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+
     sec_fracs = np.array(sec_fracs)
 
     # Plot secondary fractions
@@ -176,6 +179,8 @@ def main(*, year: str, sign: str, magnetisation: str):
     path = f"{sign}_data_ipchi2_leakage.png"
     print(f"plotting {path}")
     fig.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
     # Dump secondary fraction to file
     with open(str(ipchi2_fit.sec_frac_file(sign)), "wb") as dump_f:

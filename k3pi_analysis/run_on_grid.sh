@@ -33,6 +33,7 @@ mv raw_fits out_stuff/
 mv bdt_fits out_stuff/
 mv eff_fits out_stuff/
 mv alt_bkg_eff_fits out_stuff/
+mv plot_pkls/ out_stuff/
 
 # Move the output dir into the home dir
 mv out_stuff/ ..

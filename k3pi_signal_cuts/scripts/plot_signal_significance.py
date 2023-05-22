@@ -3,6 +3,7 @@ Plot signal significance of the testing sample
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 import numpy as np
@@ -106,7 +107,11 @@ def main(*, year: str, sign: str, magnetisation: str):
     ax.set_xlabel("probability threshhold")
     ax.set_ylabel("signal significance")
 
-    plt.savefig(f"significance_threshholds_{year}_{sign}_{magnetisation}.png")
+    path = f"significance_threshholds_{year}_{sign}_{magnetisation}.png"
+    plt.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, ax), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

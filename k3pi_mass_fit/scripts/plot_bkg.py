@@ -5,6 +5,7 @@ where the pi_s comes from a different event
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 import numpy as np
@@ -134,6 +135,8 @@ def main(*, year: str, magnetisation: str, bdt_cut: bool):
 
     print(f"plotting {path}")
     fig.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

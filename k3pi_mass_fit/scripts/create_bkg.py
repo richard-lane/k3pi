@@ -120,7 +120,6 @@ def main(*, year: str, magnetisation: str, sign: str, bdt_cut: bool, n_repeats: 
             raise err
 
     dump_dir.mkdir()
-    print(dump_dir)
 
     # Get a generator of dataframes
     df_generator = get.data(year, sign, magnetisation)

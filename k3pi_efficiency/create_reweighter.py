@@ -72,15 +72,19 @@ def main(
     mc_corr_wts = d0_mc_corrections.pgun_wt_df(pgun_df, year, magnetisation)
 
     # Just to check stuff let's plot some projections
-    plotting.projections(mc_pts, ag_pts, mc_corr_wts)
+    fig, axes = plotting.projections(mc_pts, ag_pts, mc_corr_wts)
     suffix = f"{'_fit' if fit else ''}{'_cut' if cut else ''}"
     path = f"training_proj_{year}_{sign}_{magnetisation}_{k_sign}{suffix}.png"
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+
     plt.savefig(path)
     print(f"saved {path}")
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 550,
+        "n_estimators": 600,
         "max_depth": 3,
         "learning_rate": 0.15,
         "min_samples_leaf": 1800,

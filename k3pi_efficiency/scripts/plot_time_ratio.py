@@ -5,6 +5,7 @@ Test data
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Tuple
@@ -150,7 +151,7 @@ def main(args: argparse.Namespace):
         ws_mc_t, bins[0], bins[-1], ws_wt, ws_mc_corr_wt
     )
 
-    plotting.plot_ratios(
+    fig, axes = plotting.plot_ratios(
         rs_mc_t,
         ws_mc_t,
         rs_ag_t,
@@ -163,10 +164,11 @@ def main(args: argparse.Namespace):
     )
 
     fit_suffix = "_fit" if args.fit else ""
-    plt.savefig(
-        f"ratio_{args.year}_{args.magnetisation}_data_{args.data_k_charge}"
-        f"_weighter_{args.weighter_k_charge}{fit_suffix}.png"
-    )
+    path = "ratio_{args.year}_{args.magnetisation}_data_{args.data_k_charge}_weighter_{args.weighter_k_charge}{fit_suffix}.png"
+    plt.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

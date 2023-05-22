@@ -4,6 +4,7 @@ using the LHCb fitter only (i.e. no charm threshhold)
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 
@@ -180,6 +181,8 @@ def main(
     path = f"lhcb_fits_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}_{fit_systematic=}.png"
     print(f"plotting {path}")
     fig.savefig(path)
+    with open(path, "wb") as f:
+        pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

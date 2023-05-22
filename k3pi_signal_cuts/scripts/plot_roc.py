@@ -3,6 +3,7 @@ Plot ROC curve for our classifier
 
 """
 import sys
+import pickle
 import pathlib
 import argparse
 from typing import Tuple
@@ -137,7 +138,11 @@ def main(*, year: str, magnetisation: str, sign: str):
     axis.legend()
     fig.tight_layout()
 
-    plt.savefig(f"roc_{year}_{magnetisation}_{sign}.png")
+    path = f"roc_{year}_{magnetisation}_{sign}.png"
+    plt.savefig(path)
+
+    with open(path, "wb") as f:
+        pickle.dump((fig, axis), f"plot_pkls/{path}.pkl")
 
 
 if __name__ == "__main__":

@@ -119,6 +119,9 @@ def _plot_masses(
     fig.savefig(path)
     print(f"plotted {path}")
 
+    with open(path, "wb") as f:
+        pickle.dump((fig, ax), f"plot_pkls/{path}.pkl")
+
 
 def _plot_train_vars(
     dataframe: pd.DataFrame,

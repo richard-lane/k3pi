@@ -159,6 +159,10 @@ class EtaPWeighter:
 
         print(f"saving {path}")
         plt.savefig(path)
+
+        with open(path, "wb") as f:
+            pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+
         plt.close(fig)
 
     def plot_distribution(
@@ -227,6 +231,10 @@ class EtaPWeighter:
 
         print(f"saving {path}")
         plt.savefig(path)
+
+        with open(path, "wb") as f:
+            pickle.dump((fig, axes), f"plot_pkls/{path}.pkl")
+
         plt.close(fig)
 
 
@@ -333,7 +341,7 @@ def pgun_weights(year: str, sign: str, magnetisation: str) -> np.ndarray:
     Weights for particle gun -> data
 
     """
-    return pgun_wt_df(get.particle_gun(year, sign, magnetisation))
+    return pgun_wt_df(get.particle_gun(year, sign, magnetisation), year, magnetisation)
 
 
 def mc_wt_df(dataframe: pd.DataFrame, year: str, magnetisation: str) -> np.ndarray:
