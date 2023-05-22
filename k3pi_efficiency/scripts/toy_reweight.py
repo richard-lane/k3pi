@@ -75,8 +75,13 @@ def _efficiency(
 
     # Also pT
     pts = tuple(
-        _pt(dataframe[f"{p}_Px"], dataframe[f"{p}_Py"])
-        for p in ("Kplus", "pi1minus", "pi2minus", "pi3plus")
+        _pt(dataframe[f"{p}_PX"], dataframe[f"{p}_PY"])
+        for p in (
+            "Dst_ReFit_D0_Kplus",
+            "Dst_ReFit_D0_piplus",
+            "Dst_ReFit_D0_piplus_0",
+            "Dst_ReFit_D0_piplus_1",
+        )
     )
     pt_eff = np.multiply.reduce(
         [
@@ -249,7 +254,12 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
         "n_bins": 10000,
     }
     reweighter = EfficiencyWeighter(
-        target_pts, orig_pts, False, efficiency_definitions.MIN_TIME, **train_kwargs
+        target_pts,
+        orig_pts,
+        original_weight=np.ones(len(orig_pts)),
+        fit=False,
+        min_t=efficiency_definitions.MIN_TIME,
+        **train_kwargs,
     )
 
     # Apply the efficiency to the test set
@@ -291,6 +301,7 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
         *efficiency_util.k_3pi(test),
         *efficiency_util.k_3pi(test[test_keep]),
         weights,
+        np.ones(np.sum(test_keep)),
         5,
     )
     fig.savefig("toy_test_z.png")
@@ -304,10 +315,12 @@ def main():
 
     """
     # Read dataframes
+    print("getting dfs")
     cf_df = get.ampgen("cf")
     dcs_df = get.ampgen("dcs")
 
     # Only keep stuff above min time
+    print("cutting dfs (time)")
     cf_df = cf_df[cf_df["time"] > efficiency_definitions.MIN_TIME]
     dcs_df = dcs_df[dcs_df["time"] > efficiency_definitions.MIN_TIME]
 
@@ -315,6 +328,7 @@ def main():
     dcs_target, dcs_orig, dcs_wt = _reweight(cf_df)
 
     # Plot ratio
+    print("plotting ratio")
     fig, ax = plotting.plot_ratios(
         cf_orig[:, -1],
         dcs_orig[:, -1],
@@ -322,7 +336,9 @@ def main():
         dcs_target[:, -1],
         cf_wt,
         dcs_wt,
-        np.concatenate(([efficiency_definitions.MIN_TIME], TIME_BINS[2:])),
+        TIME_BINS[2:],
+        np.ones(len(cf_orig)),
+        np.ones(len(dcs_orig)),
     )
     ax[0].set_title("Original")
     ax[1].set_title("Target")

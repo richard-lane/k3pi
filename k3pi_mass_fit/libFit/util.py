@@ -278,8 +278,8 @@ def plot_dir(
         retval,
         f"{retval}ws/",
         f"{retval}rs/",
-        f"plot_pkls/{retval}ws/"
-        f"plot_pkls/{retval}rs/"
+        f"plot_pkls/{retval}ws/",
+        f"plot_pkls/{retval}rs/",
     ):
         if not os.path.isdir(dir_):
             os.makedirs(dir_)
