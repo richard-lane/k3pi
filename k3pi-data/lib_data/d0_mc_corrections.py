@@ -275,7 +275,7 @@ def pgun_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     :returns: path
 
     """
-    assert year in {"2018"}
+    assert year in {"2018", "2017"}
     assert sign in {"dcs", "cf"}
     assert magnetisation in {"magdown", "magup"}
 
@@ -294,7 +294,7 @@ def mc_path(year: str, sign: str, magnetisation: str) -> pathlib.Path:
     :returns: path
 
     """
-    assert year in {"2018"}
+    assert year in {"2017", "2018"}
     assert sign in {"dcs", "cf"}
     assert magnetisation in {"magdown", "magup"}
 
