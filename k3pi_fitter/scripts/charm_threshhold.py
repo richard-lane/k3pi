@@ -75,7 +75,9 @@ def main():
     max_chi2 = 9
     params, errs = parabola.fit(combined_vals, re_z, im_z, best_z, max_chi2)
     for param, err, label in zip(
-        params, errs, ["ReZ", "ImZ", "ReZ widthL", "ReZ width R", "imz w L", "imz w R", "corr"]
+        params,
+        errs,
+        ["ReZ", "ImZ", "ReZ widthL", "ReZ width R", "imz w L", "imz w R", "corr"],
     ):
         print(f"{label}\t= {param:.3f} +- {err:.3f}")
 
