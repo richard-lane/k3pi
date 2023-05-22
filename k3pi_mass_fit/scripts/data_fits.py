@@ -236,8 +236,8 @@ def _fit(
     print(f"Saving {plot_path}")
     fig.savefig(plot_path)
 
-    with open(plot_path, "wb") as f:
-        pickle.dump((fig, axes), f"plot_pkls/{plot_path}.pkl")
+    with open(f"plot_pkls/{plot_path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
 
     plt.close(fig)
 
