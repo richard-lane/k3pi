@@ -133,7 +133,7 @@ class TimeWeighter:
                 f"Performing fit to {len(mc_times):,} times from "
                 f"{np.min(mc_times):.4f} to {np.max(mc_times):.4f}"
             )
-            self.fitter.fit(None, mc_times)
+            self.fitter.fit(None, mc_times, mc_weights)
 
     def apply_efficiency(self, times):
         """

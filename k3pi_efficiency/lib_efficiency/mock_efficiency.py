@@ -29,7 +29,7 @@ def time_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
 
     times = dataframe["time"]
     retvals = (
-        time_fitter.normalised_pdf(times, MIN_TIME, 1.0, 2.0, 1.0, 2.0, 1.0)[1]
+        time_fitter.normalised_pdf((times + 0.8), MIN_TIME, 1.0, 2.0, 1.0, 2.0, 1.0)[1]
         * np.exp(factor * times)
         / 10
     )
@@ -60,7 +60,10 @@ def phsp_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
 
     """
     # Find the transverse momentum of the kaon
-    k_pt = np.sqrt(dataframe["Kplus_Px"] ** 2 + dataframe["Kplus_Py"] ** 2)
+    k_pt = np.sqrt(
+        dataframe["Dst_ReFit_D0_Kplus_PX"] ** 2
+        + dataframe["Dst_ReFit_D0_Kplus_PX"] ** 2
+    )
 
     efficiency = kpt_eff(k_pt, factor)
 
