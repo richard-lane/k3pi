@@ -64,7 +64,7 @@ def main(args: argparse.Namespace):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 35, # 350,
+        "n_estimators": 35,  # 350,
         "max_depth": 3,
         # "learning_rate": 0.7,
         "min_samples_leaf": 1800,

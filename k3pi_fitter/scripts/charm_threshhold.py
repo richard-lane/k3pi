@@ -108,9 +108,18 @@ def main():
     for label in ("A", "B", "C"):
         axes[label].add_patch(Circle((0, 0), radius=1, facecolor="none", edgecolor="k"))
         axes[label].set_aspect("equal")
+        axes[label].set_xlabel("Re(Z)")
 
     fig.colorbar(contours, cax=axes["D"])
     # fig.tight_layout()
+
+    if not bin_number:
+        axes["A"].set_title("CLEO", fontsize=20)
+        axes["B"].set_title("BES", fontsize=20)
+        axes["C"].set_title("Combined", fontsize=20)
+    axes["A"].set_ylabel("Im(Z)")
+    fig.supylabel(f"Bin {bin_number}", fontsize=20)
+
     fig.savefig(f"charm_bin_{bin_number}.png")
 
 
