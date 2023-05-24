@@ -30,7 +30,7 @@ def _gen(
     Generate some RS and WS times
 
     """
-    n_rs = 240000000
+    n_rs = 3_200_000
     gen = np.random.default_rng(seed=0)
 
     rs_t = common.gen_rs(gen, n_rs, domain)
@@ -99,20 +99,20 @@ def _cartesian_plot(
     axis.plot(*true_z, "yo")
 
     # Plot the best-fit value of Z
-    min_im, min_re = np.unravel_index(np.nanargmin(chi2s), chi2s.shape)
-    axis.plot(allowed_rez[min_re], allowed_imz[min_im], "r*", alpha=0.5)
+    # min_im, min_re = np.unravel_index(np.nanargmin(chi2s), chi2s.shape)
+    # axis.plot(allowed_rez[min_re], allowed_imz[min_im], "r*", alpha=0.5)
 
     axis.set_xlabel(r"Re(Z)")
     axis.set_ylabel(r"Im(Z)")
     axis.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))
 
     # Legend
-    axis.legend(
-        handles=[
-            Patch(facecolor="y", label="True"),
-            Patch(facecolor="r", label="Best-Fit"),
-        ]
-    )
+    # axis.legend(
+    #     handles=[
+    #         Patch(facecolor="y", label="True"),
+    #         # Patch(facecolor="r", label="Best-Fit"),
+    #     ]
+    # )
 
     return contours
 
@@ -211,21 +211,21 @@ def _charm_only_scan(
         plotting_params["allowed_imz"][best_index[0]],
     )
     _cartesian_plot(
-        axes[0],
+        axes,
         plotting_params["allowed_rez"],
         plotting_params["allowed_imz"],
         threshhold_chi2s,
         plotting_params["n_levels"],
         best_z,
     )
-    _polar_plot(
-        axes[1],
-        plotting_params["allowed_rez"],
-        plotting_params["allowed_imz"],
-        threshhold_chi2s,
-        plotting_params["n_levels"],
-        best_z,
-    )
+    # _polar_plot(
+    #     axes[1],
+    #     plotting_params["allowed_rez"],
+    #     plotting_params["allowed_imz"],
+    #     threshhold_chi2s,
+    #     plotting_params["n_levels"],
+    #     best_z,
+    # )
 
     return best_z
 
@@ -268,26 +268,26 @@ def _fit_only_scan(
     chi2s = np.sqrt(chi2s)
 
     _cartesian_plot(
-        axes[0],
+        axes,
         plotting_params["allowed_rez"],
         plotting_params["allowed_imz"],
         chi2s,
         plotting_params["n_levels"],
         (params.re_z, params.im_z),
     )
-    _polar_plot(
-        axes[1],
-        plotting_params["allowed_rez"],
-        plotting_params["allowed_imz"],
-        chi2s,
-        plotting_params["n_levels"],
-        (params.re_z, params.im_z),
-    )
+    # _polar_plot(
+    #     axes[1],
+    #     plotting_params["allowed_rez"],
+    #     plotting_params["allowed_imz"],
+    #     chi2s,
+    #     plotting_params["n_levels"],
+    #     (params.re_z, params.im_z),
+    # )
 
     # Add a best fit line to the cartesian plot
-    _add_best_fit_line(
-        axes[0], plotting_params["allowed_rez"], plotting_params["allowed_imz"], chi2s
-    )
+    # _add_best_fit_line(
+    #     axes, plotting_params["allowed_rez"], plotting_params["allowed_imz"], chi2s
+    # )
 
 
 def _combined_scan(
@@ -329,7 +329,7 @@ def _combined_scan(
     chi2s = np.sqrt(chi2s)
 
     _cartesian_plot(
-        axes[0],
+        axes,
         plotting_params["allowed_rez"],
         plotting_params["allowed_imz"],
         chi2s,
@@ -337,14 +337,14 @@ def _combined_scan(
         (params.re_z, params.im_z),
     )
 
-    _polar_plot(
-        axes[1],
-        plotting_params["allowed_rez"],
-        plotting_params["allowed_imz"],
-        chi2s,
-        plotting_params["n_levels"],
-        (params.re_z, params.im_z),
-    )
+    # _polar_plot(
+    #     axes[1],
+    #     plotting_params["allowed_rez"],
+    #     plotting_params["allowed_imz"],
+    #     chi2s,
+    #     plotting_params["n_levels"],
+    #     (params.re_z, params.im_z),
+    # )
 
 
 def main():
@@ -352,7 +352,8 @@ def main():
     Generate toy data, perform fits, show plots
 
     """
-    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig, axes = plt.subplots(1, 3, figsize=(10, 5))
+    print(axes)
 
     # Set some parameters
     mixing_params = {
@@ -365,14 +366,14 @@ def main():
         "xy_correlation": -0.301,
     }
     plotting_params = {
-        "allowed_rez": np.linspace(-1, 1, 20),
-        "allowed_imz": np.linspace(-1, 1, 21),
+        "allowed_rez": np.linspace(-1, 1, 30),
+        "allowed_imz": np.linspace(-1, 1, 31),
         "n_levels": 5,
     }
 
     # Scan the charm threshhold likelihood to find the best values of z to use
     # while we do this plot it on the axis
-    best_z = _charm_only_scan(axes[:, 0], mixing_params, plotting_params)
+    best_z = _charm_only_scan(axes[0], mixing_params, plotting_params)
 
     # generate toy decay times for fitting to
     params = util.ScanParams(
@@ -381,7 +382,7 @@ def main():
     ratio, err, bins = _ratio_err(params)
 
     _fit_only_scan(
-        axes[:, 1],
+        axes[1],
         ratio,
         bins,
         err,
@@ -391,7 +392,7 @@ def main():
     )
 
     _combined_scan(
-        axes[:, 2],
+        axes[2],
         ratio,
         bins,
         err,
@@ -400,13 +401,13 @@ def main():
         plotting_params,
     )
 
-    for axis in axes[0]:
+    for axis in axes:
         axis.set_xlim(-1, 1)
         axis.set_ylim(-1, 1)
 
-    axes[0, 0].set_title("CLEO + BES")
-    axes[0, 1].set_title("LHCb (simulation)")
-    axes[0, 2].set_title("LHCb (simulation), CLEO + BES")
+    axes[0].set_title("CLEO + BES")
+    axes[1].set_title("LHCb (simulation)")
+    axes[2].set_title("LHCb (simulation), CLEO + BES")
 
     fig.tight_layout()
     plt.savefig("charm_threshhold_scan.png")
