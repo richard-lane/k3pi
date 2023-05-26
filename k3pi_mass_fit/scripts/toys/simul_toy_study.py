@@ -278,12 +278,12 @@ def _do_pull_study():
     out_dict = manager.dict()
 
     # For plotting pulls
-    fig, axes = plt.subplot_mosaic(
-        "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
-    )
+    # fig, axes = plt.subplot_mosaic(
+    #     "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
+    # )
 
     n_procs = 6
-    n_experiments = 50
+    n_experiments = 200
     procs = [
         Process(
             target=_pull_study,
@@ -308,24 +308,46 @@ def _do_pull_study():
 
     pulls = np.concatenate(out_list, axis=1)
 
-    _plot_pulls(
-        fig,
-        axes["A"],
-        pulls,
-        n_procs * n_experiments,
-        out_dict["labels"],
-    )
+    # _plot_pulls(
+    #     fig,
+    #     axes["A"],
+    #     pulls,
+    #     n_procs * n_experiments,
+    #     out_dict["labels"],
+    # )
 
-    _plot_fit(
-        out_dict["fit_params"],
-        out_dict["rs_combined"],
-        out_dict["ws_combined"],
-        (axes["C"], axes["E"]),
-        (axes["D"], axes["F"]),
-        fit_range,
-    )
-    for axis in (axes["C"], axes["D"]):
-        axis.set_title("Example fit")
+    # _plot_fit(
+    #     out_dict["fit_params"],
+    #     out_dict["rs_combined"],
+    #     out_dict["ws_combined"],
+    #     (axes["C"], axes["E"]),
+    #     (axes["D"], axes["F"]),
+    #     fit_range,
+    # )
+    # for axis in (axes["C"], axes["D"]):
+    #     axis.set_title("Example fit")
+    # fig.tight_layout()
+
+    # Just plot histograms of the n signal evts pulls
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+    hist_kw = {"histtype": "step", "bins": np.linspace(-5, 5, 100)}
+    rs_str = f"{np.mean(pulls[0]):.3f}" r"$\pm$" f"{np.std(pulls[0]):.3f}"
+    ws_str = f"{np.mean(pulls[2]):.3f}" r"$\pm$" f"{np.std(pulls[2]):.3f}"
+    axes[0].hist(pulls[0], **hist_kw, label=f"pull: {rs_str}")
+    axes[1].hist(pulls[2], **hist_kw, label=f"pull: {ws_str}")
+
+    axes[0].set_title(r"RS $n_\mathrm{sig}$ pull")
+    axes[1].set_title(r"WS $n_\mathrm{sig}$ pull")
+
+    axes[0].set_xlabel(r"$\frac{x - \mu}{\sigma}$")
+    axes[1].set_xlabel(r"$\frac{x - \mu}{\sigma}$")
+
+    axes[0].legend()
+    axes[1].legend()
+
+    fig.suptitle(f"{n_experiments * n_procs} Toy Experiments")
+
     fig.tight_layout()
 
     n_bins = len(_bins()) - 1

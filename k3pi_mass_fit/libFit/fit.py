@@ -343,6 +343,6 @@ def alt_simultaneous_fit(
 
     fitter.fixed["beta"] = True
 
-    fitter.migrad(ncall=5000)
+    fitter.migrad(ncall=8000, iterate=10)
 
     return fitter
