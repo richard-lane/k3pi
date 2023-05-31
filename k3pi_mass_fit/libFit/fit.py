@@ -309,40 +309,54 @@ def alt_simultaneous_fit(
         rs_bkg_pdf, ws_bkg_pdf, rs_counts, ws_counts, bins, rs_errors, ws_errors
     )
 
-    fitter = Minuit(
-        chi2,
-        rs_n_sig=rs_n_sig,
-        rs_n_bkg=rs_n_bkg,
-        ws_n_sig=ws_n_sig,
-        ws_n_bkg=ws_n_bkg,
-        centre=centre,
-        width_l=width_l,
-        width_r=width_r,
-        alpha_l=alpha_l,
-        alpha_r=alpha_r,
-        beta=beta,
-        rs_a_0=rs_a0,
-        rs_a_1=rs_a1,
-        rs_a_2=rs_a2,
-        ws_a_0=ws_a0,
-        ws_a_1=ws_a1,
-        ws_a_2=ws_a2,
-    )
+    # Repeat until fit converges, unless it doesn't
+    done = False
+    n_iter = 0
+    while not done:
+        fitter = Minuit(
+            chi2,
+            rs_n_sig=rs_n_sig,
+            rs_n_bkg=rs_n_bkg,
+            ws_n_sig=ws_n_sig,
+            ws_n_bkg=ws_n_bkg,
+            centre=centre,
+            width_l=width_l,
+            width_r=width_r,
+            alpha_l=alpha_l,
+            alpha_r=alpha_r,
+            beta=beta,
+            rs_a_0=rs_a0,
+            rs_a_1=rs_a1,
+            rs_a_2=rs_a2,
+            ws_a_0=ws_a0,
+            ws_a_1=ws_a1,
+            ws_a_2=ws_a2,
+        )
 
-    n_rs = np.sum(rs_counts)
-    n_ws = np.sum(ws_counts)
-    fitter.limits["rs_n_sig"] = (0, n_rs)
-    fitter.limits["ws_n_sig"] = (0, n_ws)
-    fitter.limits["rs_n_bkg"] = (0.0, n_rs)
-    fitter.limits["ws_n_bkg"] = (0.0, n_ws)
-    fitter.limits["centre"] = (144.0, 147.0)
-    fitter.limits["width_l"] = (0.1, 1.0)
-    fitter.limits["width_r"] = (0.1, 1.0)
-    fitter.limits["alpha_l"] = (0.0, 2.0)
-    fitter.limits["alpha_r"] = (0.0, 2.0)
+        n_rs = np.sum(rs_counts)
+        n_ws = np.sum(ws_counts)
+        fitter.limits["rs_n_sig"] = (0, n_rs)
+        fitter.limits["ws_n_sig"] = (0, n_ws)
+        fitter.limits["rs_n_bkg"] = (0.0, n_rs)
+        fitter.limits["ws_n_bkg"] = (0.0, n_ws)
+        fitter.limits["centre"] = (144.0, 147.0)
+        fitter.limits["width_l"] = (0.1, 1.0)
+        fitter.limits["width_r"] = (0.1, 1.0)
+        fitter.limits["alpha_l"] = (0.0, 2.0)
+        fitter.limits["alpha_r"] = (0.0, 2.0)
 
-    fitter.fixed["beta"] = True
+        fitter.fixed["beta"] = True
 
-    fitter.migrad(ncall=8000, iterate=10)
+        fitter.migrad(ncall=8000, iterate=10)
+
+        done = fitter.valid
+
+        if not done:
+            print(f"ALT BKG:")
+            print(fitter)
+
+        n_iter += 1
+        if n_iter > 5:
+            break
 
     return fitter
