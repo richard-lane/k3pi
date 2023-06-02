@@ -41,7 +41,7 @@ def main(*, year: str, magnetisation: str):
         d0_mc_corrections.d0_points(rs_df)
     )
     rs_weights /= np.mean(rs_weights)
-    ws_weights = d0_mc_corrections.get_pgun(year, "dcs", magnetisation).weights(
+    ws_weights = d0_mc_corrections.get_pgun(year, "cf", magnetisation).weights(
         d0_mc_corrections.d0_points(ws_df)
     )
     ws_weights /= np.mean(ws_weights)
@@ -137,6 +137,7 @@ def main(*, year: str, magnetisation: str):
     _plot_shaded_area(axis, after_opt, after_cov, pts)
 
     axis.legend()
+    axis.set_ylim(0.0025, 0.0050)
     fig.tight_layout()
 
     fig.suptitle("Testing Data")

@@ -148,8 +148,6 @@ def _pull_study(
     n_rs_bkg = 100_000
     n_ws_bkg = 80_000
 
-    # Find the expected number of bkg events from the acceptance area / generating area
-
     # want to track n_sig and n_bkg for both RS and WS
     pulls = [np.full(n_experiments, np.inf, dtype=float) for _ in range(4)]
     for i in tqdm(range(n_experiments)):
@@ -162,7 +160,6 @@ def _pull_study(
             # Add fluctuations to sig
             rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
             ws_sig = _sig(rng, ws_signal_counts, n_ws_sig)
-            print()
 
             # Combine
             rs_counts = rs_sig + rs_bkg
