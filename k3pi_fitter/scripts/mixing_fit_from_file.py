@@ -123,8 +123,8 @@ def main(
     fig.suptitle(rf"$\Delta\chi^2\Rightarrow$No Mixing p value p={p_val:.3E}")
 
     # Indicate rD from the fit on the plot
-    world_r_d = 0.05504543
-    world_r_d_err = 0.000635
+    world_rate_ratio = 0.00303
+    world_rate_err = 0.00007
 
     tick_width = 0.0075
     r_d = unconstrained_fitter.values[0]
@@ -133,15 +133,15 @@ def main(
     print(f"{r_d:.6f}+-{r_d_err:.6f}")
 
     axes[1].axhline(
-        world_r_d**2, xmin=-tick_width, xmax=tick_width, color="b", clip_on=False
+        world_rate_ratio, xmin=-tick_width, xmax=tick_width, color="b", clip_on=False
     )
     axes[1].text(
-        -0.5, world_r_d**2, r"World Avg $r_D^2$", color="b", rotation=90, va="center"
+        -0.5, world_rate_ratio, r"World Avg $r_D^2$", color="b", rotation=90, va="center"
     )
     axes[1].fill_between(
         [-0.1, 0.1],
-        [(world_r_d + world_r_d_err) ** 2] * 2,
-        [(world_r_d - world_r_d_err) ** 2] * 2,
+        [world_rate_ratio + world_rate_err] * 2,
+        [world_rate_ratio - world_rate_err] * 2,
         color="b",
         edgecolor=None,
     )
