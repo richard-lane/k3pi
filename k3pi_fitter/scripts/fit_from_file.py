@@ -239,9 +239,9 @@ def main(
     params, errs = parabola.fit(chi2s, allowed_rez, allowed_imz, best_z, max_chi2)
     if not quiet:
         for param, err, label in zip(
-            params, errs, ["ReZ", "ImZ", "ReZ width", "ImZ width", "corr"]
+            params, errs, ["ReZ", "ImZ", "ReZ width L", "ReZ width R", "ImZ width L", "ImZ width R", "corr"]
         ):
-            print(f"{label}\t= {param:.3f} +- {err:.3f}")
+            print(f"{label}\t= {param:.5f} +- {err:.5f}")
 
     # Plot 1d profiles
     fig, axes = plotting.projections((allowed_rez, allowed_imz), chi2s)
@@ -249,10 +249,11 @@ def main(
     path = f"profiles_{year}_{magnetisation}_{bdt_cut=}_{efficiency=}_{phsp_bin}_{alt_bkg=}_{sec_correction=}_{misid_correction=}_{fit_systematic=}.png"
     axes[0].legend()
     axes[0].set_title(f"ReZ={params[0]:.3f}+{params[3]:.3f}-{params[2]:.3f}")
-    axes[1].set_title(f"ImZ={params[1]:.3f}+{params[4]:.3f}-{params[5]:.3f}")
+    axes[1].set_title(f"ImZ={params[1]:.3f}+{params[5]:.3f}-{params[4]:.3f}")
     fig.suptitle(rf"$\rho=${params[6]:.3f}$\pm${errs[6]:.3f}")
     fig.tight_layout()
 
+    print(f"saving {path}")
     fig.savefig(path)
     with open(f"plot_pkls/{path}.pkl", "wb") as f:
         pickle.dump((fig, axes), f)

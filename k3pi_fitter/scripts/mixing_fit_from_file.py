@@ -8,10 +8,10 @@ import sys
 import pickle
 import pathlib
 import argparse
+from typing import Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 from scipy.stats import chi2 as scipy_chi2
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
@@ -21,7 +21,7 @@ sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi_mass_fi
 from lib_data import ipchi2_fit
 from lib_data.util import misid_correction as correct_misid
 from libFit import util as mass_util
-from lib_time_fit import plotting, util, fitter, definitions
+from lib_time_fit import plotting, util, fitter
 
 
 def main(
@@ -123,13 +123,31 @@ def main(
     fig.suptitle(rf"$\Delta\chi^2\Rightarrow$No Mixing p value p={p_val:.3E}")
 
     # Indicate rD from the fit on the plot
-    world_r_d = 0.055
+    world_r_d = 0.05504543
+    world_r_d_err = 0.000635
+
     tick_width = 0.0075
     r_d = unconstrained_fitter.values[0]
     r_d_err = unconstrained_fitter.errors[0]
     print(f"{r_d:.6f}+-{r_d_err:.6f}")
     axes[1].axhline(
         world_r_d**2, xmin=-tick_width, xmax=tick_width, color="r", clip_on=False
+    )
+    axes[1].axhline(
+        (world_r_d + world_r_d_err) ** 2,
+        xmin=-tick_width,
+        xmax=tick_width,
+        color="r",
+        clip_on=False,
+        alpha=0.5,
+    )
+    axes[1].axhline(
+        (world_r_d - world_r_d_err) ** 2,
+        xmin=-tick_width,
+        xmax=tick_width,
+        color="r",
+        clip_on=False,
+        alpha=0.5,
     )
 
     # Shade the error area
