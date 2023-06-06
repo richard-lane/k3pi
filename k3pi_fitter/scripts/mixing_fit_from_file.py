@@ -129,25 +129,21 @@ def main(
     tick_width = 0.0075
     r_d = unconstrained_fitter.values[0]
     r_d_err = unconstrained_fitter.errors[0]
+    axes[1].plot([0.0, 1.0 + tick_width], [r_d**2] * 2, color="r", linestyle=":")
     print(f"{r_d:.6f}+-{r_d_err:.6f}")
+
     axes[1].axhline(
-        world_r_d**2, xmin=-tick_width, xmax=tick_width, color="r", clip_on=False
+        world_r_d**2, xmin=-tick_width, xmax=tick_width, color="b", clip_on=False
     )
-    axes[1].axhline(
-        (world_r_d + world_r_d_err) ** 2,
-        xmin=-tick_width,
-        xmax=tick_width,
-        color="r",
-        clip_on=False,
-        alpha=0.5,
+    axes[1].text(
+        -0.5, world_r_d**2, r"World Avg $r_D^2$", color="b", rotation=90, va="center"
     )
-    axes[1].axhline(
-        (world_r_d - world_r_d_err) ** 2,
-        xmin=-tick_width,
-        xmax=tick_width,
-        color="r",
-        clip_on=False,
-        alpha=0.5,
+    axes[1].fill_between(
+        [-0.1, 0.1],
+        [(world_r_d + world_r_d_err) ** 2] * 2,
+        [(world_r_d - world_r_d_err) ** 2] * 2,
+        color="b",
+        edgecolor=None,
     )
 
     # Shade the error area
@@ -163,7 +159,7 @@ def main(
         edgecolor=None,
         alpha=0.3,
     )
-    axes[1].text(-0.5, rd_sq, r"$r_D^2$", color="r")
+    axes[1].text(1.1, rd_sq, r"Measured $r_D^2$", color="r")
 
     fig.tight_layout()
 
