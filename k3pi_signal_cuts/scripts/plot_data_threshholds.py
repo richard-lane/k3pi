@@ -48,7 +48,8 @@ def main():
 
     # For various values of the threshhold, perform cuts
     # and plot the resultant delta M distribution
-    threshholds = [0.0, 0.05, definitions.THRESHOLD, 0.40, 0.50, 0.80, 1.0]
+    # threshholds = [0.0, 0.05, definitions.THRESHOLD, 0.40, 0.50, 0.80, 1.0]
+    threshholds = [0.0, 0.05, 0.288, 0.40, 0.50, 0.80, 1.0]
 
     ws_delta_m = dm_fcn(ws_df)
     rs_delta_m = dm_fcn(rs_df)
