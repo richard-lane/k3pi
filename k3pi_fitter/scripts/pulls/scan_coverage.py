@@ -121,7 +121,16 @@ def main():
 
     n_procs = 6
     n_experiments = 25
-    procs = [Process(target=_coverage, args=(n_experiments, out_dict,)) for _ in range(n_procs)]
+    procs = [
+        Process(
+            target=_coverage,
+            args=(
+                n_experiments,
+                out_dict,
+            ),
+        )
+        for _ in range(n_procs)
+    ]
 
     for p in procs:
         p.start()
@@ -144,15 +153,24 @@ def main():
         weights=np.ones_like(delta_chi2) / len(delta_chi2),
     )
     predicted_frac = 2 * (norm.cdf(bins) - 0.5)
-    theory_line, = ax.plot(bins, predicted_frac, "k--")
+    (theory_line,) = ax.plot(bins, predicted_frac, "k--")
 
     # Plot also an uncertainty region on the theory prediction
     # This is given by binomial errors around the best fit region
     n_tot = n_procs * n_experiments
     err = predicted_frac * (1 - predicted_frac)
-    theory_area = plt.fill_between(bins, predicted_frac + err, predicted_frac - err, color="k", alpha=0.2, edgecolor=None)
+    theory_area = plt.fill_between(
+        bins,
+        predicted_frac + err,
+        predicted_frac - err,
+        color="k",
+        alpha=0.2,
+        edgecolor=None,
+    )
 
-    ax.legend([*bars, (theory_line, theory_area)], ["Measured Coverage", "Perfect Coverage"])
+    ax.legend(
+        [*bars, (theory_line, theory_area)], ["Measured Coverage", "Perfect Coverage"]
+    )
 
     fig.savefig("toy_coverage.png")
 
