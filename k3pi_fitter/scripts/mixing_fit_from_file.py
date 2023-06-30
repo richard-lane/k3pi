@@ -136,7 +136,12 @@ def main(
         world_rate_ratio, xmin=-tick_width, xmax=tick_width, color="b", clip_on=False
     )
     axes[1].text(
-        -0.5, world_rate_ratio, r"World Avg $r_D^2$", color="b", rotation=90, va="center"
+        -0.5,
+        world_rate_ratio,
+        r"World Avg $r_D^2$",
+        color="b",
+        rotation=90,
+        va="center",
     )
     axes[1].fill_between(
         [-0.1, 0.1],

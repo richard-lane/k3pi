@@ -86,7 +86,7 @@ def main(
     fig, axes = plotting.projections(mc, ag, mc_wt=weights)
 
     fit_suffix = "_fit" if fit else ""
-    path = "proj_{year}_{magnetisation}_data_{decay_type}_{data_k_charge}_weighter_{weighter_type}_{weighter_k_charge}_{fit=}_{cut=}.png"
+    path = f"proj_{year}_{magnetisation}_data_{decay_type}_{data_k_charge}_weighter_{weighter_type}_{weighter_k_charge}_{fit=}_{cut=}.png"
     plt.savefig(path)
 
     with open(f"plot_pkls/{path}.pkl", "wb") as f:

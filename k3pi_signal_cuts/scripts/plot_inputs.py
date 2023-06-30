@@ -22,7 +22,7 @@ def _plot(
     Plot signal + bkg on an axis
 
     """
-    hist_kw = {"histtype": "step"}
+    hist_kw = {"histtype": "step", "density": True}
     quantiles = [0.01, 0.99]  # Which quantiles to use for binning
     n_bins = 100
 
@@ -39,11 +39,11 @@ def _plot(
         signal,
         bins=bins,
         **hist_kw,
-        label="sig",
+        label="Signal",
         color="b",
         weights=sig_wt * np.ones_like(signal)
     )
-    axis.hist(bkg, bins=bins, **hist_kw, label="bkg", color="r")
+    axis.hist(bkg, bins=bins, **hist_kw, label="Background", color="r")
 
 
 def main():
@@ -65,14 +65,26 @@ def main():
     )[0]
 
     # Plot
-    fig, ax = plt.subplots(3, 3, figsize=(8, 8))
+    fig, ax = plt.subplots(3, 3, figsize=(12, 8))
 
     columns = list(training_vars.training_var_names()) + ["Dst_ReFit_D0_M", "D* mass"]
-    for col, axis in zip(columns, ax.ravel()):
+    xlabels = [
+        "",
+        "",
+        "",
+        "MeV",
+        "",
+        "MeV",
+        "MeV",
+        "MeV",
+    ]
+    for col, axis, label in zip(columns, ax.ravel(), xlabels):
         _plot(axis, mc_df[col], uppermass_df[col], sig_wt)
 
         title = col if col in training_vars.training_var_names() else col + "*"
         axis.set_title(title)
+        axis.set_yticks([])
+        axis.set_xlabel(label)
 
     # Let's also plot the mass difference
     _plot(

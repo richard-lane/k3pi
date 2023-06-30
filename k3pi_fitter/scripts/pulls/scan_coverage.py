@@ -18,6 +18,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[3] / "k3pi-data"))
 
 from lib_time_fit import util, models, fitter
 from lib_data import stats
+from lib_data.util import ratio_err as data_ratio_err
 
 
 def _gen(
@@ -27,7 +28,7 @@ def _gen(
     Generate some RS and WS times
 
     """
-    n_rs = 5_000_000
+    n_rs = 800_000 * 9
     # TODO probably make the generator in outer scope
     gen = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 
@@ -68,10 +69,10 @@ def _ratio_err(widths, correlation) -> Tuple[np.ndarray, np.ndarray]:
     rs_count, rs_err = stats.counts(rs_t, bins=bins)
     ws_count, ws_err = stats.counts(ws_t, bins=bins)
 
-    return (*util.ratio_err(ws_count, rs_count, ws_err, rs_err), params, bins)
+    return (*data_ratio_err(ws_count, rs_count, ws_err, rs_err), params, bins)
 
 
-def _coverage(out_dict: dict):
+def _coverage(n_experiments: int, out_dict: dict):
     """
     Put an array of delta chi2s in the dictionary
 
@@ -79,7 +80,6 @@ def _coverage(out_dict: dict):
     # Need x/y widths and correlations for the Gaussian constraint
     widths = (0.005, 0.005)
     correlation = 0.5
-    n_experiments = 10
 
     delta_chi2 = np.ones(n_experiments) * np.inf
     for n in range(n_experiments):
@@ -119,8 +119,9 @@ def main():
     """
     out_dict = Manager().dict()
 
-    n_procs = 8
-    procs = [Process(target=_coverage, args=(out_dict,)) for _ in range(n_procs)]
+    n_procs = 6
+    n_experiments = 25
+    procs = [Process(target=_coverage, args=(n_experiments, out_dict,)) for _ in range(n_procs)]
 
     for p in procs:
         p.start()
@@ -135,14 +136,24 @@ def main():
     ax.set_xlabel(r"$\sqrt{\Delta \chi^2}$")
     ax.set_ylabel(r"Frequency")
     bins = np.linspace(0, 3)
-    ax.hist(
+    _, _, bars = ax.hist(
         delta_chi2,
         bins=bins,
         histtype="step",
         cumulative=True,
         weights=np.ones_like(delta_chi2) / len(delta_chi2),
     )
-    ax.plot(bins, 2 * (norm.cdf(bins) - 0.5), "k--")
+    predicted_frac = 2 * (norm.cdf(bins) - 0.5)
+    theory_line, = ax.plot(bins, predicted_frac, "k--")
+
+    # Plot also an uncertainty region on the theory prediction
+    # This is given by binomial errors around the best fit region
+    n_tot = n_procs * n_experiments
+    err = predicted_frac * (1 - predicted_frac)
+    theory_area = plt.fill_between(bins, predicted_frac + err, predicted_frac - err, color="k", alpha=0.2, edgecolor=None)
+
+    ax.legend([*bars, (theory_line, theory_area)], ["Measured Coverage", "Perfect Coverage"])
+
     fig.savefig("toy_coverage.png")
 
 

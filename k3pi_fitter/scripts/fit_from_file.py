@@ -239,7 +239,17 @@ def main(
     params, errs = parabola.fit(chi2s, allowed_rez, allowed_imz, best_z, max_chi2)
     if not quiet:
         for param, err, label in zip(
-            params, errs, ["ReZ", "ImZ", "ReZ width L", "ReZ width R", "ImZ width L", "ImZ width R", "corr"]
+            params,
+            errs,
+            [
+                "ReZ",
+                "ImZ",
+                "ReZ width L",
+                "ReZ width R",
+                "ImZ width L",
+                "ImZ width R",
+                "corr",
+            ],
         ):
             print(f"{label}\t= {param:.5f} +- {err:.5f}")
 

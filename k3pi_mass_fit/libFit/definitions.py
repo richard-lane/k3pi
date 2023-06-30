@@ -12,9 +12,10 @@ from . import pdfs
 # From the systematic pull study
 # We will scale the statistical errors by these amounts
 # When assessing the systematic error associated
-RS_PHSP_BINNED_PULL = 1.23
-WS_PHSP_BINNED_PULL = 0.12
-# Since we have 4x the stats
+RS_PHSP_BINNED_PULL = 0.951
+WS_PHSP_BINNED_PULL = 0.0
+
+# Since we have 4x the stats over all 4 bins
 RS_PHSP_INT_PULL = 2 * RS_PHSP_BINNED_PULL
 WS_PHSP_INT_PULL = 2 * WS_PHSP_BINNED_PULL
 

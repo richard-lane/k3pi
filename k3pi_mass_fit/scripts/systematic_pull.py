@@ -5,6 +5,7 @@ Pull study to assess systematic associated with the mass fitter
 import os
 import sys
 import time
+import pickle
 import pathlib
 from multiprocessing import Process, Manager
 from typing import Tuple
@@ -60,7 +61,7 @@ class GaussKDE:
 
 
 def _sig_counts(
-    year: str, sign: str, magnetisation: str, bins: np.ndarray, n_underflow: int
+    year: str, sign: str, magnetisation: str, bins: np.ndarray
 ) -> np.ndarray:
     """
     binned MC counts
@@ -78,6 +79,7 @@ def _sig_counts(
     sig_predictions = clf.predict_proba(mc_df[training_labels])[:, 1] > THRESHOLD
 
     mc_df = mc_df[sig_predictions]
+    print(len(mc_df))
 
     count, _ = stats.counts(mass_util.delta_m(mc_df), bins)
     print(f"total sig: {np.sum(count)}")
@@ -108,13 +110,16 @@ def _bkg(
     return counts
 
 
-def _sig(rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int) -> np.ndarray:
+def _sig(
+    rng: np.random.Generator, sig_counts: np.ndarray, n_tot: int, n_underflow: int
+) -> np.ndarray:
     """
     Array of signal counts after Poisson fluctuations
 
     """
     # Scale such that we have the right counts
-    scale_factor = n_tot / np.sum(sig_counts)
+    # We want the number in the fit region to equal the number requested
+    scale_factor = n_tot / np.sum(sig_counts[n_underflow:])
     print(f"{scale_factor=}", end="\t")
     counts = sig_counts * scale_factor
 
@@ -158,8 +163,8 @@ def _pull_study(
             ws_bkg = _bkg(rng, n_ws_bkg, bins=bins, sign="dcs")
 
             # Add fluctuations to sig
-            rs_sig = _sig(rng, rs_signal_counts, n_rs_sig)
-            ws_sig = _sig(rng, ws_signal_counts, n_ws_sig)
+            rs_sig = _sig(rng, rs_signal_counts, n_rs_sig, n_underflow)
+            ws_sig = _sig(rng, ws_signal_counts, n_ws_sig, n_underflow)
 
             # Combine
             rs_counts = rs_sig + rs_bkg
@@ -300,6 +305,7 @@ def _plot_pulls(
     for val in (-1.0, 1.0):
         pull_axis.axvline(val, color="k", alpha=0.5, linestyle="--")
     pull_axis.set_xlim(-5.0, 5.0)
+    pull_axis.set_xlabel("Pull")
 
     fig.suptitle(f"{n_experiments=}")
 
@@ -326,14 +332,15 @@ def main():
         (low, fit_range[0], high), (n_underflow, 150)
     )
 
-    rs_count = _sig_counts(year, "cf", magnetisation, bins, n_underflow)
-    ws_count = _sig_counts(year, "dcs", magnetisation, bins, n_underflow)
+    # Get the MC counts in all the bins (including underflow)
+    rs_count = _sig_counts(year, "cf", magnetisation, bins)
+    ws_count = _sig_counts(year, "dcs", magnetisation, bins)
 
     manager = Manager()
     out_dict = manager.dict()
     out_list = manager.list()
-    n_procs = 6
-    n_experiments = 30
+    n_procs = 4
+    n_experiments = 25
     procs = [
         Process(
             target=_pull_study,
@@ -360,7 +367,7 @@ def main():
 
     # Plot pulls
     fig, axes = plt.subplot_mosaic(
-        "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF\nEEFF", figsize=(8, 10)
+        "AAAA\nAAAA\nAAAA\nAAAA\nAAAA\nCCDD\nCCDD\nEEFF", figsize=(8, 10)
     )
     _plot_fit(
         out_dict["fit_params"],
@@ -380,7 +387,11 @@ def main():
     )
     fig.tight_layout()
 
-    fig.savefig("systematic_pull.png")
+    path = "systematic_pull.png"
+    with open(f"plot_pkls/{path}.pkl", "wb") as f:
+        pickle.dump((fig, axes), f)
+
+    fig.savefig(path)
 
 
 if __name__ == "__main__":
