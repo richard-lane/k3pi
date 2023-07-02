@@ -22,6 +22,9 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 from lib_time_fit import util, models, fitter, plotting
 from lib_time_fit.charm_threshhold import likelihoods
 
+# Colours for plotting
+COLOURS = plt.rcParams["axes.prop_cycle"].by_key()["color"][:3]
+
 
 def _gen(
     domain: Tuple[float, float], params: util.ScanParams
@@ -94,9 +97,10 @@ def _cartesian_plot(
         allowed_imz,
         chi2s,
         levels=np.arange(n_levels),
+        plot_kw={"colors": COLOURS},
     )
     # Plot the true/generating value of Z
-    axis.plot(*true_z, "yo")
+    axis.plot(*true_z, "y*")
 
     # Plot the best-fit value of Z
     # min_im, min_re = np.unravel_index(np.nanargmin(chi2s), chi2s.shape)
@@ -328,7 +332,7 @@ def _combined_scan(
     chi2s -= np.nanmin(chi2s)
     chi2s = np.sqrt(chi2s)
 
-    _cartesian_plot(
+    contours = _cartesian_plot(
         axes,
         plotting_params["allowed_rez"],
         plotting_params["allowed_imz"],
@@ -346,6 +350,8 @@ def _combined_scan(
     #     (params.re_z, params.im_z),
     # )
 
+    return contours
+
 
 def main():
     """
@@ -353,7 +359,6 @@ def main():
 
     """
     fig, axes = plt.subplots(1, 3, figsize=(10, 5))
-    print(axes)
 
     # Set some parameters
     mixing_params = {
@@ -366,8 +371,8 @@ def main():
         "xy_correlation": -0.301,
     }
     plotting_params = {
-        "allowed_rez": np.linspace(-1, 1, 30),
-        "allowed_imz": np.linspace(-1, 1, 31),
+        "allowed_rez": np.linspace(-1, 1, 50),
+        "allowed_imz": np.linspace(-1, 1, 51),
         "n_levels": 4,
     }
 
@@ -391,7 +396,7 @@ def main():
         plotting_params,
     )
 
-    _combined_scan(
+    contours = _combined_scan(
         axes[2],
         ratio,
         bins,
@@ -410,6 +415,12 @@ def main():
     axes[2].set_title("LHCb (simulation), CLEO + BES")
 
     fig.tight_layout()
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.1, 0.05, 0.8])
+    fig.colorbar(contours, cax=cbar_ax)
+    cbar_ax.set_title(r"$\sigma$")
+
     plt.savefig("charm_threshhold_scan.png")
 
     plt.show()
