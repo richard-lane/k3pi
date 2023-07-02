@@ -368,7 +368,7 @@ def main():
     plotting_params = {
         "allowed_rez": np.linspace(-1, 1, 30),
         "allowed_imz": np.linspace(-1, 1, 31),
-        "n_levels": 5,
+        "n_levels": 4,
     }
 
     # Scan the charm threshhold likelihood to find the best values of z to use
