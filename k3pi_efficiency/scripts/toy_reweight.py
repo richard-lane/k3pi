@@ -107,7 +107,7 @@ def _mass_pts(dataframe: pd.DataFrame) -> np.ndarray:
     Phsp + time pts with inv masses
 
     """
-    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    k, pi1, pi2, pi3 = util.k_3pi(dataframe)
     pi1, pi2 = util.momentum_order(k, pi1, pi2)
     return np.column_stack((inv_mass_param(k, pi1, pi2, pi3), dataframe["time"]))
 
@@ -117,7 +117,7 @@ def _pts(dataframe: pd.DataFrame) -> np.ndarray:
     Phase space + time points
 
     """
-    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    k, pi1, pi2, pi3 = util.k_3pi(dataframe)
     pi1, pi2 = util.momentum_order(k, pi1, pi2)
     return np.column_stack((helicity_param(k, pi1, pi2, pi3), dataframe["time"]))
 
@@ -272,7 +272,9 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
     fig, ax = _plot_points(target_pts, orig_pts, weights)
     for axis, label in zip((ax[l] for l in "DEFJKL"), plotting.phsp_labels()):
         axis.set_xlabel(label)
+
     ax["L"].set_xlabel(r"$t/\tau$")
+
     fig.tight_layout()
     fig.savefig("toy_test_proj.png")
 
@@ -291,15 +293,14 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
         ),
     ):
         axis.set_xlabel(label)
-        axis.set_yticks([])
 
     fig.tight_layout()
     fig.savefig("toy_test_masses.png")
 
     # Plot Z scatter
     fig, ax, _, _ = plotting.z_scatter(
-        *efficiency_util.k_3pi(test),
-        *efficiency_util.k_3pi(test[test_keep]),
+        *util.k_3pi(test),
+        *util.k_3pi(test[test_keep]),
         weights,
         np.ones(np.sum(test_keep)),
         5,
@@ -343,6 +344,11 @@ def main():
     ax[0].set_title("Original")
     ax[1].set_title("Target")
     ax[2].set_title("Reweighted")
+
+    for a in ax[1:]:
+        ax[1].set_yticks([])
+        ax[2].set_yticks([])
+
     for a in ax:
         for text in a.texts:
             text.remove()
