@@ -28,7 +28,7 @@ def _gen(
     Generate some RS and WS times
 
     """
-    n_rs = 800_000 * 9
+    n_rs = 800_000 * 9 * 4
     # TODO probably make the generator in outer scope
     gen = np.random.default_rng(seed=(os.getpid() * int(time.time())) % 123456789)
 

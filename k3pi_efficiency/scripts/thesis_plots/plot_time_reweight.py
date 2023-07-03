@@ -25,7 +25,7 @@ def main(*, year: str, magnetisation: str, sign: str, fit: bool):
 
     """
     ag_df = get.ampgen(sign)
-    pgun_df = get.particle_gun(sign)
+    pgun_df = get.particle_gun(year, sign, magnetisation)
 
     ag_time = ag_df["time"]
     pgun_time = pgun_df["time"]
@@ -33,8 +33,8 @@ def main(*, year: str, magnetisation: str, sign: str, fit: bool):
     pgun_train = pgun_df["train"]
 
     # Train a reweighter
-    reweighter = TimeWeighter(min_t=MIN_TIME, fit=fit, n_bins=40000, n_neighs=10)
-    reweighter.fit(mc_times=pgun_time[pgun_train], ampgen_times=ag_time[ag_train])
+    reweighter = TimeWeighter(min_t=MIN_TIME, fit=fit, n_bins=20000, n_neighs=10)
+    reweighter.fit(mc_times=pgun_time[pgun_train], ampgen_times=ag_time[ag_train], mc_weights=None)
 
     # Find test weights
     wts = reweighter.correct_efficiency(pgun_time[~pgun_train])
