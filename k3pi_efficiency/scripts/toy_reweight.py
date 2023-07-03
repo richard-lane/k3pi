@@ -213,10 +213,17 @@ def _plot_points(
         pull_axis.plot(pull_axis.get_xlim(), (0, 0), "k-")
 
     ax["A"].legend()
+    # Big axes only
     for axis in (ax[l] for l in "ABCGHI"):
         axis.set_xticks([])
+        axis.set_ylabel("Counts")
+
+    # Small axes only
     for axis in (ax[l] for l in "DEFJK"):
         axis.set_ylim(-0.0023, 0.0023)
+
+    for axis in ax.values():
+        axis.set_yticks([])
 
     return fig, ax
 
