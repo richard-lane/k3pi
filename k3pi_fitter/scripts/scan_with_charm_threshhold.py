@@ -371,8 +371,20 @@ def main():
         "xy_correlation": -0.301,
     }
     plotting_params = {
-        "allowed_rez": np.linspace(-1, 1, 50),
-        "allowed_imz": np.linspace(-1, 1, 51),
+        "allowed_rez": np.concatenate(
+            (
+                np.linspace(-1, 0.25, 10),
+                np.linspace(0.25, 0.8, 20),
+                np.linspace(0.8, 1.0, 5),
+            )
+        ),
+        "allowed_imz": np.concatenate(
+            (
+                np.linspace(-1, -0.75, 5),
+                np.linspace(-0.75, -0.1, 20),
+                np.linspace(-0.1, 1.0, 10),
+            )
+        ),
         "n_levels": 4,
     }
 
