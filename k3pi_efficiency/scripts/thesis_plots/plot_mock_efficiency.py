@@ -34,7 +34,7 @@ def main():
     dcs_phsp_eff = mock_efficiency.kpt_eff(k_pt, factor=dcs_factors[1])
     cf_phsp_eff = mock_efficiency.kpt_eff(k_pt, factor=cf_factors[1])
 
-    fig, axes = plt.subplots(1, 2, figsize=(20, 10), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharey=True)
 
     axes[0].plot(times, dcs_time_eff, label="DCS", color="r")
     axes[0].plot(times, cf_time_eff, label="CF", color="b")
