@@ -62,7 +62,7 @@ def phsp_efficiency(dataframe: pd.DataFrame, factor: float = 1.0) -> np.ndarray:
     # Find the transverse momentum of the kaon
     k_pt = np.sqrt(
         dataframe["Dst_ReFit_D0_Kplus_PX"] ** 2
-        + dataframe["Dst_ReFit_D0_Kplus_PX"] ** 2
+        + dataframe["Dst_ReFit_D0_Kplus_PY"] ** 2
     )
 
     efficiency = kpt_eff(k_pt, factor)
