@@ -21,6 +21,7 @@ from lib_efficiency import (
     plotting,
     efficiency_util,
     efficiency_definitions,
+    get as eff_get,
 )
 from lib_efficiency.reweighter import EfficiencyWeighter
 from lib_time_fit.definitions import TIME_BINS
@@ -122,43 +123,6 @@ def _pts(dataframe: pd.DataFrame) -> np.ndarray:
     return np.column_stack((helicity_param(k, pi1, pi2, pi3), dataframe["time"]))
 
 
-def _plot_efficiencies(time_params):
-    """Line plots of analytic efficiency"""
-    t_pts = np.linspace(0, 10, 100)
-    pt_pts = np.linspace(0, 800, 100)
-
-    t_eff = _time_efficiency(t_pts, time_params)
-
-    k_eff = _k_efficiency(pt_pts)
-    pi1_eff = _piminus_efficiency(pt_pts)
-    pi2_eff = _piminus_efficiency(pt_pts)
-    pi3_eff = _piplus_efficiency(pt_pts)
-    p_eff = np.multiply.reduce((k_eff, pi1_eff, pi2_eff, pi3_eff))
-
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
-    kw = {"linestyle": "--", "alpha": 0.8}
-
-    ax[0].plot(t_pts, t_eff, "k-", label=r"$\epsilon(t)$")
-
-    ax[1].plot(pt_pts, k_eff, **kw, label=r"$\epsilon(K)$")
-    ax[1].plot(pt_pts, pi1_eff, **kw, linewidth=2.5, label=r"$\epsilon(\pi_1^-)$")
-    ax[1].plot(pt_pts, pi2_eff, **kw, label=r"$\epsilon(\pi_2^-)$")
-    ax[1].plot(pt_pts, pi3_eff, **kw, label=r"$\epsilon(\pi^+)$")
-    ax[1].plot(pt_pts, p_eff, "k-", label=r"$\epsilon(p)$")
-
-    ax[0].set_ylim(0, 1)
-
-    ax[0].legend()
-    ax[1].legend()
-
-    ax[0].set_xlabel(r"$t / \tau$")
-    ax[1].set_xlabel(r"$p_T$ /MeV")
-    ax[0].set_ylabel(r"Efficiency")
-
-    fig.tight_layout()
-    fig.savefig("toy_efficiency.png")
-
-
 def _plot_points(
     target_pts: np.ndarray, orig_pts: np.ndarray, weights: np.ndarray
 ) -> Tuple[plt.Figure, dict]:
@@ -228,51 +192,23 @@ def _plot_points(
     return fig, ax
 
 
-def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _reweight(
+    dataframe: pd.DataFrame, sign: str
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Apply the efficiency, reweight, make some plots +
     return the testing (target, original, weights)
 
     """
-    train = dataframe[dataframe["train"]]
-    test = dataframe[~dataframe["train"]]
+    target_df = dataframe[~dataframe["train"]]
+    orig_df = target_df[target_df["accepted"]]
 
-    # Plot efficiencies
-    rng = np.random.default_rng()
-    time_params = (
-        rng.normal(loc=1, scale=0.1),
-        rng.normal(loc=2, scale=0.2),
-        rng.normal(loc=1, scale=0.1),
-        rng.normal(loc=2, scale=0.2),
-    )
-    _plot_efficiencies(time_params)
+    # Get the reweighter from pickle dump
+    reweighter = eff_get.ampgen_reweighter_dump(sign, verbose=True)
 
-    # Apply efficiencies
-    keep = _efficiency(train, time_params)
-
-    # Perform reweighting
-    target_pts = _pts(train)
-    orig_pts = target_pts[keep]
-    train_kwargs = {
-        "n_estimators": 10,
-        "max_depth": 5,
-        "learning_rate": 0.7,
-        "min_samples_leaf": 1800,
-        "n_bins": 10000,
-    }
-    reweighter = EfficiencyWeighter(
-        target_pts,
-        orig_pts,
-        original_weight=np.ones(len(orig_pts)),
-        fit=False,
-        min_t=efficiency_definitions.MIN_TIME,
-        **train_kwargs,
-    )
-
-    # Apply the efficiency to the test set
-    test_keep = _efficiency(test, time_params)
-    target_pts = _pts(test)
-    orig_pts = target_pts[test_keep]
+    # Get phase space points
+    target_pts = _pts(target_df)
+    orig_pts = _pts(orig_df)
 
     # Plot projections
     weights = reweighter.weights(orig_pts)
@@ -283,10 +219,12 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
     ax["L"].set_xlabel(r"$t/\tau$")
 
     fig.tight_layout()
-    fig.savefig("toy_test_proj.png")
+    path = f"toy_test_proj_{sign}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
-    target_masses = _mass_pts(test)
-    orig_masses = target_masses[test_keep]
+    target_masses = _mass_pts(target_df)
+    orig_masses = _mass_pts(orig_df)
     fig, ax = _plot_points(target_masses, orig_masses, weights)
     for axis, label in zip(
         (ax[l] for l in "DEFJKL"),
@@ -302,17 +240,23 @@ def _reweight(dataframe: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarr
         axis.set_xlabel(label)
 
     fig.tight_layout()
-    fig.savefig("toy_test_masses.png")
+    path = f"toy_test_masses_{sign}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
     # Plot Z scatter
     fig, ax, _, _ = plotting.z_scatter(
-        *util.k_3pi(test),
-        *util.k_3pi(test[test_keep]),
+        *util.k_3pi(target_df),
+        *util.k_3pi(orig_df),
         weights,
-        np.ones(np.sum(test_keep)),
+        np.ones(len(weights)),
         5,
     )
-    fig.savefig("toy_test_z.png")
+
+    fig.tight_layout()
+    path = f"toy_test_z_{sign}.png"
+    print(f"plotting {path}")
+    fig.savefig(path)
 
     return target_pts, orig_pts, weights
 
@@ -332,8 +276,8 @@ def main():
     cf_df = cf_df[cf_df["time"] > efficiency_definitions.MIN_TIME]
     dcs_df = dcs_df[dcs_df["time"] > efficiency_definitions.MIN_TIME]
 
-    cf_target, cf_orig, cf_wt = _reweight(cf_df)
-    dcs_target, dcs_orig, dcs_wt = _reweight(cf_df)
+    cf_target, cf_orig, cf_wt = _reweight(cf_df, "cf")
+    dcs_target, dcs_orig, dcs_wt = _reweight(dcs_df, "dcs")
 
     # Plot ratio
     print("plotting ratio")

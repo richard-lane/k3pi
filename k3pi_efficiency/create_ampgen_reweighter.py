@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from fourbody.param import helicity_param
-from lib_efficiency import efficiency_definitions, efficiency_util, plotting
+from lib_efficiency import efficiency_definitions, plotting
 from lib_efficiency.reweighter import EfficiencyWeighter
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "k3pi-data"))
@@ -27,7 +27,7 @@ def _points(dataframe: pd.DataFrame) -> np.ndarray:
 
     """
     # Get the right arrays
-    k, pi1, pi2, pi3 = efficiency_util.k_3pi(dataframe)
+    k, pi1, pi2, pi3 = util.k_3pi(dataframe)
 
     # Momentum order
     pi1, pi2 = util.momentum_order(k, pi1, pi2)
@@ -64,7 +64,7 @@ def main(args: argparse.Namespace):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 35,  # 350,
+        "n_estimators": 1,  # 350,
         "max_depth": 3,
         # "learning_rate": 0.7,
         "min_samples_leaf": 1800,
@@ -75,8 +75,8 @@ def main(args: argparse.Namespace):
         np.ones(len(original_pts)),
         fit=False,  # Don't do a time fit (in principle we could)
         min_t=efficiency_definitions.MIN_TIME,
-        n_bins=50000,
-        n_neighs=30.0,
+        n_bins=40000,
+        n_neighs=10.0,
         **train_kwargs,
     )
 
