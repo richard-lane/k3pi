@@ -34,7 +34,9 @@ def main(*, year: str, magnetisation: str, sign: str, fit: bool):
 
     # Train a reweighter
     reweighter = TimeWeighter(min_t=MIN_TIME, fit=fit, n_bins=20000, n_neighs=10)
-    reweighter.fit(mc_times=pgun_time[pgun_train], ampgen_times=ag_time[ag_train], mc_weights=None)
+    reweighter.fit(
+        mc_times=pgun_time[pgun_train], ampgen_times=ag_time[ag_train], mc_weights=None
+    )
 
     # Find test weights
     wts = reweighter.correct_efficiency(pgun_time[~pgun_train])
