@@ -65,6 +65,7 @@ def _true_line_plot(ax: plt.Axes, params: fit_util.ScanParams):
     points = np.linspace(*ax.get_xlim())
     expected = params.im_z + (params.y / params.x) * (params.re_z - points)
     ax.plot(points, expected, "y", linewidth=1, label="Expected")
+    ax.set_ylim(-1, 1)
 
 
 def main():

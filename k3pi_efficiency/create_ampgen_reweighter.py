@@ -64,7 +64,7 @@ def main(args: argparse.Namespace):
 
     # Create + train reweighter
     train_kwargs = {
-        "n_estimators": 1,  # 350,
+        "n_estimators": 150,  # 350,
         "max_depth": 3,
         # "learning_rate": 0.7,
         "min_samples_leaf": 1800,
@@ -75,7 +75,7 @@ def main(args: argparse.Namespace):
         np.ones(len(original_pts)),
         fit=False,  # Don't do a time fit (in principle we could)
         min_t=efficiency_definitions.MIN_TIME,
-        n_bins=40000,
+        n_bins=20000,
         n_neighs=10.0,
         **train_kwargs,
     )

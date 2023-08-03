@@ -252,6 +252,8 @@ def _reweight(
         np.ones(len(weights)),
         5,
     )
+    if sign == "cf":
+        ax.set_xlim(0.586, 0.602)
 
     fig.tight_layout()
     path = f"toy_test_z_{sign}.png"
@@ -260,6 +262,16 @@ def _reweight(
 
     return target_pts, orig_pts, weights
 
+
+def _time_cut(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove events below a min time and above a max time
+
+    """
+    times = df["time"]
+    keep = (efficiency_definitions.MIN_TIME < times) & (times < 8.0)
+
+    return df[keep]
 
 def main():
     """
@@ -273,8 +285,10 @@ def main():
 
     # Only keep stuff above min time
     print("cutting dfs (time)")
-    cf_df = cf_df[cf_df["time"] > efficiency_definitions.MIN_TIME]
-    dcs_df = dcs_df[dcs_df["time"] > efficiency_definitions.MIN_TIME]
+    cf_df = _time_cut(cf_df)
+    dcs_df = _time_cut(dcs_df)
+    # cf_df = cf_df[cf_df["time"] > efficiency_definitions.MIN_TIME]
+    # dcs_df = dcs_df[dcs_df["time"] > efficiency_definitions.MIN_TIME]
 
     cf_target, cf_orig, cf_wt = _reweight(cf_df, "cf")
     dcs_target, dcs_orig, dcs_wt = _reweight(dcs_df, "dcs")
@@ -288,7 +302,7 @@ def main():
         dcs_target[:, -1],
         cf_wt,
         dcs_wt,
-        TIME_BINS[2:],
+        TIME_BINS[2:-1],
         np.ones(len(cf_orig)),
         np.ones(len(dcs_orig)),
     )

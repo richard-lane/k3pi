@@ -155,6 +155,7 @@ def fits_and_scan(
     chi2s: np.ndarray,
     fit_vals: np.ndarray,
     n_contours: int,
+    plot_best: bool = False,
 ) -> QuadContourSet:
     """
     Plot fits and a scan on a plot
@@ -163,7 +164,8 @@ def fits_and_scan(
     :param allowed_z: tuple of allowed values for (re_z, im_z)
     :param chi2s: 2d array of chi2s for the fits
     :param fit_vals: 2d array of fitter values from the fits
-    :param n_coutours: 1 more than the number of contours lol
+    :param n_contours: 1 more than the number of contours lol
+    :param plot_best: whether to plot the best fit star
 
     :returns: contours
 
@@ -192,7 +194,8 @@ def fits_and_scan(
 
     # Plot the best fit value
     min_im, min_re = np.unravel_index(chi2s.argmin(), chi2s.shape)
-    scan_ax.plot(allowed_rez[min_re], allowed_imz[min_im], "r*", label="Best Fit")
+    if plot_best:
+        scan_ax.plot(allowed_rez[min_re], allowed_imz[min_im], "r*", label="Best Fit")
 
     # Draw a circle
     scan_ax.add_patch(plt.Circle((0, 0), 1.0, color="k", fill=False))

@@ -158,7 +158,7 @@ def main():
     # Plot also an uncertainty region on the theory prediction
     # This is given by binomial errors around the best fit region
     n_tot = n_procs * n_experiments
-    err = predicted_frac * (1 - predicted_frac)
+    err = predicted_frac * (1 - predicted_frac) / np.sqrt(n_tot)
     theory_area = plt.fill_between(
         bins,
         predicted_frac + err,

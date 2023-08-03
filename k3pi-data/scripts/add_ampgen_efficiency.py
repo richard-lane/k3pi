@@ -61,11 +61,14 @@ def _add_col(rng: np.random.Generator, sign: str, axes: plt.Axes):
     # Read AmpGen dataframe
     dataframe = get.ampgen(sign)
 
+    # Throw away times above this val
+    dataframe = dataframe[dataframe["time"] < 8.0]
+
     if _efficiency_column_exists(dataframe):
         print(f"overwriting {sign} column")
 
     # Use rejection sampling to see which events are kept
-    time_factor = 1.0 if sign == "dcs" else 0.99
+    time_factor = 1.0 if sign == "dcs" else 0.995
     phsp_factor = 1.0 if sign == "dcs" else 0.95
     kept = mock_efficiency.accepted(
         rng, dataframe, time_factor=time_factor, phsp_factor=phsp_factor

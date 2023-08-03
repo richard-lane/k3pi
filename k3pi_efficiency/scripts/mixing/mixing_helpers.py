@@ -184,11 +184,10 @@ def scan_fits(
         axes[0], ideal, "--m", "Expected Fit,\nsmall mixing approximation"
     )
     axes[0].legend()
-    axes[1].legend()
+    # axes[1].legend()
 
     axes[0].set_ylim(0.9 * ideal.r_d**2, 1.1 * models.scan(bins[-1], ideal))
 
-    fig.suptitle(path)
     fig.tight_layout()
 
     fig.subplots_adjust(right=0.85)
