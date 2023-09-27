@@ -17,12 +17,13 @@ def main():
     Plot correlation matrices
 
     """
+    year, magnetisation = "2018", "magup"
     # Convert to percent
-    dcs_eff = 100 * get.absolute_efficiency("dcs")
-    cf_eff = 100 * get.absolute_efficiency("cf")
+    dcs_eff = 100 * get.absolute_efficiency(year, "dcs", magnetisation)
+    cf_eff = 100 * get.absolute_efficiency(year, "cf", magnetisation)
 
-    dcs_err = 100 * get.abs_eff_err("dcs")
-    cf_err = 100 * get.abs_eff_err("cf")
+    dcs_err = 100 * get.abs_eff_err(year, "dcs", magnetisation)
+    cf_err = 100 * get.abs_eff_err(year, "cf", magnetisation)
 
     fig, axis = plt.subplots()
 
@@ -35,7 +36,7 @@ def main():
     axis.set_xticklabels(["DCS", "CF"])
 
     axis.set_ylabel("Efficiency/ %")
-    axis.set_ylim(2.23, 2.285)
+    # axis.set_ylim(2.23, 2.285)
 
     # Draw a line from the error bars to the axes to make it easier to read
     axis.plot([-xlim, -1.0], [dcs_eff - dcs_err, dcs_eff - dcs_err], "k--")
@@ -49,7 +50,7 @@ def main():
 
     fig.tight_layout()
 
-    fig.savefig("abs_efficiency.png")
+    fig.savefig(f"abs_efficiency_{year}_{magnetisation}.png")
 
 
 if __name__ == "__main__":
