@@ -69,7 +69,7 @@ def _efficiency(dataframe: pd.DataFrame, sign: str) -> float:
     abs efficiency
 
     """
-    n_tot = get.pgun_n_generated(sign)
+    n_tot = get.pgun_n_generated("2018", sign, "magdown")
     retval = len(dataframe) / n_tot
 
     print(f"{sign} total {n_tot}, abs efficiency {100 * retval:2.4f}%")
@@ -143,9 +143,9 @@ def main(args: argparse.Namespace):
     # Read MC dataframes
     year, magnetisation = "2018", "magdown"
     print("getting cf")
-    cf_df = get.particle_gun("cf")
+    cf_df = get.particle_gun(year, "cf", magnetisation)
     print("getting dcs")
-    dcs_df = get.particle_gun("dcs")
+    dcs_df = get.particle_gun(year, "dcs", magnetisation)
 
     # Time cuts
     max_time = 7
