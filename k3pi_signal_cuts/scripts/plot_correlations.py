@@ -11,7 +11,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from itertools import islice
 from tqdm import tqdm
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
@@ -24,9 +23,8 @@ def _add_cbar(fig: plt.Figure, axis: plt.Axes) -> None:
     Add colour bar to figure, using the provided axis as scale
 
     """
-    divider = make_axes_locatable(axis)
-    size = 7
-    cbar_ax = divider.append_axes("right", size=f"{size}%")#, pad=size / 100)
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.327, 0.05, 0.5688])
 
     fig.colorbar(mappable=axis.get_images()[0], cax=cbar_ax)
 
@@ -67,6 +65,9 @@ def _plot_simulated():
 
     _plot(ax[0], sig_df)
     _plot(ax[1], bkg_df)
+
+    ax[0].set_title("Signal")
+    ax[1].set_title("Background")
 
     fig.tight_layout()
 
@@ -109,7 +110,7 @@ def main():
 
     """
     _plot_simulated()
-    _plot_data()
+    # _plot_data()
 
 
 if __name__ == "__main__":
