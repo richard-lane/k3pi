@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from itertools import islice
 from tqdm import tqdm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[2] / "k3pi-data"))
 sys.path.append(str(pathlib.Path(__file__).absolute().parents[1]))
@@ -23,8 +24,9 @@ def _add_cbar(fig: plt.Figure, axis: plt.Axes) -> None:
     Add colour bar to figure, using the provided axis as scale
 
     """
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.30, 0.05, 0.50])
+    divider = make_axes_locatable(axis)
+    size = 7
+    cbar_ax = divider.append_axes("right", size=f"{size}%")#, pad=size / 100)
 
     fig.colorbar(mappable=axis.get_images()[0], cax=cbar_ax)
 
@@ -47,7 +49,7 @@ def _plot(axis: plt.Axes, dataframe: pd.DataFrame) -> None:
     axis.set_xticks(range(num))
     axis.set_yticks(range(num))
 
-    axis.set_xticklabels(names, rotation=90)
+    axis.set_xticklabels(names, rotation=45, ha="right")
     axis.set_yticklabels(names)
 
 
@@ -60,20 +62,15 @@ def _plot_simulated():
     sig_df = get.mc(year, sign, magnetisation)
     bkg_df = pd.concat(get.uppermass(year, sign, magnetisation))
 
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5), sharex=True, sharey=True)
     plt.set_cmap("seismic")
 
     _plot(ax[0], sig_df)
     _plot(ax[1], bkg_df)
 
-    fig.suptitle("BDT Training var correlation: simulation")
-
-    ax[0].set_title("Signal (MC)")
-    ax[1].set_title("Background (data upper mass sideband)")
-
     fig.tight_layout()
 
-    _add_cbar(fig, ax[0])
+    _add_cbar(fig, ax[1])
 
     fig.savefig("simulation_correlation.png")
 

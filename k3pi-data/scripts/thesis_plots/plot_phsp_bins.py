@@ -39,7 +39,7 @@ def _plot_hist(
 
     angles = [np.concatenate(arr) for arr in angles]
 
-    fig, axis = plt.subplots(1, 1, figsize=(10, 10))
+    fig, axis = plt.subplots(1, 1, figsize=(5, 5))
     hist_kw = {"histtype": "step", "bins": np.arange(361) - 180.0}
 
     colours = "r", "g", "b", "y", "k"
@@ -75,7 +75,7 @@ def _plot_scatter(
     angles = [np.concatenate(arr) for arr in angles]
     mag = [np.concatenate(arr) for arr in mag]
 
-    fig, axis = plt.subplots(1, 1, figsize=(10, 10), subplot_kw={"projection": "polar"})
+    fig, axis = plt.subplots(1, 1, figsize=(5, 5), subplot_kw={"projection": "polar"})
 
     colours = "r", "g", "b", "y", "k"
     alphas = (1.0, 1.0, 1.0, 1.0, 0.3)
