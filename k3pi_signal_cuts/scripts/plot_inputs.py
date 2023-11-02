@@ -72,12 +72,12 @@ def main():
         "",
         "",
         "",
+        "",
         "MeV",
         "",
         "MeV",
         "MeV",
-        "MeV",
-    ]
+    ]  # We won't plot the delta M yet. This comment is useless no one will ever read it
     for col, axis, label in zip(columns, ax.ravel(), xlabels):
         _plot(axis, mc_df[col], uppermass_df[col], sig_wt)
 
@@ -94,6 +94,7 @@ def main():
         sig_wt,
     )
     ax.ravel()[-1].set_title(r"$\Delta$M*")
+    ax.ravel()[-1].set_xlabel("MeV")
     ax.ravel()[0].legend()
 
     fig.tight_layout()

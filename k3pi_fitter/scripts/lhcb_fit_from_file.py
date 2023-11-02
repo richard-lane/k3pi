@@ -106,6 +106,11 @@ def main(
     initial_rdxy = 0.0553431, definitions.CHARM_X, definitions.CHARM_Y
     xy_err = (definitions.CHARM_X_ERR, definitions.CHARM_Y_ERR)
     xy_corr = definitions.CHARM_XY_CORRELATION
+
+    # Do a quick fit with no constraints to find rD
+    no_constraints_fitter = fitter.no_constraints(ratio, ratio_err, time_bins, util.MixingParams(initial_rdxy[0], 0, 0))
+    print(f"{no_constraints_fitter.valid}\t{100 * no_constraints_fitter.values[0]:.2f}\t{100 * no_constraints_fitter.errors[0]:.2f}")
+
     with tqdm(total=n_re * n_im) as pbar:
         for i, re_z in enumerate(allowed_rez):
             for j, im_z in enumerate(allowed_imz):
